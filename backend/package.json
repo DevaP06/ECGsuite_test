@@ -1,0 +1,26 @@
+{
+  "name": "ecgsuite",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yashghule9/ECGsuite.git"
+  },
+  "keywords": [
+    "node"
+  ],
+  "author": "Dhruv Pekhale",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/yashghule9/ECGsuite/issues"
+  },
+  "homepage": "https://github.com/yashghule9/ECGsuite#readme",
+  "dependencies": {
+    "dotenv": "^16.5.0",
+    "express": "^5.1.0"
+  }
+}
