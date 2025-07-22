@@ -1,0 +1,1 @@
+export type UTMSource = "direct" | "linkedin" | "insta" | "reddit" | "yt" | "x" | "facebook" | "whatsapp"
