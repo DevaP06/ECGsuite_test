@@ -1,0 +1,34 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
+@import "tailwindcss";
+
+
+@plugin "daisyui" {
+    themes: black;
+}
+
+*{
+    font-family: "Inter";
+  /* background-color: #060606; */
+}
+
+.logo{
+    height: 75px;
+    width: 75px;
+}
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0px); }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.fo-trans{
+  background-color: transparent;
+}
+
+html {
+  scroll-behavior: smooth;
+}
