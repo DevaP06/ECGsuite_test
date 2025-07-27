@@ -3,6 +3,9 @@ import express from 'express';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import authRoutes from './src/routes/authRoutes.js';
+import cors from 'cors';
+app.use(cors());
+
 
 dotenv.config(); // Load .env variables
 
