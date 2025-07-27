@@ -1,1 +1,1 @@
-export const DB_NAME = "ECGeniusDb1"
+export const DB_NAME = "database1"
