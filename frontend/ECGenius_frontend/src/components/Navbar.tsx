@@ -1,30 +1,34 @@
-import { Link } from 'react-router-dom';
-import { useState } from 'react';
-import { Menu, X } from 'lucide-react';
-import logo from '../assets/ECGenius_logo.png';
+import { Link } from "react-router-dom";
+import { useState } from "react";
+import { Menu, X } from "lucide-react";
+import logo from "../assets/ECGenius_logo.png";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
 
   const navItems = [
-    { name: 'About', path: '/about' },
-    { name: 'How It Works', path: '/how-it-works' },
-    { name: 'Pricing', path: '/pricing' },
-    { name: 'Contact', path: '/contact' },
-    { name: 'Login', path: '/login' },
+    { name: "About", path: "/about" },
+    { name: "How It Works", path: "/how-it-works" },
+    { name: "Pricing", path: "/pricing" },
+    { name: "Contact", path: "/contact" },
+    { name: "Login", path: "/login" },
   ];
 
   return (
     <nav className="bg-black shadow-md sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 flex items-center justify-between h-16">
         {/* Logo (Leftmost) */}
-        <Link to="/" className="flex items-center gap-3 text-xl font-bold text-white">
+        <Link
+          to="/"
+          className="flex items-center gap-3 text-xl font-bold text-white"
+        >
           <img src={logo} alt="ECGenius Logo" className="h-9 w-9 object-contain" />
           <span className="tracking-tight">ECGenius</span>
         </Link>
 
         {/* Right Section: Desktop Nav + Hamburger Icon */}
         <div className="flex items-center">
+          {/* Desktop Menu */}
           <div className="hidden md:flex items-center gap-6">
             {navItems.map((item) => (
               <Link
@@ -35,17 +39,18 @@ const Navbar = () => {
                 {item.name}
               </Link>
             ))}
+
             <Link
-              to="/get-started"
-              className="ml-4 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-semibold"
+              to="/Sign-Up-page"
+              className="ml-4 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-semibold whitespace-nowrap"
             >
               Get Started
             </Link>
           </div>
 
-          {/* Hamburger icon */}
+          {/* Hamburger icon for Mobile */}
           <button
-            className="md:hidden text-white ml-2"
+            className="md:hidden text-white ml-4"
             onClick={() => setIsOpen(!isOpen)}
             aria-label="Toggle menu"
           >
@@ -67,8 +72,9 @@ const Navbar = () => {
               {item.name}
             </Link>
           ))}
+
           <Link
-            to="/get-started"
+            to="/Sign-Up-page"  // Corrected path for consistency
             className="block w-full text-center bg-blue-600 text-white px-4 py-2 rounded-lg mt-2 hover:bg-blue-700 transition-colors font-semibold"
             onClick={() => setIsOpen(false)}
           >

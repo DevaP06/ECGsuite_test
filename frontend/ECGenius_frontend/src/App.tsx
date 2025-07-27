@@ -13,6 +13,8 @@ import NotFound from './pages/NotFound';
 import HowItWorksPage from './pages/HowItWorksPage';
 import PricingPage from './pages/PricingPage'; // <-- Import your pricing page
 import ContactPage from './pages/ContactPage';
+import TryBetaPage from './pages/TryBetaPage';
+import SignUpPage from './pages/SignUpPage';
 
 const router = createBrowserRouter(
   createRoutesFromElements(
@@ -24,6 +26,8 @@ const router = createBrowserRouter(
       <Route path="pricing" element={<PricingPage />} /> {/* <-- Pricing route */}
       <Route path="*" element={<NotFound />} />
        <Route path="Contact" element={<ContactPage />} />
+        <Route path="try-beta" element={<TryBetaPage />} />
+        <Route path= "Sign-Up-Page" element = {<SignUpPage />} />
     </Route>
   )
 );
