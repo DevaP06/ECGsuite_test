@@ -1,6 +1,6 @@
 
 import HowItWorks from '../components/HowItWorks';
-import ThreeStepsSection from '../components/ThreeStepsSection';
+
 import TimelineSection from '../components/TimelineSection';
 import Footer from '../components/Footer';
 

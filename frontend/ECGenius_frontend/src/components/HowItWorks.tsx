@@ -1,4 +1,4 @@
-import React from "react";
+
 import { FaCloudUploadAlt, FaBolt, FaChartBar, FaArrowRight } from "react-icons/fa";
 import { motion } from "framer-motion";
 

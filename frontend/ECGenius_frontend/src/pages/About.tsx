@@ -1,4 +1,4 @@
-import React from "react";
+
 import TeamSection from "../components/TeamSection";
 import MissionSection from "../components/MissionSection";
 

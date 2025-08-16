@@ -1,4 +1,4 @@
-import React from "react";
+
 import signupImage from "../assets/signuppage.png"; // ✅ import image
 
 const LoginPage = () => {

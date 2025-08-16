@@ -1,4 +1,4 @@
-import React from "react";
+
 import { Brain, AlertTriangle, Stethoscope, Cloud } from "lucide-react";
 import { motion } from "framer-motion";
 

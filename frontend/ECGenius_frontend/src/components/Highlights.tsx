@@ -1,4 +1,4 @@
-import React from "react";
+
 import { Brain, Lock, Zap } from "lucide-react";
 
 const highlights = [
