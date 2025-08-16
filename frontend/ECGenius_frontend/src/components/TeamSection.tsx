@@ -1,3 +1,5 @@
+import React from "react";
+import { motion } from "framer-motion";
 
 const TeamSection = () => {
   const teamMembers = [
@@ -28,31 +30,49 @@ const TeamSection = () => {
   ];
 
   return (
-    <section className="relative bg-gradient-to-br from-black via-black to-purple-900 text-white py-20 px-4 overflow-hidden">
-      {/* Soft texture in the background */}
-      <div className="absolute inset-0 bg-[url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAAXNSR0IArs4c6QAAAERlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAGKADAAQAAAABAAAAGAAAAADQ8G4QAAAAJcEhZcwAADsQAAA7EAZUrDhsAAAAHUlEQVQI12NgYGAwMTAwPeH8/4/ADAAo8D9+9Y4m0QAAAABJRU5ErkJggg==')] bg-repeat opacity-10 z-0" />
+    <section className="relative bg-black text-white py-20 px-4 overflow-hidden">
+      {/* Soft texture overlay */}
+      <div className="absolute inset-0 bg-[url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAAXNSR0IArs4c6QAAAERlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAGKADAAQAAAABAAAAGAAAAADQ8G4QAAAAJcEhZcwAADsQAAA7EAZUrDhsAAAAHUlEQVQI12NgYGAwMTAwPeH8/4/ADAAo8D9+9Y4m0QAAAABJRU5ErkJggg==')] bg-repeat opacity-5 z-0" />
 
       <div className="relative z-10 max-w-6xl mx-auto text-center">
-        <h2 className="text-4xl font-extrabold bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400 bg-clip-text text-transparent mb-4">
+        <motion.h2
+          className="text-4xl font-extrabold bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-500 bg-clip-text text-transparent mb-4"
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7, ease: "easeOut" }}
+          viewport={{ once: true }}
+        >
           Meet Our Team
-        </h2>
-        <p className="mb-16 text-gray-300 max-w-xl mx-auto text-lg">
+        </motion.h2>
+
+        <motion.p
+          className="mb-16 text-gray-300 max-w-xl mx-auto text-lg"
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15, duration: 0.7 }}
+          viewport={{ once: true }}
+        >
           Dreamers, builders, and innovators — together, we’re on a mission to make ECGenius revolutionary.
-        </p>
+        </motion.p>
+
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
-          {teamMembers.map((member) => (
-            <div
+          {teamMembers.map((member, idx) => (
+            <motion.div
               key={member.name}
-              className="group bg-black/80 rounded-2xl border border-purple-500/30 shadow-md hover:shadow-purple-600/30 hover:-translate-y-2 hover:scale-105 hover:border-purple-400 transition-all duration-300 p-7 flex flex-col items-center"
+              className="group bg-black/80 rounded-2xl border border-cyan-400/20 shadow-md hover:shadow-cyan-500/20 hover:border-cyan-400 transition-all duration-300 p-7 flex flex-col items-center"
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ delay: idx * 0.15, duration: 0.6 }}
+              viewport={{ once: true }}
             >
-              <h3 className="text-xl font-semibold text-white mb-0.5">
+              <h3 className="text-xl font-semibold text-white mb-1">
                 {member.name}
               </h3>
-              <span className="mb-3 inline-block text-xs uppercase font-bold bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-1 rounded-full shadow">
+              <span className="mb-3 inline-block text-xs uppercase font-bold bg-gradient-to-r from-cyan-400 to-blue-500 text-black px-4 py-1 rounded-full shadow">
                 {member.role}
               </span>
               <p className="text-sm text-gray-300 text-center">{member.description}</p>
-            </div>
+            </motion.div>
           ))}
         </div>
       </div>

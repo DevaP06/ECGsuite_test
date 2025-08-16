@@ -1,123 +1,81 @@
-import React, { useState } from "react";
-import axios from "axios"; // install with: npm install axios
+import React from "react";
 
-const Signup: React.FC = () => {
-  const [showPassword, setShowPassword] = useState(false);
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    password: "",
-  });
-  const [message, setMessage] = useState("");
-
-  const togglePasswordVisibility = () => {
-    setShowPassword((prev) => !prev);
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.id]: e.target.value });
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const res = await axios.post("http://localhost:3000/api/auth/register", {
-        username: formData.name,
-        email: formData.email,
-        password: formData.password,
-      });
-      setMessage("✅ " + res.data.message);
-    } catch (err: any) {
-      const errorMsg = err.response?.data?.error || "Something went wrong";
-      setMessage("❌ " + errorMsg);
-    }
-  };
-
+const LoginPage = () => {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-black">
-      <div className="bg-gray-900 shadow-lg rounded-lg flex w-full max-w-4xl overflow-hidden">
-        <div className="flex-1 p-10 flex flex-col justify-center">
-          <h1 className="text-3xl font-bold mb-2 text-blue-400">
-            Join ECGenius – Your Journey to ECG Mastery Begins Here!
-          </h1>
-          <p className="mb-6 text-gray-300">
-            Sign up to unlock personalized ECG practice, instant feedback, and step-by-step learning.
-          </p>
+    <div className="flex h-screen bg-black text-white">
+      {/* Left side - Form */}
+      <div className="w-full md:w-1/2 flex flex-col justify-center px-8 md:px-16 lg:px-24">
+        <div className="max-w-md w-full mx-auto">
+          <h1 className="text-2xl font-bold mb-6 text-center">Login to ECGenius</h1>
 
-          <form className="space-y-5" onSubmit={handleSubmit}>
-            <div>
-              <label htmlFor="name" className="block mb-1 font-medium text-gray-300">Name</label>
-              <input
-                id="name"
-                type="text"
-                placeholder="Enter your name"
-                onChange={handleChange}
-                value={formData.name}
-                required
-                className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-gray-200"
-              />
-            </div>
-            <div>
-              <label htmlFor="email" className="block mb-1 font-medium text-gray-300">Email</label>
-              <input
-                id="email"
-                type="email"
-                placeholder="Enter your email"
-                onChange={handleChange}
-                value={formData.email}
-                required
-                className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-gray-200"
-              />
-            </div>
-            <div className="relative">
-              <label htmlFor="password" className="block mb-1 font-medium text-gray-300">Password</label>
-              <input
-                id="password"
-                type={showPassword ? "text" : "password"}
-                placeholder="Enter your password"
-                onChange={handleChange}
-                value={formData.password}
-                required
-                className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 pr-10 text-gray-200"
-              />
-              <button
-                type="button"
-                onClick={togglePasswordVisibility}
-                className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-blue-400 focus:outline-none"
-                aria-label={showPassword ? "Hide password" : "Show password"}
-              >
-                {/* Your SVG icons remain unchanged */}
-                {/* ... */}
-              </button>
-            </div>
-            <button
-              type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded font-semibold transition"
-            >
-              Sign Up
-            </button>
-          </form>
+          {/* Google Sign In */}
+          <button className="w-full bg-white text-black py-2 rounded-md flex items-center justify-center gap-2 hover:bg-gray-200 transition">
+            <img
+              src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
+              alt="Google"
+              className="w-5 h-5"
+            />
+            Sign in with Google
+          </button>
 
-          {message && (
-            <p className="mt-4 text-center text-sm text-white bg-gray-800 p-2 rounded">{message}</p>
-          )}
+          {/* Divider */}
+          <div className="flex items-center my-6">
+            <div className="flex-grow border-t border-gray-700"></div>
+            <span className="px-3 text-gray-400 text-sm">or</span>
+            <div className="flex-grow border-t border-gray-700"></div>
+          </div>
 
-          <p className="mt-4 text-gray-400 text-center">
-            Already have an account?{" "}
-            <a href="/login" className="text-blue-400 hover:underline">Login</a>
+          {/* Email */}
+          <div className="mb-4">
+            <label className="block mb-1 text-sm">Your email</label>
+            <input
+              type="email"
+              placeholder="name@company.com"
+              className="w-full bg-black border border-gray-700 rounded-md px-4 py-2 text-sm focus:outline-none focus:border-blue-500"
+            />
+          </div>
+
+          {/* Password */}
+          <div className="mb-4">
+            <label className="block mb-1 text-sm">Your password</label>
+            <input
+              type="password"
+              placeholder="********"
+              className="w-full bg-black border border-gray-700 rounded-md px-4 py-2 text-sm focus:outline-none focus:border-blue-500"
+            />
+            <div className="text-right mt-1">
+              <a href="#" className="text-blue-400 text-sm hover:underline">
+                Forgot Password?
+              </a>
+            </div>
+          </div>
+
+          {/* Submit */}
+          <button className="w-full bg-gradient-to-r from-blue-500 via-blue-400 to-cyan-400 hover:opacity-90 py-2 rounded-md font-medium transition">
+            Login to your account
+          </button>
+
+          {/* Register */}
+          <p className="mt-4 text-center text-sm text-gray-400">
+            Not registered?{" "}
+            <a href="#" className="text-blue-400 hover:underline">
+              Create account
+            </a>
           </p>
         </div>
+      </div>
 
-        <div className="flex-1 hidden md:flex items-center justify-center bg-gradient-to-tr from-blue-900 to-black">
-          <img
-            src="https://st.depositphotos.com/3367263/60773/i/1600/depositphotos_607735936-stock-photo-vertical-image-red-heart-stethoscope.jpg"
-            alt="ECG illustration"
-            className="object-contain rounded-lg shadow-lg"
-          />
+      {/* Right side - Image placeholder */}
+      <div className="hidden md:block w-1/2">
+        <div
+          className="h-full w-full bg-cover bg-center"
+          style={{ backgroundImage: "url('/path-to-your-image.jpg')" }}
+        >
+          {/* Image placeholder */}
         </div>
       </div>
     </div>
   );
 };
 
-export default Signup;
+export default LoginPage;

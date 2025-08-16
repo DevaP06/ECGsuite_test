@@ -1,17 +1,21 @@
-import { Outlet } from 'react-router-dom'
-import Navbar from '../components/Navbar'
+import React from "react";
+import { Outlet } from "react-router-dom";
+import Navbar from "../components/Navbar";
 
 
 const MainLayout = () => {
   return (
-    <>
-    
-      <Navbar /> 
-        {/* Navbar is the constant thingy */}
-      <Outlet/> 
-      {/* outlet is the variable it changes accordingly */}
-    </>
-  )
-}
+    <div className="relative min-h-screen bg-black overflow-hidden">
+      {/* CSS-only particle background */}
+      <div className="absolute inset-0 z-0 particle-background"></div>
 
-export default MainLayout
+      {/* Foreground content */}
+      <div className="relative z-10">
+        <Navbar />
+        <Outlet />
+      </div>
+    </div>
+  );
+};
+
+export default MainLayout;

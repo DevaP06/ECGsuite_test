@@ -1,24 +1,24 @@
+import cors from "cors";
 import express from 'express';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import authRoutes from './src/routes/authRoutes.js';
-import cors from "cors";
-app.use(cors());
 
-
+// Initialize dotenv before accessing env variables
 dotenv.config(); // Load .env variables
 
-const app = express();
+const app = express();  // <-- Define app BEFORE app.use calls
 
 // Middleware
+app.use(cors());
 app.use(express.json());
 app.use('/api/auth', authRoutes);
 
-// Env
+// Environment variables
 const PORT = process.env.PORT || 3000;
 const MONGO_URI = process.env.MONGO_URI;
 
-// DB connect
+// Connect to MongoDB and start server
 mongoose.connect(MONGO_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
