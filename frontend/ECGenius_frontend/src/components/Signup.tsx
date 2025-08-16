@@ -1,4 +1,5 @@
 import React from "react";
+import signupImage from "../assets/signuppage.png"; // ✅ import image
 
 const LoginPage = () => {
   return (
@@ -65,14 +66,12 @@ const LoginPage = () => {
         </div>
       </div>
 
-      {/* Right side - Image placeholder */}
+      {/* Right side - Image */}
       <div className="hidden md:block w-1/2">
         <div
           className="h-full w-full bg-cover bg-center"
-          style={{ backgroundImage: "url('/path-to-your-image.jpg')" }}
-        >
-          {/* Image placeholder */}
-        </div>
+          style={{ backgroundImage: `url(${signupImage})` }} // ✅ proper usage
+        />
       </div>
     </div>
   );
