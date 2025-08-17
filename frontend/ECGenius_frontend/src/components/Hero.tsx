@@ -60,11 +60,18 @@ const Hero = () => {
         {/* Buttons */}
         <div className="flex flex-wrap justify-center gap-6">
           <button
-            className="relative overflow-hidden bg-blue-600 group text-white px-8 py-3 rounded-full font-semibold
-            shadow-lg transition-all duration-300 hover:bg-blue-500 hover:scale-105 active:scale-95"
-          >
-            <span className="relative z-10">Join Waitlist</span>
-          </button>
+  onClick={() =>
+    window.open(
+      "https://docs.google.com/forms/d/e/1FAIpQLSeOMz0wsHiCfdJR-Wy4F5pgjWrcBUxx5GrEkOccMyJZBTqWhw/viewform?usp=header",
+      "_blank"
+    )
+  }
+  className="relative overflow-hidden bg-blue-600 group text-white px-8 py-3 rounded-full font-semibold
+  shadow-lg transition-all duration-300 hover:bg-blue-500 hover:scale-105 active:scale-95"
+>
+  <span className="relative z-10">Join Waitlist</span>
+</button>
+
           <button
             onClick={() => navigate('/try-beta')}
             className="relative overflow-hidden bg-transparent border border-white/70 px-8 py-3 rounded-full font-semibold

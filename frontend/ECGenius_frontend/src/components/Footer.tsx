@@ -13,21 +13,33 @@ const Footer: React.FC = () => (
       </div>
 
       {/* Navigation links */}
-      <nav className="flex flex-col sm:flex-row gap-6">
+      <nav className="flex flex-col sm:flex-row gap-12">
         <div>
           <h4 className="font-semibold text-white mb-2">Product</h4>
           <ul className="space-y-1">
             <li><a href="/try-beta" className="hover:text-teal-400">Try Beta</a></li>
-            <li><a href="/pricing" className="hover:text-teal-400">Pricing</a></li>
             <li><a href="/how-it-works" className="hover:text-teal-400">How It Works</a></li>
+            <li><a href="/pricing" className="hover:text-teal-400">Pricing</a></li>
           </ul>
         </div>
+
         <div>
           <h4 className="font-semibold text-white mb-2">Company</h4>
           <ul className="space-y-1">
             <li><a href="/about" className="hover:text-teal-400">About Us</a></li>
+            <li><a href="/careers" className="hover:text-teal-400">Careers</a></li>
             <li><a href="/contact" className="hover:text-teal-400">Contact</a></li>
             <li><a href="/privacy" className="hover:text-teal-400">Privacy Policy</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h4 className="font-semibold text-white mb-2">Resources</h4>
+          <ul className="space-y-1">
+            <li><a href="/blog" className="hover:text-teal-400">Blog</a></li>
+            <li><a href="/docs" className="hover:text-teal-400">Documentation</a></li>
+            <li><a href="/faq" className="hover:text-teal-400">FAQs</a></li>
+            <li><a href="/support" className="hover:text-teal-400">Support</a></li>
           </ul>
         </div>
       </nav>
