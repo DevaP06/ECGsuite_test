@@ -1,31 +1,36 @@
-
 import { motion } from "framer-motion";
 
 const TeamSection = () => {
   const teamMembers = [
     {
-      name: "Shekhar Deshmukh",
-      role: "Co-Founder",
-      description:
-        "As a passionate innovator, Shekhar leads with vision and a commitment to excellence, inspiring the team to new heights.",
-    },
-    {
       name: "Dhruv Pekhale",
-      role: "Co-Founder",
+      role: "Backend & Integration",
       description:
-        "Dhruv brings creativity and strategic thinking to every challenge, making every project a success.",
+        "Manages backend systems, APIs, and smooth data flow for ECG devices.",
     },
     {
       name: "Karmanya Belsare",
-      role: "Co-Founder",
+      role: "AI & Data Processing",
       description:
-        "Karmanya’s technical expertise and dedication fuel our innovative solutions and seamless user experiences.",
+        "Focuses on data pipelines, preprocessing, and improving AI accuracy.",
+    },
+    {
+      name: "Shekhar Deshmukh",
+      role: "AI Model Development",
+      description:
+        "Trains and fine-tunes deep learning models for ECG analysis.",
     },
     {
       name: "Yash Ghule",
-      role: "Co-Founder",
+      role: "Research & Development",
       description:
-        "Yash’s energy and enthusiasm empower the whole team, fostering a collaborative and fun working environment.",
+        "Explores AI in ECG, connects medical insights, and drives project vision.",
+    },
+    {
+      name: "Devashish",
+      role: "Technical Lead",
+      description:
+        "Handles core tech — development, deployment, and troubleshooting.",
     },
   ];
 
@@ -55,23 +60,25 @@ const TeamSection = () => {
           Dreamers, builders, and innovators — together, we’re on a mission to make ECGenius revolutionary.
         </motion.p>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-10">
           {teamMembers.map((member, idx) => (
             <motion.div
               key={member.name}
-              className="group bg-black/80 rounded-2xl border border-cyan-400/20 shadow-md hover:shadow-cyan-500/20 hover:border-cyan-400 transition-all duration-300 p-7 flex flex-col items-center"
+              className="group bg-black/80 rounded-xl border border-cyan-400/30 shadow-md hover:shadow-cyan-500/30 hover:border-cyan-400 transition-all duration-300 p-7 flex flex-col items-center"
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ delay: idx * 0.15, duration: 0.6 }}
               viewport={{ once: true }}
             >
-              <h3 className="text-xl font-semibold text-white mb-1">
+              <h3 className="text-lg font-semibold text-white mb-1">
                 {member.name}
               </h3>
-              <span className="mb-3 inline-block text-xs uppercase font-bold bg-gradient-to-r from-cyan-400 to-blue-500 text-black px-4 py-1 rounded-full shadow">
+              <span className="mb-3 inline-block text-xs uppercase font-bold bg-gradient-to-r from-cyan-400 to-blue-500 text-black px-3 py-1 rounded-md shadow">
                 {member.role}
               </span>
-              <p className="text-sm text-gray-300 text-center">{member.description}</p>
+              <p className="text-sm text-gray-300 text-center leading-snug">
+                {member.description}
+              </p>
             </motion.div>
           ))}
         </div>
