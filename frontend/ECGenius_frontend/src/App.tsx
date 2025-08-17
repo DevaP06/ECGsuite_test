@@ -15,6 +15,7 @@ import PricingPage from './pages/PricingPage'; // <-- Import your pricing page
 import ContactPage from './pages/ContactPage';
 import TryBetaPage from './pages/TryBetaPage';
 import SignUpPage from './pages/SignUpPage';
+import Careers from './pages/Careers'; // Import the Careers page
 
 const router = createBrowserRouter(
   createRoutesFromElements(
@@ -28,6 +29,7 @@ const router = createBrowserRouter(
        <Route path="Contact" element={<ContactPage />} />
         <Route path="try-beta" element={<TryBetaPage />} />
         <Route path= "Sign-Up-Page" element = {<SignUpPage />} />
+        <Route path="careers" element={<Careers />} />
     </Route>
   )
 );
