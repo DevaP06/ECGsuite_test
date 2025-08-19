@@ -4,7 +4,7 @@ import WhyECGGenius from "../components/WhyECGGenius";
 import Highlights from "../components/Highlights";
 import Footer from "../components/Footer";
 import ECGDiagnoses from "../components/ECGDiagnoses";
-
+import ECGFeatures from "../components/ECGFeatures";
 const HomePage = () => {
   return (
     <div className="min-h-screen bg-black text-white">
@@ -16,6 +16,7 @@ const HomePage = () => {
       <div className="mt-0"> 
         <WhyECGGenius />
       </div>
+      <ECGFeatures></ECGFeatures>
       <ECGDiagnoses />
       <Highlights />
 
