@@ -1,7 +1,8 @@
 import { motion } from "framer-motion";
-import ECGAnalysisImg from '../assets/ecg-analysis.png';
-import AnomalyDetectionImg from '../assets/anomaly-detection.png';
-import ClinicianDesignImg from '../assets/clinician-design.png';
+import ECGAnalysisImg from "../assets/ecg-analysis.png";
+import AnomalyDetectionImg from "../assets/anomaly-detection.png";
+import ClinicianDesignImg from "../assets/clinician-design.png";
+
 const features = [
   {
     title: "AI-Driven ECG Analysis",
@@ -23,7 +24,7 @@ const features = [
 const WhyECGGenius = () => {
   return (
     <motion.section
-      className="relative bg-[#101626] text-white py-20 px-4 sm:px-8"
+      className="relative bg-[#101626] text-white py-16 px-4 sm:px-8 lg:px-12"
       initial={{ opacity: 0, y: 60 }}
       whileInView={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.8, ease: "easeOut" }}
@@ -32,7 +33,7 @@ const WhyECGGenius = () => {
       <div className="max-w-6xl mx-auto">
         {/* Heading */}
         <motion.h2
-          className="text-4xl md:text-5xl font-bold mb-4 text-center text-white"
+          className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 text-center"
           initial={{ opacity: 0, y: 40 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2, duration: 0.7 }}
@@ -42,7 +43,7 @@ const WhyECGGenius = () => {
         </motion.h2>
 
         <motion.p
-          className="text-center text-gray-300 text-lg mb-14 max-w-2xl mx-auto"
+          className="text-center text-gray-300 text-base sm:text-lg mb-12 max-w-2xl mx-auto"
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4, duration: 0.7 }}
@@ -52,22 +53,35 @@ const WhyECGGenius = () => {
         </motion.p>
 
         {/* Feature Cards */}
-        <div className="flex justify-center gap-8">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap justify-center gap-6 sm:gap-8">
           {features.map((feature, index) => (
             <motion.div
               key={index}
-              className="bg-[#101626] p-6 rounded-lg shadow-md w-80 text-center border border-zinc-800 hover:border-blue-400 transition-all duration-300"
+              className="bg-[#101626] p-6 rounded-lg shadow-md w-full sm:w-80 text-center border border-zinc-800 hover:border-blue-400 transition-all duration-300"
               initial={{ opacity: 0, y: 40 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 + index * 0.15, duration: 0.6 }}
               viewport={{ once: true }}
             >
               <div className="mb-4 flex justify-center">
-                <img src={feature.image} alt={feature.title} className="h-32 w-32 object-contain" />
+                <img
+                  src={feature.image}
+                  alt={feature.title}
+                  className="h-24 sm:h-32 w-auto object-contain"
+                />
               </div>
-              <h3 className="text-lg font-semibold text-blue-300 mb-2">{feature.title}</h3>
-              <p className="text-sm text-gray-300 mb-4">{feature.description}</p>
-              <a href="#" className="text-blue-400 text-sm hover:underline">Learn more →</a>
+              <h3 className="text-lg font-semibold text-blue-300 mb-2">
+                {feature.title}
+              </h3>
+              <p className="text-sm sm:text-base text-gray-300 mb-4">
+                {feature.description}
+              </p>
+              <a
+                href="#"
+                className="text-blue-400 text-sm hover:underline"
+              >
+                Learn more →
+              </a>
             </motion.div>
           ))}
         </div>
