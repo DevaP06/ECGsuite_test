@@ -6,31 +6,25 @@ const TeamSection = () => {
       name: "Dhruv Pekhale",
       role: "Backend & Integration",
       description:
-        "Manages backend systems, APIs, and smooth data flow for ECG devices.",
+        "Manages backend systems, APIs, and ensures smooth communication between ECG devices and the platform. Experienced in system architecture and deployment for reliability.",
     },
     {
       name: "Karmanya Belsare",
       role: "AI & Data Processing",
       description:
-        "Focuses on data pipelines, preprocessing, and improving AI accuracy.",
+        "Specializes in building robust data pipelines, preprocessing ECG signals, and enhancing AI accuracy. Dedicated to making raw medical data usable for meaningful insights.",
     },
     {
       name: "Shekhar Deshmukh",
       role: "AI Model Development",
       description:
-        "Trains and fine-tunes deep learning models for ECG analysis.",
+        "Focuses on training and fine-tuning deep learning models for accurate ECG analysis. Passionate about leveraging neural networks to detect patterns in biomedical data.",
     },
     {
       name: "Yash Ghule",
       role: "Research & Development",
       description:
-        "Explores AI in ECG, connects medical insights, and drives project vision.",
-    },
-    {
-      name: "Devashish",
-      role: "Technical Lead",
-      description:
-        "Handles core tech — development, deployment, and troubleshooting.",
+        "Explores the fusion of AI with medical insights, drives innovation, and shapes the vision of ECGenius. Works on integrating clinical expertise with cutting-edge technology.",
     },
   ];
 
@@ -57,10 +51,11 @@ const TeamSection = () => {
           transition={{ delay: 0.15, duration: 0.7 }}
           viewport={{ once: true }}
         >
-          Dreamers, builders, and innovators — together, we’re on a mission to make ECGenius revolutionary.
+          Dreamers, builders, and innovators — together, we’re on a mission to
+          make ECGenius revolutionary.
         </motion.p>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-10">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
           {teamMembers.map((member, idx) => (
             <motion.div
               key={member.name}
