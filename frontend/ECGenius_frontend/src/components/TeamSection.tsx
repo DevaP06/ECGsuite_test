@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { Linkedin } from "lucide-react";
 
 const TeamSection = () => {
   const teamMembers = [
@@ -7,24 +8,35 @@ const TeamSection = () => {
       role: "Backend & Integration",
       description:
         "Manages backend systems, APIs, and ensures smooth communication between ECG devices and the platform. Experienced in system architecture and deployment for reliability.",
+      linkedin: "https://www.linkedin.com/in/dhruv-pekhale-a8061431b?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app", // placeholder
     },
     {
       name: "Karmanya Belsare",
       role: "AI & Data Processing",
       description:
         "Specializes in building robust data pipelines, preprocessing ECG signals, and enhancing AI accuracy. Dedicated to making raw medical data usable for meaningful insights.",
+      linkedin: "https://www.linkedin.com/in/karmanya-belsare-2597a8335/",
     },
     {
       name: "Shekhar Deshmukh",
       role: "AI Model Development",
       description:
         "Focuses on training and fine-tuning deep learning models for accurate ECG analysis. Passionate about leveraging neural networks to detect patterns in biomedical data.",
+      linkedin: "https://www.linkedin.com/in/shekhar-deshmukh-a94a62359?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app",
     },
     {
       name: "Yash Ghule",
       role: "Research & Development",
       description:
         "Explores the fusion of AI with medical insights, drives innovation, and shapes the vision of ECGenius. Works on integrating clinical expertise with cutting-edge technology.",
+      linkedin: "https://www.linkedin.com/in/yash-ghule-324b9922b/",
+    },
+    {
+      name: "Devashish Pundkar",
+      role: "Technical Lead",
+      description:
+        "Oversees the technical direction and ensures seamless collaboration between AI, backend, and frontend teams. Skilled in bridging innovation with practical execution.",
+      linkedin: "https://www.linkedin.com/in/devashish-pundkar-808b29324?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app",
     },
   ];
 
@@ -55,23 +67,35 @@ const TeamSection = () => {
           make ECGenius revolutionary.
         </motion.p>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
+        {/* Grid with 2 cards per row */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-10">
           {teamMembers.map((member, idx) => (
             <motion.div
               key={member.name}
-              className="group bg-black/80 rounded-xl border border-cyan-400/30 shadow-md hover:shadow-cyan-500/30 hover:border-cyan-400 transition-all duration-300 p-7 flex flex-col items-center"
+              className="group relative bg-black/80 rounded-xl border border-cyan-400/30 shadow-md hover:shadow-cyan-500/30 hover:border-cyan-400 transition-all duration-300 p-7 flex flex-col items-center text-center"
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ delay: idx * 0.15, duration: 0.6 }}
               viewport={{ once: true }}
             >
+              {/* LinkedIn icon at top-right */}
+              <a
+                href={member.linkedin}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="absolute top-4 right-4 text-gray-400 hover:text-cyan-400 transition-colors"
+                aria-label={`${member.name} LinkedIn`}
+              >
+                <Linkedin size={20} />
+              </a>
+
               <h3 className="text-lg font-semibold text-white mb-1">
                 {member.name}
               </h3>
               <span className="mb-3 inline-block text-xs uppercase font-bold bg-gradient-to-r from-cyan-400 to-blue-500 text-black px-3 py-1 rounded-md shadow">
                 {member.role}
               </span>
-              <p className="text-sm text-gray-300 text-center leading-snug">
+              <p className="text-sm text-gray-300 leading-snug">
                 {member.description}
               </p>
             </motion.div>
