@@ -71,3 +71,80 @@ export const logoutUser = async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 };
+
+export const googleAuth = async (req, res) => {
+  try {
+    const { credential } = req.body;
+    
+    if (!credential) {
+      return res.status(400).json({ error: 'Google credential is required' });
+    }
+
+    // Verify the Google token
+    const { google } = await import('googleapis');
+    const { OAuth2Client } = await import('google-auth-library');
+    const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+    
+    const ticket = await client.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+    
+    const payload = ticket.getPayload();
+    const { sub: googleId, email, name, picture } = payload;
+
+    // Check if user already exists
+    let user = await User.findOne({ 
+      $or: [{ googleId }, { email }] 
+    });
+
+    let isNewUser = false;
+    console.log('Google Auth Debug:', { 
+      email, 
+      googleId, 
+      userFound: !!user,
+      existingAuthProvider: user?.authProvider,
+      existingGoogleId: user?.googleId 
+    });
+
+    if (user) {
+      // Update existing user with Google info if needed
+      if (!user.googleId) {
+        user.googleId = googleId;
+        user.authProvider = 'google';
+        user.profilePicture = picture;
+        await user.save();
+        console.log('Updated existing user with Google info');
+      } else {
+        console.log('User already has Google auth setup');
+      }
+    } else {
+      // Create new user
+      isNewUser = true;
+      console.log('Creating new user with Google auth');
+      user = new User({
+        username: name.replace(/\s+/g, '').toLowerCase() + Math.random().toString(36).substr(2, 4),
+        email,
+        googleId,
+        profilePicture: picture,
+        authProvider: 'google'
+      });
+      await user.save();
+    }
+
+    res.status(200).json({
+      message: isNewUser ? 'Account created successfully with Google' : 'Welcome back! Signed in with Google',
+      isNewUser,
+      user: {
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        profilePicture: user.profilePicture,
+        authProvider: user.authProvider
+      }
+    });
+  } catch (err) {
+    console.error('Google Auth Error:', err);
+    res.status(500).json({ error: 'Google authentication failed' });
+  }
+};

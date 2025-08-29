@@ -1,7 +1,8 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import AxiosInstance from "../AxiosInstance";
+import { useGoogleAuth } from "../hooks/useGoogleAuth";
 import signupImage from "../assets/signuppage.png";
 
 const LoginPage = () => {
@@ -12,6 +13,16 @@ const LoginPage = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { renderGoogleButton } = useGoogleAuth();
+
+  useEffect(() => {
+    // Render Google button after component mounts
+    const timer = setTimeout(() => {
+      renderGoogleButton('google-signin-button', 'signin_with');
+    }, 500);
+    
+    return () => clearTimeout(timer);
+  }, [renderGoogleButton]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -52,6 +63,16 @@ const LoginPage = () => {
               {error}
             </div>
           )}
+
+          {/* Google Sign In */}
+          <div id="google-signin-button" className="mb-4 flex justify-center"></div>
+
+          {/* Divider */}
+          <div className="flex items-center my-6">
+            <div className="flex-grow border-t border-gray-700"></div>
+            <span className="px-3 text-gray-400 text-sm">or</span>
+            <div className="flex-grow border-t border-gray-700"></div>
+          </div>
 
           <form onSubmit={handleSubmit}>
             {/* Email/Username */}
