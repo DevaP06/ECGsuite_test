@@ -41,8 +41,9 @@ export const loginUser = async (req, res) => {
       return res.status(401).json({ error: 'User not found' });
     }
 
-    // No hashing – compare directly
-    if (user.password !== password) {
+    // Use the password comparison method from the User model
+    const isMatch = await user.matchPassword(password);
+    if (!isMatch) {
       return res.status(401).json({ error: 'Incorrect password' });
     }
 
@@ -56,6 +57,17 @@ export const loginUser = async (req, res) => {
     });
   } catch (err) {
     console.error('Login Error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+export const logoutUser = async (req, res) => {
+  try {
+    // For stateless authentication, logout is handled client-side
+    // Just send a success response
+    res.status(200).json({ message: 'Logout successful' });
+  } catch (err) {
+    console.error('Logout Error:', err);
     res.status(500).json({ error: 'Server error' });
   }
 };
