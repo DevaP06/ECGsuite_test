@@ -1,0 +1,25 @@
+{
+  "raw_features": [
+    "PatientAge",
+    "Gender",
+    "VentricularRate",
+    "AtrialRate",
+    "QRSCount",
+    "regularity_score",
+    "mean_peak_height"
+  ],
+  "targets": [
+    "Rhythm",
+    "Beat"
+  ],
+  "rhythm_metrics": {
+    "accuracy": 0.888262910798122,
+    "macro_f1": 0.4671181833411026
+  },
+  "beat_metrics": {
+    "accuracy": 0.507981220657277,
+    "macro_f1": 0.0032520904008588015
+  },
+  "random_state": 55,
+  "trained_at": "2025-08-17T16:51:16.135937Z"
+}
