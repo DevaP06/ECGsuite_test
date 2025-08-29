@@ -1,1 +1,15 @@
-{}
+{
+  "name": "ecgsuite",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "cd frontend/ECGenius_frontend && npm run build",
+    "dev": "cd frontend/ECGenius_frontend && npm run dev",
+    "install-frontend": "cd frontend/ECGenius_frontend && npm install"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "mongoose": "^8.16.1",
+    "dotenv": "^17.0.0"
+  }
+}
