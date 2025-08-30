@@ -1,5 +1,10 @@
 node_modules
 
+# Build outputs
+dist/
+build/
+.vercel/
+
 # Machine Learning Models (large files)
 *.pkl
 *.h5
@@ -35,3 +40,11 @@ logs
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+
+# Temporary files
+*.tmp
+*.temp

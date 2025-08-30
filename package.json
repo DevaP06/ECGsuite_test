@@ -2,9 +2,14 @@
   "name": "ecgsuite",
   "version": "1.0.0",
   "scripts": {
-    "build": "cd frontend/ECGenius_frontend && npm run build",
+    "build": "cd frontend/ECGenius_frontend && npm install && npm run build",
     "dev": "cd frontend/ECGenius_frontend && npm run dev",
-    "install-frontend": "cd frontend/ECGenius_frontend && npm install"
+    "install-frontend": "cd frontend/ECGenius_frontend && npm install",
+    "install-api": "cd api && npm install",
+    "vercel-build": "npm run install-frontend && npm run build",
+    "deploy": "node deploy.js",
+    "test-api": "cd api && node -e \"console.log('API dependencies check:'); require('./package.json')\"",
+    "clean": "rm -rf frontend/ECGenius_frontend/dist && rm -rf node_modules && rm -rf api/node_modules && rm -rf frontend/ECGenius_frontend/node_modules"
   },
   "dependencies": {
     "cors": "^2.8.5",
