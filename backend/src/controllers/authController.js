@@ -75,7 +75,7 @@ export const logoutUser = async (req, res) => {
 export const googleAuth = async (req, res) => {
   try {
     const { credential } = req.body;
-    
+
     if (!credential) {
       return res.status(400).json({ error: 'Google credential is required' });
     }
@@ -92,27 +92,27 @@ export const googleAuth = async (req, res) => {
     // Verify the Google token
     const { OAuth2Client } = await import('google-auth-library');
     const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
-    
+
     const ticket = await client.verifyIdToken({
       idToken: credential,
       audience: process.env.GOOGLE_CLIENT_ID,
     });
-    
+
     const payload = ticket.getPayload();
     const { sub: googleId, email, name, picture } = payload;
 
     // Check if user already exists
-    let user = await User.findOne({ 
-      $or: [{ googleId }, { email }] 
+    let user = await User.findOne({
+      $or: [{ googleId }, { email }]
     });
 
     let isNewUser = false;
-    console.log('Google Auth Debug:', { 
-      email, 
-      googleId, 
+    console.log('Google Auth Debug:', {
+      email,
+      googleId,
       userFound: !!user,
       existingAuthProvider: user?.authProvider,
-      existingGoogleId: user?.googleId 
+      existingGoogleId: user?.googleId
     });
 
     if (user) {
@@ -155,7 +155,7 @@ export const googleAuth = async (req, res) => {
     console.error('Google Auth Error:', err);
     console.error('Error details:', err.message);
     console.error('Error stack:', err.stack);
-    
+
     // More specific error messages
     if (err.message.includes('Token used too early')) {
       return res.status(400).json({ error: 'Invalid token timing' });
@@ -166,10 +166,10 @@ export const googleAuth = async (req, res) => {
     if (err.message.includes('Token used too late')) {
       return res.status(400).json({ error: 'Token expired' });
     }
-    
-    res.status(500).json({ 
-      error: 'Google authentication failed', 
-      details: process.env.NODE_ENV === 'development' ? err.message : undefined 
+
+    res.status(500).json({
+      error: 'Google authentication failed',
+      details: process.env.NODE_ENV === 'development' ? err.message : undefined
     });
   }
 };
