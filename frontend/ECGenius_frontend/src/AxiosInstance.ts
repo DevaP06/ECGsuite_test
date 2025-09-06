@@ -26,8 +26,8 @@ const AxiosInstance = axios.create({
 // Add request interceptor for debugging
 AxiosInstance.interceptors.request.use(
   (config) => {
-    console.log('Making request to:', config.baseURL + config.url);
-    console.log('Request config:', config);
+    const fullUrl = `${config.baseURL || ''}${config.url || ''}`;
+    console.log('Making API request to:', fullUrl);
     return config;
   },
   (error) => {
@@ -39,13 +39,15 @@ AxiosInstance.interceptors.request.use(
 // Add response interceptor for debugging
 AxiosInstance.interceptors.response.use(
   (response) => {
-    console.log('Response received:', response);
+    console.log('API Response received successfully');
     return response;
   },
   (error) => {
-    console.error('Response error:', error);
-    console.error('Response error data:', error.response?.data);
-    console.error('Response error status:', error.response?.status);
+    console.error('API Response error:', error);
+    if (error.response) {
+      console.error('Error status:', error.response.status);
+      console.error('Error data:', error.response.data);
+    }
     return Promise.reject(error);
   }
 );
