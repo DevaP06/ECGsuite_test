@@ -80,8 +80,16 @@ export const googleAuth = async (req, res) => {
       return res.status(400).json({ error: 'Google credential is required' });
     }
 
+    // Check if Google Client ID is configured
+    if (!process.env.GOOGLE_CLIENT_ID) {
+      console.error('GOOGLE_CLIENT_ID not found in environment variables');
+      return res.status(500).json({ error: 'Google authentication not configured' });
+    }
+
+    console.log('Google Client ID:', process.env.GOOGLE_CLIENT_ID);
+    console.log('Received credential length:', credential.length);
+
     // Verify the Google token
-    const { google } = await import('googleapis');
     const { OAuth2Client } = await import('google-auth-library');
     const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
     
@@ -145,6 +153,23 @@ export const googleAuth = async (req, res) => {
     });
   } catch (err) {
     console.error('Google Auth Error:', err);
-    res.status(500).json({ error: 'Google authentication failed' });
+    console.error('Error details:', err.message);
+    console.error('Error stack:', err.stack);
+    
+    // More specific error messages
+    if (err.message.includes('Token used too early')) {
+      return res.status(400).json({ error: 'Invalid token timing' });
+    }
+    if (err.message.includes('Invalid token signature')) {
+      return res.status(400).json({ error: 'Invalid token signature' });
+    }
+    if (err.message.includes('Token used too late')) {
+      return res.status(400).json({ error: 'Token expired' });
+    }
+    
+    res.status(500).json({ 
+      error: 'Google authentication failed', 
+      details: process.env.NODE_ENV === 'development' ? err.message : undefined 
+    });
   }
 };

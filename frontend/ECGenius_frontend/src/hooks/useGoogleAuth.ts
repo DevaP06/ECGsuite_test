@@ -9,6 +9,8 @@ declare global {
 
 export const useGoogleAuth = () => {
   const initializeGoogleAuth = useCallback(() => {
+    console.log('Google Client ID:', import.meta.env.VITE_GOOGLE_CLIENT_ID);
+    
     if (window.google) {
       window.google.accounts.id.initialize({
         client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
@@ -44,13 +46,15 @@ export const useGoogleAuth = () => {
               window.location.href = '/';
             }, 3000);
             
-          } catch (error) {
+          } catch (error: any) {
             console.error('Google authentication failed:', error);
+            console.error('Error response:', error.response?.data);
             
-            // Show error message
+            // Show error message with more details
             const errorDiv = document.createElement('div');
-            errorDiv.className = 'fixed top-4 right-4 z-50 p-4 rounded-md bg-red-600 text-white font-medium';
-            errorDiv.textContent = 'Google authentication failed. Please try again.';
+            errorDiv.className = 'fixed top-4 right-4 z-50 p-4 rounded-md bg-red-600 text-white font-medium max-w-md';
+            const errorMessage = error.response?.data?.error || error.response?.data?.details || 'Google authentication failed. Please try again.';
+            errorDiv.textContent = errorMessage;
             document.body.appendChild(errorDiv);
             
             setTimeout(() => {

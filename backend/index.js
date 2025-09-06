@@ -10,7 +10,10 @@ dotenv.config(); // Load .env variables
 const app = express();  // <-- Define app BEFORE app.use calls
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: ['http://localhost:5173', 'http://localhost:3000', 'https://your-production-domain.com'],
+  credentials: true
+}));
 app.use(express.json());
 app.use('/api/auth', authRoutes);
 
