@@ -1,11 +1,6 @@
 import cors from "cors";
 import express from 'express';
 import mongoose from 'mongoose';
-import dotenv from 'dotenv';
-import authRoutes from '../backend/src/routes/authRoutes.js';
-
-// Load environment variables
-dotenv.config({ path: '../backend/.env' });
 
 const app = express();
 
@@ -18,8 +13,14 @@ app.use(cors({
 }));
 app.use(express.json());
 
+// Import auth controller directly to avoid path issues
+import { registerUser, loginUser, logoutUser, googleAuth } from '../backend/src/controllers/authController.js';
+
 // Routes - Note: /api prefix is handled by Vercel routing
-app.use('/auth', authRoutes);
+app.post('/auth/register', registerUser);
+app.post('/auth/login', loginUser);
+app.post('/auth/logout', logoutUser);
+app.post('/auth/google', googleAuth);
 
 // Health check
 app.get('/health', (req, res) => {
@@ -69,15 +70,19 @@ async function connectToDatabase() {
   }
 }
 
-// Middleware to ensure database connection
-app.use(async (req, res, next) => {
+// Middleware to ensure database connection (only for routes that need it)
+const ensureDbConnection = async (req, res, next) => {
   try {
     await connectToDatabase();
     next();
   } catch (error) {
+    console.error('Database connection failed:', error);
     res.status(500).json({ error: 'Database connection failed' });
   }
-});
+};
+
+// Apply database middleware only to routes that need it
+app.use('/auth', ensureDbConnection);
 
 // Export for Vercel
 export default app;
