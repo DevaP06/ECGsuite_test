@@ -54,7 +54,23 @@ const RegisterPage = () => {
       // Redirect to login page after successful registration
       navigate("/login");
     } catch (err: any) {
-      setError(err.response?.data?.error || "Registration failed");
+      console.error('Registration error:', err);
+      
+      // Better error message handling
+      let errorMessage = "Registration failed";
+      if (err.response?.data) {
+        if (typeof err.response.data === 'string') {
+          errorMessage = err.response.data;
+        } else if (err.response.data.error) {
+          errorMessage = err.response.data.error;
+        } else if (err.response.data.message) {
+          errorMessage = err.response.data.message;
+        }
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

@@ -53,7 +53,21 @@ export const useGoogleAuth = () => {
             // Show error message with more details
             const errorDiv = document.createElement('div');
             errorDiv.className = 'fixed top-4 right-4 z-50 p-4 rounded-md bg-red-600 text-white font-medium max-w-md';
-            const errorMessage = error.response?.data?.error || error.response?.data?.details || 'Google authentication failed. Please try again.';
+            
+            // Better error message handling
+            let errorMessage = 'Google authentication failed. Please try again.';
+            if (error.response?.data) {
+              if (typeof error.response.data === 'string') {
+                errorMessage = error.response.data;
+              } else if (error.response.data.error) {
+                errorMessage = error.response.data.error;
+              } else if (error.response.data.message) {
+                errorMessage = error.response.data.message;
+              }
+            } else if (error.message) {
+              errorMessage = error.message;
+            }
+            
             errorDiv.textContent = errorMessage;
             document.body.appendChild(errorDiv);
             
