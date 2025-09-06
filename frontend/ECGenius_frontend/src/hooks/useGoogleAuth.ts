@@ -48,44 +48,22 @@ export const useGoogleAuth = () => {
             
           } catch (error: any) {
             console.error('Google authentication failed:', error);
-            console.error('Error response data:', error.response?.data);
-            console.error('Error response status:', error.response?.status);
-            console.error('Error message:', error.message);
-            console.error('Full error object:', JSON.stringify(error, null, 2));
             
-            // Show error message with more details
+            // Show error message
             const errorDiv = document.createElement('div');
             errorDiv.className = 'fixed top-4 right-4 z-50 p-4 rounded-md bg-red-600 text-white font-medium max-w-md';
             
-            // Better error message handling
+            // Simple error message handling
             let errorMessage = 'Google authentication failed. Please try again.';
             
-            // Debug: Log what we're getting
-            console.log('Trying to extract error message...');
-            console.log('error.response?.data type:', typeof error.response?.data);
-            console.log('error.response?.data value:', error.response?.data);
-            
-            if (error.response?.data) {
-              if (typeof error.response.data === 'string') {
-                errorMessage = error.response.data;
-                console.log('Using string error message:', errorMessage);
-              } else if (error.response.data.error) {
-                errorMessage = error.response.data.error;
-                console.log('Using error.error:', errorMessage);
-              } else if (error.response.data.message) {
-                errorMessage = error.response.data.message;
-                console.log('Using error.message:', errorMessage);
-              } else {
-                // If it's still an object, stringify it for debugging
-                errorMessage = `Error: ${JSON.stringify(error.response.data)}`;
-                console.log('Using stringified object:', errorMessage);
-              }
-            } else if (error.message) {
+            if (error.response?.data?.error && typeof error.response.data.error === 'string') {
+              errorMessage = error.response.data.error;
+            } else if (error.response?.data?.message && typeof error.response.data.message === 'string') {
+              errorMessage = error.response.data.message;
+            } else if (error.message && typeof error.message === 'string') {
               errorMessage = error.message;
-              console.log('Using error.message:', errorMessage);
             }
             
-            console.log('Final error message to display:', errorMessage);
             errorDiv.textContent = errorMessage;
             document.body.appendChild(errorDiv);
             
