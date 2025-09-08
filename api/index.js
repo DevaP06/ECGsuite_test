@@ -27,8 +27,8 @@ const connectDB = async () => {
 // Initialize DB connection
 connectDB();
 
-// Import auth routes
-import authRoutes from '../backend/src/routes/authRoutes.js';
+// Import auth controller functions
+import { registerUser, loginUser, logoutUser, googleAuth } from './controllers/authController.js';
 
 // Test routes
 app.get('/', (req, res) => {
@@ -45,8 +45,11 @@ app.get('/health', (req, res) => {
   res.json({ status: 'OK', message: 'API is healthy' });
 });
 
-// Use auth routes
-app.use('/auth', authRoutes);
+// Authentication routes
+app.post('/auth/register', registerUser);
+app.post('/auth/login', loginUser);
+app.post('/auth/logout', logoutUser);
+app.post('/auth/google', googleAuth);
 
 // Export for Vercel
 export default app;
