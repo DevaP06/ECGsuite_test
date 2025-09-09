@@ -16,16 +16,21 @@ app.use(express.json());
 const connectDB = async () => {
   try {
     if (mongoose.connection.readyState === 0) {
+      if (!process.env.MONGO_URI) {
+        console.error('MONGO_URI not found in environment variables');
+        return;
+      }
       await mongoose.connect(process.env.MONGO_URI);
       console.log('MongoDB connected successfully');
     }
   } catch (error) {
     console.error('MongoDB connection error:', error);
+    // Don't crash the app if MongoDB fails
   }
 };
 
-// Initialize DB connection
-connectDB();
+// Initialize DB connection (don't await to prevent blocking)
+connectDB().catch(console.error);
 
 // Import auth controller functions
 import { registerUser, loginUser, logoutUser, googleAuth } from './controllers/authController.js';
@@ -50,6 +55,24 @@ app.post('/auth/register', registerUser);
 app.post('/auth/login', loginUser);
 app.post('/auth/logout', logoutUser);
 app.post('/auth/google', googleAuth);
+
+// Error handling middleware
+app.use((error, req, res, next) => {
+  console.error('Unhandled error:', error);
+  res.status(500).json({ 
+    error: 'Internal server error',
+    message: process.env.NODE_ENV === 'development' ? error.message : 'Something went wrong'
+  });
+});
+
+// 404 handler
+app.use('*', (req, res) => {
+  res.status(404).json({ 
+    error: 'Not found',
+    path: req.originalUrl,
+    availableRoutes: ['/api/', '/api/health', '/api/auth/register', '/api/auth/login', '/api/auth/logout', '/api/auth/google']
+  });
+});
 
 // Export for Vercel
 export default app;
