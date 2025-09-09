@@ -10,14 +10,14 @@ declare global {
 export const useGoogleAuth = () => {
   const initializeGoogleAuth = useCallback(() => {
     console.log('Google Client ID:', import.meta.env.VITE_GOOGLE_CLIENT_ID);
-    
+
     if (window.google) {
       window.google.accounts.id.initialize({
         client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
         callback: async (response: any) => {
           try {
             console.log('Google response received:', response);
-            
+
             // Send the credential to your backend
             const result = await AxiosInstance.post('/auth/google', {
               credential: response.credential
@@ -27,35 +27,34 @@ export const useGoogleAuth = () => {
 
             // Store user data
             localStorage.setItem('user', JSON.stringify(result.data.user));
-            
+
             // Show success message
             const message = result.data.message;
             const isNewUser = result.data.isNewUser;
-            
+
             // Create and show a temporary success message
             const messageDiv = document.createElement('div');
-            messageDiv.className = `fixed top-4 right-4 z-50 p-4 rounded-md text-white font-medium transition-all duration-300 ${
-              isNewUser ? 'bg-green-600' : 'bg-blue-600'
-            }`;
+            messageDiv.className = `fixed top-4 right-4 z-50 p-4 rounded-md text-white font-medium transition-all duration-300 ${isNewUser ? 'bg-green-600' : 'bg-blue-600'
+              }`;
             messageDiv.textContent = message;
             document.body.appendChild(messageDiv);
-            
+
             // Remove message after 3 seconds and redirect
             setTimeout(() => {
               messageDiv.remove();
               window.location.href = '/';
             }, 3000);
-            
+
           } catch (error: any) {
             console.error('Google authentication failed:', error);
-            
+
             // Show error message
             const errorDiv = document.createElement('div');
             errorDiv.className = 'fixed top-4 right-4 z-50 p-4 rounded-md bg-red-600 text-white font-medium max-w-md';
-            
+
             // Simple error message handling
             let errorMessage = 'Google authentication failed. Please try again.';
-            
+
             if (error.response?.data?.error && typeof error.response.data.error === 'string') {
               errorMessage = error.response.data.error;
             } else if (error.response?.data?.message && typeof error.response.data.message === 'string') {
@@ -63,10 +62,10 @@ export const useGoogleAuth = () => {
             } else if (error.message && typeof error.message === 'string') {
               errorMessage = error.message;
             }
-            
+
             errorDiv.textContent = errorMessage;
             document.body.appendChild(errorDiv);
-            
+
             setTimeout(() => {
               errorDiv.remove();
             }, 3000);
@@ -100,7 +99,7 @@ export const useGoogleAuth = () => {
         setTimeout(checkAndRender, 100);
       }
     };
-    
+
     checkAndRender();
   }, [initializeGoogleAuth]);
 
