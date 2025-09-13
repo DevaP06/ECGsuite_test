@@ -76,8 +76,8 @@ class ECGClassifier:
     def _build_pipeline(self) -> Pipeline:
         pre = self._build_preprocessor()
         clf = RandomForestClassifier(
-            n_estimators=200,
-            max_depth=18,
+            n_estimators=50,
+            max_depth=10,
             min_samples_split=6,
             min_samples_leaf=3,
             class_weight=None,

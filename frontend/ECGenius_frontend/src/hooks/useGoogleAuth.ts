@@ -19,7 +19,7 @@ export const useGoogleAuth = () => {
             console.log('Google response received:', response);
 
             // Send the credential to your backend
-            const result = await AxiosInstance.post('/auth/google', {
+            const result = await AxiosInstance.post('/api/auth/google', {
               credential: response.credential
             });
 
