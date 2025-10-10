@@ -9,7 +9,9 @@
   ],
   "routes": [
     { "src": "/api/(.*)", "dest": "/backend/index.js" },
-    { "handle": "filesystem" },
-    { "src": "/(.*)", "dest": "/index.html" }
+    { "src": "/assets/(.*)", "dest": "/frontend/ECGenius_frontend/assets/$1" },
+    { "src": "/ecgenius.png", "dest": "/frontend/ECGenius_frontend/ecgenius.png" },
+    { "src": "/vite.svg", "dest": "/frontend/ECGenius_frontend/vite.svg" },
+    { "src": "/(.*)", "dest": "/frontend/ECGenius_frontend/index.html" }
   ]
 }
