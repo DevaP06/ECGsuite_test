@@ -9,8 +9,7 @@
   ],
   "routes": [
     { "src": "/api/(.*)", "dest": "/backend/index.js" },
-    { "handle": "filesystem" },
-    { "src": "/(.*)", "dest": "/index.html" }
+    { "src": "/assets/(.*)", "dest": "/frontend/ECGenius_frontend/dist/assets/$1" },
+    { "src": "/(.*)", "dest": "/frontend/ECGenius_frontend/dist/index.html" }
   ]
 }
-
