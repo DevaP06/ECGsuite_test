@@ -10,7 +10,13 @@ const app = express();
 
 // Middleware
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:3000', 'https://ec-gsuite-test.vercel.app'],
+  origin: [
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'https://ec-gsuite-test.vercel.app',
+    'https://www.ecgenius.life',
+    'https://ecgenius.life'
+  ],
   credentials: true
 }));
 app.use(express.json());
