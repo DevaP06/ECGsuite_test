@@ -80,11 +80,13 @@ app.use((req, res) => {
   });
 });
 
-// Start server
+// Start server only when running as a standalone server (not on Vercel serverless)
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+if (!process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}
 
 // For Vercel serverless function compatibility
 export default (req, res) => {
