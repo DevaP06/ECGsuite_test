@@ -1,0 +1,16 @@
+{
+  "builds": [
+    { "src": "backend/index.js", "use": "@vercel/node" },
+    {
+      "src": "frontend/ECGenius_frontend/package.json",
+      "use": "@vercel/static-build",
+      "config": { "distDir": "dist" }
+    }
+  ],
+  "routes": [
+    { "src": "/api/(.*)", "dest": "/backend/index.js" },
+    { "handle": "filesystem" },
+    { "src": "/(.*)", "dest": "/index.html" }
+  ]
+}
+
