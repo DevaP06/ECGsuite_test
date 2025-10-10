@@ -36,7 +36,7 @@ const connectDB = async () => {
 connectDB().catch(console.error);
 
 // Import auth controller functions
-import { registerUser, loginUser, logoutUser, googleAuth } from './src/controllers/authController.js';
+import authRoutes from './src/routes/authRoutes.js';
 
 // Test routes
 app.get('/api', (req, res) => {
@@ -54,10 +54,7 @@ app.get('/api/health', (req, res) => {
 });
 
 // Authentication routes with /api prefix
-app.post('/api/auth/register', registerUser);
-app.post('/api/auth/login', loginUser);
-app.post('/api/auth/logout', logoutUser);
-app.post('/api/auth/google', googleAuth);
+app.use('/api/auth', authRoutes);
 
 // Error handling middleware
 app.use((error, req, res, next) => {
