@@ -196,6 +196,8 @@ def classify_ecg_image():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+    # @app.route('/health') → return jsonify({'success': True, 'status': 'ok'})
+
 if __name__ == '__main__':
     # Dev server for local use. For production, use Gunicorn/Waitress behind a reverse proxy.
     app.run(host='0.0.0.0', port=5001)
