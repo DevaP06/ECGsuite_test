@@ -18,6 +18,7 @@ const BetaECGUploader: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [serverResponse, setServerResponse] = useState<ServerResponse | null>(null);
+  const [rawResponse, setRawResponse] = useState<any | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -33,13 +34,13 @@ const BetaECGUploader: React.FC = () => {
     setLoading(true);
 
     const formData = new FormData();
-    formData.append("name", name);
-    formData.append("age", age);
-    formData.append("gender", gender);
-    formData.append("ecg", ecg);
+    // Endpoint expects: ecgFile, patientAge, gender (MALE/FEMALE)
+    formData.append("patientAge", age);
+    formData.append("gender", gender.toUpperCase());
+    formData.append("ecgFile", ecg);
 
     try {
-      const response = await fetch("http://localhost:5000/api/try-beta-ecg", {
+      const response = await fetch("http://localhost:3000/api/ml/classify-ecg-image", {
         method: "POST",
         body: formData,
       });
@@ -49,11 +50,13 @@ const BetaECGUploader: React.FC = () => {
       const data = await response.json();
       setServerResponse({
         success: data.success,
-        message: data.message || "Analysis complete.",
-        data: data.data,
+        message: data.message || (data.success ? "Analysis complete." : data.error) || "",
+        data: data.data || { features: data?.image_analysis || data?.features },
       });
+      setRawResponse(data);
     } catch (err: any) {
       setServerResponse(null);
+      setRawResponse(null);
       setError(err.message || "Failed to send data. Please try again.");
     } finally {
       setLoading(false);
@@ -131,9 +134,8 @@ const BetaECGUploader: React.FC = () => {
             <option value="" disabled>
               Select gender
             </option>
-            <option value="female">Female</option>
-            <option value="male">Male</option>
-            <option value="other">Other</option>
+            <option value="FEMALE">Female</option>
+            <option value="MALE">Male</option>
           </select>
         </label>
 
@@ -159,7 +161,7 @@ const BetaECGUploader: React.FC = () => {
           </div>
           <input
             type="file"
-            name="ecg"
+            name="ecgFile"
             accept="image/png, image/jpeg"
             required
             onChange={(e) => setECG(e.target.files ? e.target.files[0] : null)}
@@ -210,6 +212,16 @@ const BetaECGUploader: React.FC = () => {
                     </li>
                   ))}
                 </ul>
+              </div>
+            )}
+
+            {/* Full Raw JSON Response */}
+            {rawResponse && (
+              <div className="mt-6 text-left">
+                <h3 className="text-xl font-bold text-pink-400 mb-3">Full Response (JSON)</h3>
+                <pre className="bg-gray-900 text-gray-200 p-4 rounded-lg overflow-auto text-sm max-h-96">
+{JSON.stringify(rawResponse, null, 2)}
+                </pre>
               </div>
             )}
           </div>

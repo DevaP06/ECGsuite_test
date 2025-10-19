@@ -43,6 +43,9 @@ connectDB().catch(console.error);
 
 // Import auth controller functions
 import authRoutes from './src/routes/authRoutes.js';
+import ecgRoutes from './src/routes/ecgRoutes.js';
+import mlRoutes from './src/routes/mlRoutes.js';
+import protect from './src/middleware/auth.middleWare.js';
 
 // Test routes
 app.get('/api', (req, res) => {
@@ -62,6 +65,10 @@ app.get('/api/health', (req, res) => {
 // Authentication routes with /api prefix
 app.use('/api/auth', authRoutes);
 
+// Domain routes
+app.use('/api/ecg', protect, ecgRoutes);
+app.use('/api/ml', mlRoutes);
+
 // Error handling middleware
 app.use((error, req, res, next) => {
   console.error('Unhandled error:', error);
@@ -76,7 +83,16 @@ app.use((req, res) => {
   res.status(404).json({ 
     error: 'Not found',
     path: req.originalUrl,
-    availableRoutes: ['/api', '/api/health', '/api/auth/register', '/api/auth/login', '/api/auth/logout', '/api/auth/google']
+    availableRoutes: [
+      '/api',
+      '/api/health',
+      '/api/auth/register',
+      '/api/auth/login',
+      '/api/auth/logout',
+      '/api/auth/google',
+      '/api/ecg/...',
+      '/api/ml/...'
+    ]
   });
 });
 
