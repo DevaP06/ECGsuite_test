@@ -4,3 +4,4 @@ opencv-python-headless
 scipy
 Flask
 Werkzeug
+gunicorn
