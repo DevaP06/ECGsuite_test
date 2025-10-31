@@ -6,19 +6,12 @@ import werkzeug
 
 app = Flask(__name__)
 
-# Limit uploads to 20MB and use an ephemeral, writable temp dir (Render-friendly)
-app.config['MAX_CONTENT_LENGTH'] = 20 * 1024 * 1024
-UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER', '/tmp/temp_uploads')
+UPLOAD_FOLDER = 'temp_uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 print("🚀 Loading ML models and warming up server...")
 classifier.load_models()
 print("✅ Models loaded successfully.")
-
-
-@app.route('/health', methods=['GET'])
-def health():
-    return jsonify({'success': True, 'status': 'ok'})
 
 
 def _validate_patient_payload(payload: dict):

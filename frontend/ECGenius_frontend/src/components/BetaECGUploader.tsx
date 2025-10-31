@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo } from "react";
+import React, { useState, useRef } from "react";
 
 interface ServerResponse {
   success: boolean;
@@ -10,12 +10,6 @@ interface ServerResponse {
 }
 
 const BetaECGUploader: React.FC = () => {
-  // Prefer env base URL, else localhost in dev, else relative in prod
-  const API_BASE = useMemo(() => {
-    const envBase = (import.meta as any).env?.VITE_API_BASE_URL as string | undefined;
-    if (envBase) return envBase.replace(/\/$/, "");
-    return window.location.hostname === 'localhost' ? 'http://localhost:3000' : '';
-  }, []);
   const [name, setName] = useState("");
   const [age, setAge] = useState("");
   const [gender, setGender] = useState("");
@@ -46,7 +40,7 @@ const BetaECGUploader: React.FC = () => {
     formData.append("ecgFile", ecg);
 
     try {
-      const response = await fetch(`${API_BASE}/api/ml/classify-ecg-image`, {
+      const response = await fetch("http://localhost:3000/api/ml/classify-ecg-image", {
         method: "POST",
         body: formData,
       });

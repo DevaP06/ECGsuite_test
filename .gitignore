@@ -22,6 +22,16 @@ __pycache__/
 *.pyc
 *.pyo
 
+# Python virtual environments
+.venv/
+venv/
+**/.venv/
+**/venv/
+
+# Local temp data
+backend/src/ml-models/temp_uploads/
+**/.ipynb_checkpoints/
+
 # Environment files
 .env
 .env.local
