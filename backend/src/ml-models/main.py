@@ -10,8 +10,14 @@ UPLOAD_FOLDER = 'temp_uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 print("🚀 Loading ML models and warming up server...")
-classifier.load_models()
-print("✅ Models loaded successfully.")
+try:
+    loaded_ok = classifier.load_models()
+    if loaded_ok:
+        print("✅ Models loaded successfully.")
+    else:
+        print("⚠️  Models failed to load; API will still start (will return error on predict).")
+except Exception as e:
+    print(f"❌ Exception while loading models: {e}")
 
 
 def _validate_patient_payload(payload: dict):
@@ -59,6 +65,20 @@ def analyze_ecg_image():
         # Optionally include a ready-to-fill patientData_template
         analysis = processing_results.get('analysis', {})
         features = processing_results.get('features', {})
+        intervals = processing_results.get('intervals_ms', {})
+        calibration = processing_results.get('calibration', {})
+
+        # Debug log for quick verification
+        try:
+            print(
+                f"[DEBUG] /analyze-ecg-image file={filename} "
+                f"HR={analysis.get('heart_rate')} bpm, "
+                f"QRS={intervals.get('qrs')} ms, PR={intervals.get('pr')} ms, QT={intervals.get('qt')} ms, "
+                f"peaks={features.get('num_peaks')}"
+            )
+        except Exception:
+            pass
+        intervals = processing_results.get('intervals_ms', {})
         patient_template = {
             "PatientAge": None,  # fill on client
             "Gender": None,      # fill on client ("MALE"/"FEMALE")
@@ -69,8 +89,19 @@ def analyze_ecg_image():
             "mean_peak_height": float(features.get("mean_peak_height", 0.0)),
         }
 
+        # Back-compat shim for clients expecting camelCase ecg_analysis
+        processing_results["ecg_analysis"] = {
+            "image_interpreted": filename,
+            "heartRate": analysis.get("heart_rate"),
+            "prInterval": intervals.get("pr"),
+            "qrsDuration": intervals.get("qrs"),
+            "qtInterval": intervals.get("qt"),
+        }
+
         # Return augmented response
         processing_results["patientData_template"] = patient_template
+        # Attach calibration info
+        processing_results["calibration"] = calibration
         return jsonify(processing_results)
 
     except Exception as e:
@@ -156,6 +187,9 @@ def classify_ecg_image():
 
         analysis = processing_results.get('analysis', {})
         features = processing_results.get('features', {})
+        intervals = processing_results.get('intervals_ms', {})
+        calibration = processing_results.get('calibration', {})
+        intervals = processing_results.get('intervals_ms', {})
 
         # Build patientData aligned with training schema
         hr = float(analysis.get('heart_rate', 0.0))
@@ -175,6 +209,26 @@ def classify_ecg_image():
             raise Exception(pred.get('error', 'Classification failed'))
 
         preds = pred.get("predictions", {})
+
+        # Debug log for quick verification
+        try:
+            print(
+                f"[DEBUG] /classify-ecg-image file={filename} age={patient_age} gender={gender_norm} "
+                f"HR={analysis.get('heart_rate')} bpm, QRS={intervals.get('qrs')} ms, PR={intervals.get('pr')} ms, QT={intervals.get('qt')} ms, "
+                f"peaks={features.get('num_peaks')}, best_rhythm={preds.get('best_rhythm')}"
+            )
+        except Exception:
+            pass
+
+        # Back-compat shim for clients expecting camelCase ecg_analysis
+        ecg_analysis = {
+            "image_interpreted": filename,
+            "heartRate": analysis.get("heart_rate"),
+            "prInterval": intervals.get("pr"),
+            "qrsDuration": intervals.get("qrs"),
+            "qtInterval": intervals.get("qt"),
+        }
+
         response = {
             "success": True,
             "image_analysis": {
@@ -183,6 +237,9 @@ def classify_ecg_image():
                 "regularity_score": analysis.get("regularity_score", 0.0),
                 "num_beats_detected": analysis.get("num_beats_detected", 0),
             },
+            "intervals_ms": intervals,
+            "ecg_analysis": ecg_analysis,
+            "calibration": calibration,
             "patientData": patient_data,
             "prediction": {
                 "best_rhythm": str(preds.get("best_rhythm", "")),
@@ -197,8 +254,9 @@ def classify_ecg_image():
 
 
     # @app.route('/health') → return jsonify({'success': True, 'status': 'ok'})
-# @app.route('/health') def health():
-#     return jsonify({'success': True, 'status': 'ok'})
+@app.route('/health')
+def health():
+    return jsonify({'success': True, 'status': 'ok'})
 
 if __name__ == '__main__':
     # Dev server for local use. For production, use Gunicorn/Waitress behind a reverse proxy.

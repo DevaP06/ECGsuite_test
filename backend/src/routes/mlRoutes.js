@@ -199,7 +199,42 @@ router.post('/classify-ecg-image', upload.single('ecgFile'), async (req, res) =>
       maxContentLength: Infinity,
     });
 
-    return res.status(response.status).json(response.data);
+      const mlResult = response.data;
+
+    const formattedReport = {
+     success: true,
+     timestamp: new Date().toISOString(),
+
+     patient: {
+      age: patientAge,
+      gender: gender,
+      id: req.body.patientId || null
+     },
+
+     ecg_analysis: {
+      image_interpreted: req.file.originalname,
+      heartRate: mlResult.heartRate || null,
+      prInterval: mlResult.prInterval || null,
+      qrsDuration: mlResult.qrsDuration || null,
+      qtInterval: mlResult.qtInterval || null,
+     },
+
+     diagnosis: {
+      predictedClass: mlResult.prediction || "UNKNOWN",
+      confidence: mlResult.confidence || null,
+      possibleConditions: mlResult.possibleConditions || [],
+     },
+
+     explainability: {
+      heatmapUrl: mlResult.heatmapUrl || null,
+      featuresUsed: mlResult.features || null
+     },
+
+     recommendations: mlResult.recommendations || 
+     "Consult a cardiologist for further evaluation."
+    };
+
+   return res.status(200).json(formattedReport);
   } catch (error) {
     console.error('Error calling Flask /classify-ecg-image:', error.response?.data || error.message);
     return res.status(error.response?.status || 500).json({
