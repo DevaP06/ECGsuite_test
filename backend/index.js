@@ -45,6 +45,7 @@ connectDB().catch(console.error);
 import authRoutes from './src/routes/authRoutes.js';
 import ecgRoutes from './src/routes/ecgRoutes.js';
 import mlRoutes from './src/routes/mlRoutes.js';
+import waitlistRoutes from './src/routes/waitlistRoutes.js';
 import protect from './src/middleware/auth.middleWare.js';
 
 // Test routes
@@ -64,6 +65,9 @@ app.get('/api/health', (req, res) => {
 
 // Authentication routes with /api prefix
 app.use('/api/auth', authRoutes);
+
+// Waitlist routes
+app.use('/api/waitlist', waitlistRoutes);
 
 // Domain routes
 app.use('/api/ecg', protect, ecgRoutes);

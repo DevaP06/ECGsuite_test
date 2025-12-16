@@ -1,9 +1,12 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import heroVideo from '../assets/hero-bg.mp4';
 import { Sparkles, HeartPulse } from 'lucide-react';
+import WaitlistForm from './WaitlistForm';
 
 const Hero = () => {
   const navigate = useNavigate();
+  const [showWaitlist, setShowWaitlist] = useState(false);
 
   return (
     <section
@@ -60,17 +63,12 @@ const Hero = () => {
         {/* Buttons */}
         <div className="flex flex-wrap justify-center gap-6">
           <button
-  onClick={() =>
-    window.open(
-      "https://docs.google.com/forms/d/e/1FAIpQLSeOMz0wsHiCfdJR-Wy4F5pgjWrcBUxx5GrEkOccMyJZBTqWhw/viewform?usp=header",
-      "_blank"
-    )
-  }
-  className="relative overflow-hidden bg-blue-600 group text-white px-8 py-3 rounded-full font-semibold
-  shadow-lg transition-all duration-300 hover:bg-blue-500 hover:scale-105 active:scale-95"
->
-  <span className="relative z-10">Join Waitlist</span>
-</button>
+            onClick={() => setShowWaitlist(true)}
+            className="relative overflow-hidden bg-blue-600 group text-white px-8 py-3 rounded-full font-semibold
+            shadow-lg transition-all duration-300 hover:bg-blue-500 hover:scale-105 active:scale-95"
+          >
+            <span className="relative z-10">Join Waitlist</span>
+          </button>
 
           <button
             onClick={() => navigate('/try-beta')}
@@ -81,6 +79,14 @@ const Hero = () => {
           </button>
         </div>
       </div>
+
+      {/* Waitlist Modal */}
+      {showWaitlist && (
+        <WaitlistForm 
+          onClose={() => setShowWaitlist(false)}
+          onSuccess={() => setShowWaitlist(false)}
+        />
+      )}
     </section>
   );
 };

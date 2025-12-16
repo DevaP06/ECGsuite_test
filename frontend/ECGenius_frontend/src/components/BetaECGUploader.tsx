@@ -267,7 +267,7 @@ const BetaECGUploader: React.FC = () => {
                 {(() => {
                   const bestRaw = (rawResponse.prediction?.best_rhythm ?? rawResponse.diagnosis?.predictedClass?.best_rhythm) as any;
                   const bestKey = cleanLabel(bestRaw);
-                  const bestFull = RHYTHM_LABELS[bestKey] ?? bestKey || "—";
+                  const bestFull = (RHYTHM_LABELS[bestKey] ?? bestKey) || "—";
                   const tops = Object.entries((rawResponse.prediction?.top_rhythms || rawResponse.diagnosis?.predictedClass?.top_rhythms) as Record<string, any>)
                     .map(([k, v]) => ({ k, pct: parsePct(v) }))
                     .sort((a, b) => (b.pct ?? 0) - (a.pct ?? 0));
@@ -375,7 +375,7 @@ const BetaECGUploader: React.FC = () => {
                     {(() => {
                       const bestRaw = (rawResponse.prediction?.best_rhythm ?? rawResponse.diagnosis?.predictedClass?.best_rhythm) as any;
                       const bestKey = cleanLabel(bestRaw);
-                      const bestFull = RHYTHM_LABELS[bestKey] ?? bestKey || "—";
+                      const bestFull = (RHYTHM_LABELS[bestKey] ?? bestKey) || "—";
                       const beatRaw = (rawResponse.prediction?.beat ?? rawResponse.diagnosis?.predictedClass?.beat) as any;
                       const beatKey = cleanLabel(beatRaw) || "—";
                       return (
