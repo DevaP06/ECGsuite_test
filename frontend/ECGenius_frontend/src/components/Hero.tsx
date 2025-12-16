@@ -3,10 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import heroVideo from '../assets/hero-bg.mp4';
 import { Sparkles, HeartPulse } from 'lucide-react';
 import WaitlistForm from './WaitlistForm';
+import Toast from './Toast';
 
 const Hero = () => {
   const navigate = useNavigate();
   const [showWaitlist, setShowWaitlist] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
 
   return (
     <section
@@ -84,7 +86,20 @@ const Hero = () => {
       {showWaitlist && (
         <WaitlistForm 
           onClose={() => setShowWaitlist(false)}
-          onSuccess={() => setShowWaitlist(false)}
+          onSuccess={() => {
+            setShowWaitlist(false);
+            setToast({ message: ' Successfully joined the waitlist!', type: 'success' });
+          }}
+        />
+      )}
+
+      {/* Toast Notification */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          duration={4000}
+          onClose={() => setToast(null)}
         />
       )}
     </section>

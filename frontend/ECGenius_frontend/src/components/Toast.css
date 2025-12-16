@@ -1,0 +1,81 @@
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  min-width: 280px;
+  max-width: 360px;
+
+  background: #121212;
+  color: #eaeaea;
+
+  padding: 14px 16px;
+  border-radius: 10px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+  animation: slideIn 0.35s ease-out;
+
+  font-size: 14px;
+  letter-spacing: 0.2px;
+  z-index: 1000;
+  position: relative;
+}
+
+/* Accent strip */
+.toast::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 4px;
+  height: 100%;
+  border-radius: 10px 0 0 10px;
+}
+
+/* Types */
+.toast-success::before {
+  background: #22c55e;
+}
+
+.toast-error::before {
+  background: #ef4444;
+}
+
+.toast-warning::before {
+  background: #facc15;
+}
+
+.toast-message {
+  flex: 1;
+  margin-right: 12px;
+  margin-left: 4px;
+}
+
+/* Close button */
+.toast-close {
+  background: transparent;
+  border: none;
+  color: #9ca3af;
+  font-size: 16px;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.toast-close:hover {
+  color: #ffffff;
+}
+
+/* Animation */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

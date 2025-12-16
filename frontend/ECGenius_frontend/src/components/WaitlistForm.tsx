@@ -55,15 +55,12 @@ export default function WaitlistForm({ onClose, onSuccess }: WaitlistFormProps) 
       );
 
       if (response.data.success) {
-        setMessage('🎉 Successfully joined the waitlist!');
         setFormData({ name: '', email: '' });
         setWaitlistCount(waitlistCount + 1);
         if (onSuccess) onSuccess();
         
-        // Close modal after 2 seconds
-        setTimeout(() => {
-          if (onClose) onClose();
-        }, 2000);
+        // Close modal immediately
+        if (onClose) onClose();
       }
     } catch (err) {
       const axiosError = err as AxiosError<{ message: string }>;
@@ -121,17 +118,6 @@ export default function WaitlistForm({ onClose, onSuccess }: WaitlistFormProps) 
         {message && (
           <motion.div 
             className="mb-4 p-4 bg-green-900 border border-green-700 text-green-300 rounded"
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            {message}
-          </motion.div>
-        )}
-
-        {error && (
-          <motion.div 
-            className="mb-4 p-4 bg-red-900 border border-red-700 text-red-300 rounded"
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
