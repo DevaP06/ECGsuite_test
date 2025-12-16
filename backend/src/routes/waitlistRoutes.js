@@ -3,7 +3,9 @@ import express from 'express';
 import { 
   addToWaitlist, 
   getWaitlist, 
-  checkWaitlistStatus 
+  checkWaitlistStatus,
+  getUserWaitlistStatus,
+  linkWaitlistToUser
 } from '../controllers/waitlistController.js';
 
 const router = express.Router();
@@ -12,7 +14,11 @@ const router = express.Router();
 router.post('/join', addToWaitlist);
 router.get('/check', checkWaitlistStatus);
 
-// Admin routes (add auth middleware later if needed)
+// Authenticated routes
+router.get('/status/:userId', getUserWaitlistStatus);
+router.post('/link-user', linkWaitlistToUser);
+
+// Admin routes
 router.get('/all', getWaitlist);
 
 export default router;

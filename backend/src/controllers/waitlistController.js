@@ -47,6 +47,80 @@ export const addToWaitlist = async (req, res) => {
   }
 };
 
+// Get user's waitlist status (for logged-in users)
+export const getUserWaitlistStatus = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const waitlistEntry = await Waitlist.findOne({ userId });
+    
+    if (!waitlistEntry) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'User not on waitlist',
+        onWaitlist: false
+      });
+    }
+
+    // Get user's position in waitlist (how many are ahead of them)
+    const position = await Waitlist.countDocuments({
+      createdAt: { $lt: waitlistEntry.createdAt },
+      status: { $ne: 'rejected' }
+    });
+
+    res.status(200).json({ 
+      success: true,
+      onWaitlist: true,
+      data: {
+        name: waitlistEntry.name,
+        email: waitlistEntry.email,
+        status: waitlistEntry.status,
+        position: position + 1, // +1 because counting starts at 0
+        joinedAt: waitlistEntry.joinedAt,
+        invitedAt: waitlistEntry.invitedAt
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching user waitlist status:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error fetching waitlist status' 
+    });
+  }
+};
+
+// Link waitlist entry to user (when user signs up)
+export const linkWaitlistToUser = async (req, res) => {
+  try {
+    const { userId, email } = req.body;
+
+    const waitlistEntry = await Waitlist.findOneAndUpdate(
+      { email: email.toLowerCase() },
+      { userId },
+      { new: true }
+    );
+
+    if (!waitlistEntry) {
+      return res.status(404).json({
+        success: false,
+        message: 'Waitlist entry not found'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Waitlist linked to user account',
+      data: waitlistEntry
+    });
+  } catch (error) {
+    console.error('Error linking waitlist:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error linking waitlist'
+    });
+  }
+};
+
 // Get all waitlist entries (admin)
 export const getWaitlist = async (req, res) => {
   try {

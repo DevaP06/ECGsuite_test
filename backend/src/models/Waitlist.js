@@ -13,6 +13,11 @@ const waitlistSchema = new mongoose.Schema({
     type: String, 
     required: true 
   },
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null
+  },
   status: { 
     type: String, 
     enum: ['pending', 'invited', 'rejected'], 
@@ -22,6 +27,10 @@ const waitlistSchema = new mongoose.Schema({
     type: Date, 
     default: Date.now 
   },
+  invitedAt: {
+    type: Date,
+    default: null
+  }
 }, { timestamps: true });
 
 export default mongoose.model('Waitlist', waitlistSchema);
