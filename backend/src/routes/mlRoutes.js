@@ -84,8 +84,8 @@ import fs from 'fs';
 
 const router = express.Router();
 
-// Store uploads temporarily on disk (cleaned up after each request)
-const upload = multer({ dest: 'uploads/' });
+// Use memory storage instead of disk (for serverless deployment compatibility)
+const upload = multer({ storage: multer.memoryStorage() });
 
 // Base URL for your Flask service
 const PYTHON_API_URL = 'http://127.0.0.1:5001';
