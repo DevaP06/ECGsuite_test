@@ -19,7 +19,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo(() => ({
     session,
-    signin: async (email: string, password: string) => {
+    signin: async (_email: string, _password: string) => {
       // TODO: replace with real API
       const next: Session = { token: "jwt-demo", role: "doctor", doctorId: "doc_1", name: "Dr. Jane Doe" };
       localStorage.setItem("ecg:session", JSON.stringify(next));

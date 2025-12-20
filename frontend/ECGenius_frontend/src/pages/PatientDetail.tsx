@@ -9,7 +9,7 @@ import PatientAppointments from "../components/Patients/PatientAppointments";
 import PatientECGs from "../components/Patients/PatientECGs";
 
 export default function PatientDetail() {
-  const { id } = useParams();
+  const { id: _id } = useParams();
 
   return (
     <DashboardLayout>

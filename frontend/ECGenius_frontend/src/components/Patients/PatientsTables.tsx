@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { fetchPatients, Patient } from "../../features/patient/patientService";
+import { fetchPatients } from "../../features/patient/patientService";
+import type { Patient } from "../../features/patient/patientService";
 
 export default function PatientsTable() {
   const [patients, setPatients] = useState<Patient[]>([]);

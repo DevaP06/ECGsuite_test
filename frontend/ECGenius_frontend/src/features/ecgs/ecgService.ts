@@ -9,5 +9,5 @@ export type ECGRecord = {
 
 export async function getECGsByPatient(patientId: string): Promise<ECGRecord[]> {
   await new Promise((res) => setTimeout(res, 200)); // simulate API delay
-  return mockECGs[patientId] || [];
+  return (mockECGs as Record<string, ECGRecord[]>)[patientId] || [];
 }
