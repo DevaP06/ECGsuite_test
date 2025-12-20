@@ -59,3 +59,6 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.temp
+**/.venv/backend/src/ml-models/.venv/
+
+frontend/node_modules/

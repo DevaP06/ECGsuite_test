@@ -13,7 +13,6 @@
     "@fortawesome/fontawesome-svg-core": "^6.7.2",
     "@fortawesome/free-brands-svg-icons": "^6.7.2",
     "@fortawesome/react-fontawesome": "^0.2.2",
-    "@google-cloud/local-auth": "^3.0.1",
     "@radix-ui/react-navigation-menu": "^1.2.13",
     "@tailwindcss/vite": "^4.1.8",
     "axios": "^1.9.0",
@@ -29,6 +28,7 @@
     "react-icons": "^5.5.0",
     "react-router-dom": "^7.6.1",
     "react-tsparticles": "^2.12.2",
+    "recharts": "^3.3.0",
     "tailwind-merge": "^3.3.0",
     "tailwindcss": "^4.1.8"
   },

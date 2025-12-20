@@ -5,18 +5,18 @@ import Highlights from "../components/Highlights";
 import Footer from "../components/Footer";
 import ECGDiagnoses from "../components/ECGDiagnoses";
 import ECGFeatures from "../components/ECGFeatures";
+import Navbar from "../components/Navbar";
 const HomePage = () => {
   return (
     <div className="min-h-screen bg-black text-white">
       <ScrollTracker />
-
+      <Navbar />
       <Hero />
 
-      
-      <div className="mt-0"> 
+      <div className="mt-0">
         <WhyECGGenius />
       </div>
-      <ECGFeatures></ECGFeatures>
+      <ECGFeatures />
       <ECGDiagnoses />
       <Highlights />
 

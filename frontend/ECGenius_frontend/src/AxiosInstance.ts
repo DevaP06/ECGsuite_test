@@ -20,3 +20,4 @@ const AxiosInstance = axios.create({
 });
 
 export default AxiosInstance;
+// in applications import as api

@@ -3,9 +3,11 @@ import CareersHero from "../components/CareersHero"; // ✅ Make sure path is co
 import WhyWorkWithUs from "../components/WhyWorkWithUs";
 import OpenPositions from "../components/OpenPositions";
 import Footer from "../components/Footer";
+import Navbar from "../components/Navbar";
 const Careers: React.FC = () => {
   return (
     <div className="bg-black min-h-screen">
+      <Navbar />
       <CareersHero />
       <WhyWorkWithUs />
       <OpenPositions />
