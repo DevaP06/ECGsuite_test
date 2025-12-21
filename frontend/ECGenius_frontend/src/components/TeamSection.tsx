@@ -2,43 +2,77 @@ import { motion } from "framer-motion";
 import { Linkedin } from "lucide-react";
 
 const TeamSection = () => {
-  const teamMembers = [
-    {
-      name: "Dhruv Pekhale",
-      role: "Backend & Integration",
-      description:
-        "Manages backend systems, APIs, and ensures smooth communication between ECG devices and the platform. Experienced in system architecture and deployment for reliability.",
-      linkedin: "https://www.linkedin.com/in/dhruv-pekhale-a8061431b?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app", // placeholder
-    },
-    {
-      name: "Karmanya Belsare",
-      role: "AI & Data Processing",
-      description:
-        "Specializes in building robust data pipelines, preprocessing ECG signals, and enhancing AI accuracy. Dedicated to making raw medical data usable for meaningful insights.",
-      linkedin: "https://www.linkedin.com/in/karmanya-belsare-2597a8335/",
-    },
-    {
-      name: "Shekhar Deshmukh",
-      role: "AI Model Development",
-      description:
-        "Focuses on training and fine-tuning deep learning models for accurate ECG analysis. Passionate about leveraging neural networks to detect patterns in biomedical data.",
-      linkedin: "https://www.linkedin.com/in/shekhar-deshmukh-a94a62359?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app",
-    },
-    {
-      name: "Yash Ghule",
-      role: "Research & Development",
-      description:
-        "Explores the fusion of AI with medical insights, drives innovation, and shapes the vision of ECGenius. Works on integrating clinical expertise with cutting-edge technology.",
-      linkedin: "https://www.linkedin.com/in/yash-ghule-324b9922b/",
-    },
-    {
-      name: "Devashish Pundkar",
-      role: "Technical Lead",
-      description:
-        "Oversees the technical direction and ensures seamless collaboration between AI, backend, and frontend teams. Skilled in bridging innovation with practical execution.",
-      linkedin: "https://www.linkedin.com/in/devashish-pundkar-808b29324?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app",
-    },
-  ];
+ const teamMembers = [
+  {
+    name: "Dhruv Pekhale",
+    role: "Backend & Integration",
+    description:
+      "Manages backend systems, APIs, and ensures smooth communication between ECG devices and the platform. Experienced in system architecture and deployment for reliability.",
+    linkedin:
+      "https://www.linkedin.com/in/dhruv-pekhale-a8061431b?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app",
+  },
+  {
+    name: "Karmanya Belsare",
+    role: "AI & Data Processing",
+    description:
+      "Specializes in building robust data pipelines, preprocessing ECG signals, and enhancing AI accuracy. Dedicated to making raw medical data usable for meaningful insights.",
+    linkedin: "https://www.linkedin.com/in/karmanya-belsare-2597a8335/",
+  },
+  {
+    name: "Shekhar Deshmukh",
+    role: "AI Model Development",
+    description:
+      "Focuses on training and fine-tuning deep learning models for accurate ECG analysis. Passionate about leveraging neural networks to detect patterns in biomedical data.",
+    linkedin:
+      "https://www.linkedin.com/in/shekhar-deshmukh-a94a62359?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app",
+  },
+  {
+    name: "Yash Ghule",
+    role: "Research & Development",
+    description:
+      "Explores the fusion of AI with medical insights, drives innovation, and shapes the vision of ECGenius. Works on integrating clinical expertise with cutting-edge technology.",
+    linkedin: "https://www.linkedin.com/in/yash-ghule-324b9922b/",
+  },
+  {
+    name: "Devashish Pundkar",
+    role: "Technical Lead",
+    description:
+      "Oversees the technical direction and ensures seamless collaboration between AI, backend, and frontend teams. Skilled in bridging innovation with practical execution.",
+    linkedin:
+      "https://www.linkedin.com/in/devashish-pundkar-808b29324?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app",
+  },
+
+  // 🔹 Newly Joined Medical Experts
+  {
+    name: "Palak Shah",
+    role: "Medical Expert",
+    description:
+      "Provides clinical insights for ECG interpretation and validation. Ensures that AI outputs align with real-world cardiology practices and patient safety standards.",
+    linkedin: "#",
+  },
+  {
+    name: "Tanvi Lakhmawar",
+    role: "Medical Expert",
+    description:
+      "Contributes medical expertise in cardiac physiology and diagnostics, helping bridge the gap between AI predictions and clinical decision-making.",
+    linkedin: "#",
+  },
+  {
+    name: "Aditi Jain",
+    role: "Medical Expert",
+    description:
+      "Supports model validation from a medical perspective and assists in refining ECG analysis workflows for accuracy and clinical relevance.",
+    linkedin: "#",
+  },
+  {
+    name: "Sanika Motewar",
+    role: "Medical Expert",
+    description:
+      "Works on medical review and interpretation of ECG patterns, ensuring the system adheres to established healthcare standards and practices.",
+    linkedin: "#",
+  },
+];
+
 
   return (
     <section className="relative bg-black text-white py-20 px-4 overflow-hidden">
