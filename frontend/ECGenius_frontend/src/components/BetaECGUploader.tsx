@@ -1,11 +1,16 @@
-import React, { useState, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
+import AxiosInstance from "../AxiosInstance";
 
 interface ServerResponse {
   success: boolean;
   message: string;
   data?: {
-    patient?: { name: string; age: string; gender: string };
-    features?: Record<string, any>;
+    analysisId?: string;
+    fileName?: string;
+    filePath?: string;
+    analysisResult?: Record<string, any>;
+    error?: string;
   };
 }
 
@@ -18,11 +23,28 @@ const BetaECGUploader: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [serverResponse, setServerResponse] = useState<ServerResponse | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(true);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      AxiosInstance.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      setIsAuthenticated(true);
+    } else {
+      setIsAuthenticated(false);
+    }
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    if (!isAuthenticated) {
+      setError('Please sign in before uploading an ECG image.');
+      setServerResponse(null);
+      return;
+    }
 
     if (!name || !age || !gender || !ecg) {
       setError("Please fill all fields and upload an ECG image.");
@@ -33,20 +55,20 @@ const BetaECGUploader: React.FC = () => {
     setLoading(true);
 
     const formData = new FormData();
-    formData.append("name", name);
-    formData.append("age", age);
-    formData.append("gender", gender);
-    formData.append("ecg", ecg);
+    formData.append("patientName", name);
+    formData.append("patientAge", age);
+    formData.append("patientGender", gender);
+    formData.append("notes", "Uploaded from Try Beta page");
+    formData.append("ecgFile", ecg);
 
     try {
-      const response = await fetch("http://localhost:5000/api/try-beta-ecg", {
-        method: "POST",
-        body: formData,
+      const response = await AxiosInstance.post("/api/ecg/upload", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data"
+        }
       });
 
-      if (!response.ok) throw new Error("Server error: " + response.status);
-
-      const data = await response.json();
+      const data = response.data;
       setServerResponse({
         success: data.success,
         message: data.message || "Analysis complete.",
@@ -54,7 +76,12 @@ const BetaECGUploader: React.FC = () => {
       });
     } catch (err: any) {
       setServerResponse(null);
-      setError(err.message || "Failed to send data. Please try again.");
+      setError(
+        err.response?.data?.message ||
+        err.response?.data?.error ||
+        err.message ||
+        "Failed to send data. Please try again."
+      );
     } finally {
       setLoading(false);
     }
@@ -78,6 +105,16 @@ const BetaECGUploader: React.FC = () => {
       <p className="mb-8 text-gray-400 tracking-wide leading-relaxed">
         Enter patient details and upload an ECG image for instant AI-powered analysis.
       </p>
+
+      {!isAuthenticated && (
+        <div className="mb-6 rounded-lg border border-pink-500/40 bg-pink-500/10 p-4 text-sm text-pink-200">
+          <p className="mb-2">You need to sign in before using the beta analyzer.</p>
+          <Link to="/Sign-Up-Page" className="font-semibold text-white underline underline-offset-4">
+            Go to sign in
+          </Link>
+        </div>
+      )}
+
       <form onSubmit={handleSubmit} encType="multipart/form-data" noValidate>
         {/* Patient Name */}
         <label className="block mb-6">
@@ -179,14 +216,14 @@ const BetaECGUploader: React.FC = () => {
         {/* Submit Button */}
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || !isAuthenticated}
           className={`w-full py-4 font-bold rounded-lg
             text-white 
-            ${loading ? "bg-pink-300 cursor-not-allowed" : "bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700"} 
+            ${loading || !isAuthenticated ? "bg-pink-300 cursor-not-allowed" : "bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700"} 
             shadow-lg 
             transition-all duration-300 ease-in-out
             transform 
-            ${loading ? "" : "hover:scale-105 hover:shadow-[0_0_30px_8px_rgba(236,72,153,0.9)] active:scale-95"}
+            ${loading || !isAuthenticated ? "" : "hover:scale-105 hover:shadow-[0_0_30px_8px_rgba(236,72,153,0.9)] active:scale-95"}
           `}
         >
           {loading ? "Analyzing..." : "Analyze ECG"}
@@ -199,11 +236,11 @@ const BetaECGUploader: React.FC = () => {
               {serverResponse.message}
             </p>
             {/* Show features if present */}
-            {serverResponse.data?.features && (
+            {serverResponse.data?.analysisResult && (
               <div className="mt-6 p-4 bg-gray-800 rounded-lg text-left text-gray-300">
-                <h3 className="text-xl font-bold text-pink-400 mb-3">Extracted Features</h3>
+                    <h3 className="text-xl font-bold text-pink-400 mb-3">Analysis Result</h3>
                 <ul className="space-y-2">
-                  {Object.entries(serverResponse.data.features).map(([key, value]) => (
+                      {Object.entries(serverResponse.data.analysisResult).map(([key, value]) => (
                     <li key={key} className="flex justify-between">
                       <span className="font-medium">{key}:</span>
                       <span>{value !== null ? value.toString() : "N/A"}</span>

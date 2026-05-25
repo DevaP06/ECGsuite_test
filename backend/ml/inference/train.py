@@ -7,7 +7,7 @@ import json
 from datetime import datetime
 from ecg_classifier import ECGClassifier
 
-DATA_PATH = "Diagnostics.xlsx"
+DATA_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "../data/Diagnostics.xlsx"))
 
 
 def main():

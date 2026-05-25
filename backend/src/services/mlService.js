@@ -30,7 +30,7 @@ function parsePredictionOutput(stdout) {
   }
 }
 
-export async function predictECG(imagePath) {
+export async function predictECG(imagePath, patientAge = 0, gender = 2) {
   if (!imagePath) {
     throw new Error('Image path is required');
   }
@@ -38,7 +38,7 @@ export async function predictECG(imagePath) {
   const serviceDir = path.dirname(fileURLToPath(import.meta.url));
   const scriptPath = path.resolve(serviceDir, '../../ml/inference/ecg_analyzer.py');
   const resolvedImagePath = path.resolve(imagePath);
-  const command = `python "${scriptPath}" "${resolvedImagePath}"`;
+  const command = `python "${scriptPath}" "${resolvedImagePath}" "${patientAge}" "${gender}"`;
 
   const { stdout } = await execAsync(command);
   return parsePredictionOutput(stdout);

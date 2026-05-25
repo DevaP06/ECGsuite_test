@@ -1,19 +1,31 @@
 import express from 'express';
 import multer from 'multer';
+import fs from 'fs';
+import { promises as fsp } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import ECGAnalysis from '../models/ECGAnalysis.js';
+import { predictECG } from '../services/mlService.js';
+import { sendResponse } from '../utils/responseHandler.js';
 
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+const tempUploadDir = path.resolve(__dirname, '../../temp_uploads/ecg');
+const processedUploadDir = path.resolve(__dirname, '../../uploads/ecg/processed');
+const failedUploadDir = path.resolve(__dirname, '../../uploads/ecg/failed');
+
+fs.mkdirSync(tempUploadDir, { recursive: true });
+fs.mkdirSync(processedUploadDir, { recursive: true });
+fs.mkdirSync(failedUploadDir, { recursive: true });
 
 const router = express.Router();
 
 // Configure multer for ECG file uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, path.join(__dirname, '../uploads/ecg/'));
+    cb(null, tempUploadDir);
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
@@ -41,46 +53,145 @@ const upload = multer({
   }
 });
 
+const mapGenderToNumeric = (gender) => {
+  if (gender === 'male') return 1;
+  if (gender === 'female') return 0;
+  return 2;
+};
+
+const normalizeRhythm = (value) => {
+  const rhythm = String(value || 'normal')
+    .toLowerCase()
+    .replace(/[\[\]'"()]/g, '')
+    .trim();
+
+  if (['normal', 'nsr'].includes(rhythm)) return 'normal';
+  if (['atrial fibrillation', 'afib', 'atrial_fibrillation'].includes(rhythm)) return 'atrial_fibrillation';
+  if (['atrial flutter', 'atrial_flutter'].includes(rhythm)) return 'atrial_flutter';
+  if (['ventricular tachycardia', 'vt', 'ventricular_tachycardia'].includes(rhythm)) return 'ventricular_tachycardia';
+  if (['bradycardia'].includes(rhythm)) return 'bradycardia';
+
+  return 'other';
+};
+
+const toAnalysisResult = (prediction, processingTime) => {
+  const payload = prediction?.prediction || prediction?.predictions || prediction || {};
+  const imageAnalysis = prediction?.image_analysis || {};
+  const topRhythms = payload.top_rhythms || {};
+  const bestRhythm = normalizeRhythm(payload.best_rhythm || payload.rhythm || payload.label);
+  const topRhythmScore = Object.values(topRhythms)?.[0];
+  const parsedConfidence = typeof topRhythmScore === 'string'
+    ? Number.parseFloat(topRhythmScore.replace('%', ''))
+    : Number(topRhythmScore || 0);
+
+  const abnormalities = Array.isArray(payload.abnormalities)
+    ? payload.abnormalities
+    : Array.isArray(payload.abnormality)
+      ? payload.abnormality
+      : [];
+
+  return {
+    rhythm: bestRhythm,
+    heartRate: imageAnalysis.heart_rate ?? payload.heartRate ?? payload.VentricularRate ?? payload.ventricularRate ?? null,
+    qrsDuration: payload.qrsDuration ?? payload.QRSDuration ?? null,
+    qtInterval: payload.qtInterval ?? payload.QTInterval ?? null,
+    abnormalities,
+    confidence: Number.isFinite(parsedConfidence) ? parsedConfidence : (payload.confidence ?? payload.score ?? 0),
+    aiModel: payload.aiModel || 'ecg_genius_v1',
+    modelVersion: payload.modelVersion || 'v1.0.0',
+    processingTime
+  };
+};
+
+const moveFile = async (sourcePath, destinationDir, destinationName) => {
+  await fsp.mkdir(destinationDir, { recursive: true });
+  const destinationPath = path.join(destinationDir, destinationName);
+  await fsp.rename(sourcePath, destinationPath);
+  return destinationPath;
+};
+
 // Upload ECG file
 router.post('/upload', upload.single('ecgFile'), async (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ error: 'No ECG file uploaded' });
+      return sendResponse(res, 400, false, 'No ECG file uploaded');
     }
 
     const { patientName, patientAge, patientGender, notes } = req.body;
-    const userId = req.user.id; // From auth middleware
+    const userId = req.user?._id || req.user?.id;
+    const age = Number(patientAge || 0);
+    const genderValue = mapGenderToNumeric(patientGender);
+    const startedAt = Date.now();
+
+    const prediction = await predictECG(req.file.path, age, genderValue);
+    const processingTime = Date.now() - startedAt;
+    const analysisResult = toAnalysisResult(prediction, processingTime);
+    const finalFilePath = await moveFile(req.file.path, processedUploadDir, req.file.filename);
 
     const ecgAnalysis = new ECGAnalysis({
       userId,
       fileName: req.file.filename,
       originalName: req.file.originalname,
-      filePath: req.file.path,
+      filePath: finalFilePath,
       fileSize: req.file.size,
       patientInfo: {
         name: patientName,
-        age: patientAge,
+        age,
         gender: patientGender
       },
       notes,
-      status: 'uploaded',
-      uploadedAt: new Date()
+      status: 'completed',
+      analysisResult,
+      processedAt: new Date()
     });
 
     await ecgAnalysis.save();
 
-    res.status(201).json({
-      success: true,
-      message: 'ECG file uploaded successfully',
+    return sendResponse(res, 201, true, 'ECG analyzed successfully', {
       analysisId: ecgAnalysis._id,
-      fileName: req.file.filename
+      fileName: req.file.filename,
+      filePath: finalFilePath,
+      analysisResult
     });
 
   } catch (error) {
     console.error('ECG upload error:', error);
-    res.status(500).json({ 
-      error: 'Failed to upload ECG file',
-      message: error.message 
+
+    if (req.file?.path) {
+      try {
+        await moveFile(req.file.path, failedUploadDir, req.file.filename);
+      } catch (moveError) {
+        console.error('Failed to move ECG file to failed folder:', moveError);
+      }
+    }
+
+    const { patientName, patientAge, patientGender, notes } = req.body;
+    const userId = req.user?._id || req.user?.id;
+
+    try {
+      const ecgAnalysis = new ECGAnalysis({
+        userId,
+        fileName: req.file?.filename,
+        originalName: req.file?.originalname,
+        filePath: req.file?.path,
+        fileSize: req.file?.size,
+        patientInfo: {
+          name: patientName,
+          age: Number(patientAge || 0),
+          gender: patientGender
+        },
+        notes,
+        status: 'failed',
+        failureReason: error.message
+      });
+
+      await ecgAnalysis.save();
+    } catch (saveError) {
+      console.error('Failed to save failed ECG analysis:', saveError);
+    }
+
+    return sendResponse(res, 500, false, 'Failed to upload and analyze ECG file', {
+      error: error.message
     });
   }
 });

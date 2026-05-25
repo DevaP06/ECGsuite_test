@@ -8,6 +8,26 @@ declare global {
 }
 
 export const useGoogleAuth = () => {
+  const loadGoogleScript = useCallback((onLoad: () => void) => {
+    if (window.google) {
+      onLoad();
+      return;
+    }
+
+    const existingScript = document.querySelector('script[src="https://accounts.google.com/gsi/client"]');
+    if (existingScript) {
+      existingScript.addEventListener('load', onLoad, { once: true });
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.defer = true;
+    script.onload = onLoad;
+    document.head.appendChild(script);
+  }, []);
+
   const initializeGoogleAuth = useCallback(() => {
     console.log('Google Client ID:', import.meta.env.VITE_GOOGLE_CLIENT_ID);
 
@@ -111,8 +131,8 @@ export const useGoogleAuth = () => {
       }
     };
 
-    checkAndRender();
-  }, [initializeGoogleAuth]);
+    loadGoogleScript(checkAndRender);
+  }, [initializeGoogleAuth, loadGoogleScript]);
 
   return { renderGoogleButton };
 };

@@ -92,6 +92,17 @@ class ECGClassifier:
                 self.beat_pipeline = bundle.get("beat_pipeline")
                 return (self.rhythm_pipeline is not None) and (self.beat_pipeline is not None)
 
+            # Fallback: load legacy individual pipeline pickles if present
+            legacy_dir = os.path.join(self.model_dir, "legacy")
+            rhythm_legacy = os.path.join(legacy_dir, "rhythm_pipeline.pkl")
+            beat_legacy = os.path.join(legacy_dir, "beat_pipeline.pkl")
+            if os.path.exists(rhythm_legacy) and os.path.exists(beat_legacy):
+                with open(rhythm_legacy, "rb") as f:
+                    self.rhythm_pipeline = pickle.load(f)
+                with open(beat_legacy, "rb") as f:
+                    self.beat_pipeline = pickle.load(f)
+                return (self.rhythm_pipeline is not None) and (self.beat_pipeline is not None)
+
             return False
         except Exception as e:
             print(f"Error loading models: {e}")

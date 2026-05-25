@@ -17,12 +17,8 @@ const RegisterPage = () => {
   const { renderGoogleButton } = useGoogleAuth();
 
   useEffect(() => {
-    // Render Google button after component mounts
-    const timer = setTimeout(() => {
-      renderGoogleButton('google-signup-button', 'signup_with');
-    }, 500);
-    
-    return () => clearTimeout(timer);
+    // Render Google button as soon as the component mounts
+    renderGoogleButton('google-signup-button', 'signup_with');
   }, [renderGoogleButton]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
