@@ -1,0 +1,7 @@
+pandas
+scikit-learn==1.6.1
+opencv-python-headless
+scipy
+Flask
+Werkzeug
+numpy<2

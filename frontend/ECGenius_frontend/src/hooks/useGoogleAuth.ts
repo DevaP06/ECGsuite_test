@@ -25,12 +25,23 @@ export const useGoogleAuth = () => {
 
             console.log('Backend response:', result.data);
 
-            // Store user data
-            localStorage.setItem('user', JSON.stringify(result.data.user));
+            // Backend uses a standard envelope: { success, message, data }
+            const resp = result.data;
+            const payload = resp.data || {};
+
+            // Store token and user so frontend can authenticate subsequent requests
+            if (payload.token) {
+              localStorage.setItem('token', payload.token);
+              AxiosInstance.defaults.headers.common['Authorization'] = `Bearer ${payload.token}`;
+            }
+
+            if (payload.user) {
+              localStorage.setItem('user', JSON.stringify(payload.user));
+            }
 
             // Show success message
-            const message = result.data.message;
-            const isNewUser = result.data.isNewUser;
+            const message = resp.message;
+            const isNewUser = payload.isNewUser || false;
 
             // Create and show a temporary success message
             const messageDiv = document.createElement('div');

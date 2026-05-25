@@ -1,69 +1,6 @@
 import mongoose from 'mongoose';
-
-const patientInfoSchema = new mongoose.Schema({
-  name: {
-    type: String,
-    required: true,
-    trim: true
-  },
-  age: {
-    type: Number,
-    required: true,
-    min: 0,
-    max: 150
-  },
-  gender: {
-    type: String,
-    enum: ['male', 'female', 'other', 'prefer-not-to-say'],
-    required: true
-  }
-});
-
-const analysisResultSchema = new mongoose.Schema({
-  rhythm: {
-    type: String,
-    enum: ['normal', 'atrial_fibrillation', 'atrial_flutter', 'ventricular_tachycardia', 'bradycardia', 'other'],
-    default: 'normal'
-  },
-  heartRate: {
-    type: Number,
-    min: 0,
-    max: 300
-  },
-  qrsDuration: {
-    type: Number,
-    min: 0,
-    max: 200
-  },
-  qtInterval: {
-    type: Number,
-    min: 0,
-    max: 600
-  },
-  abnormalities: [{
-    type: String,
-    enum: [
-      'st_elevation', 'st_depression', 't_wave_inversion',
-      'q_wave', 'r_wave_progression', 'left_bundle_branch_block',
-      'right_bundle_branch_block', 'left_ventricular_hypertrophy',
-      'right_ventricular_hypertrophy', 'atrial_enlargement'
-    ]
-  }],
-  confidence: {
-    type: Number,
-    min: 0,
-    max: 100,
-    default: 0
-  },
-  aiModel: {
-    type: String,
-    default: 'ecg_genius_v1'
-  },
-  processingTime: {
-    type: Number, // in milliseconds
-    default: 0
-  }
-});
+import patientInfoSchema from './schema/PatientInfo.js';
+import analysisResultSchema from './schema/AnalysisResult.js';
 
 const ecgAnalysisSchema = new mongoose.Schema({
   userId: {
@@ -73,11 +10,13 @@ const ecgAnalysisSchema = new mongoose.Schema({
   },
   fileName: {
     type: String,
-    required: true
+    required: true,
+    trim: true
   },
   originalName: {
     type: String,
-    required: true
+    required: true,
+    trim: true
   },
   filePath: {
     type: String,
@@ -85,12 +24,13 @@ const ecgAnalysisSchema = new mongoose.Schema({
   },
   fileSize: {
     type: Number,
-    required: true
+    required: true,
+    max: 10 * 1024 * 1024
   },
   fileType: {
     type: String,
     enum: ['image', 'csv', 'json', 'excel'],
-    required: true
+    
   },
   patientInfo: {
     type: patientInfoSchema,
@@ -106,13 +46,19 @@ const ecgAnalysisSchema = new mongoose.Schema({
     enum: ['uploaded', 'processing', 'completed', 'failed', 'archived'],
     default: 'uploaded'
   },
+  failureReason: {
+   type: String,
+   trim: true,
+   validate: {
+      validator: function(v){
+         return this.status === 'failed' || !v;
+      },
+      message: 'Failure reason only allowed when status is failed'
+   }
+  },
   analysisResult: {
     type: analysisResultSchema,
     default: null
-  },
-  uploadedAt: {
-    type: Date,
-    default: Date.now
   },
   processedAt: {
     type: Date,
@@ -134,18 +80,34 @@ const ecgAnalysisSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
   }],
-  metadata: {
-    device: String,
-    samplingRate: Number,
-    leadCount: Number,
-    duration: Number, // in seconds
-    voltageRange: {
-      min: Number,
-      max: Number
-    }
+  metadata:{
+   device:String,
+
+   samplingRate:{
+      type:Number,
+      min:1
+   },
+
+   leadCount:{
+      type:Number,
+      min:1,
+      max:12
+   },
+
+   duration:{
+      type:Number,
+      min:0
+   },
+
+   voltageRange:{
+      min:Number,
+      max:Number
+   }
   }
 }, {
-  timestamps: true
+  timestamps: true,
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true }
 });
 
 // Indexes for better query performance
@@ -156,7 +118,10 @@ ecgAnalysisSchema.index({ tags: 1 });
 
 // Virtual for file size in MB
 ecgAnalysisSchema.virtual('fileSizeMB').get(function() {
-  return (this.fileSize / (1024 * 1024)).toFixed(2);
+  return Number(
+   (this.fileSize/(1024*1024))
+   .toFixed(2)
+  );
 });
 
 // Virtual for age group
@@ -169,18 +134,16 @@ ecgAnalysisSchema.virtual('ageGroup').get(function() {
 
 // Pre-save middleware to set file type
 ecgAnalysisSchema.pre('save', function(next) {
-  if (this.originalName) {
-    const ext = this.originalName.toLowerCase().split('.').pop();
-    if (['jpg', 'jpeg', 'png', 'tiff', 'bmp'].includes(ext)) {
-      this.fileType = 'image';
-    } else if (ext === 'csv') {
-      this.fileType = 'csv';
-    } else if (ext === 'json') {
-      this.fileType = 'json';
-    } else if (['xls', 'xlsx'].includes(ext)) {
-      this.fileType = 'excel';
-    }
+  const ext = this.originalName
+    ?.toLowerCase()
+    ?.split('.')
+    ?.pop();
+
+  if (!ext) {
+    return next();
   }
+
+  this.fileType = this.fileType || null;
   next();
 });
 

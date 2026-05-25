@@ -1,17 +1,13 @@
-import { exec } from 'child_process';
-import path from 'path';
+import asyncHandler from '../middleware/asyncHandler.js';
+import { sendResponse } from '../utils/responseHandler.js';
+import { predictECG } from '../services/mlService.js';
 
-export const diagnoseECG = (req, res) => {
+export const diagnoseECG = asyncHandler(async (req, res) => {
   if (!req.file) {
-    return res.status(400).json({ error: 'No ECG image uploaded' });
+    return sendResponse(res, 400, false, 'No ECG image uploaded');
   }
 
-  const imagePath = path.resolve(req.file.path);
-  exec(`python ./ml-models/ecg_analyzer.py "${imagePath}"`, (error, stdout, stderr) => {
-    if (error) {
-      console.error('Inference error:', stderr);
-      return res.status(500).json({ error: 'Model inference failed' });
-    }
-    res.json({ diagnosis: stdout.trim() });
-  });
-};
+  const result = await predictECG(req.file.path);
+
+  return sendResponse(res, 200, true, 'Diagnosis generated successfully', result);
+});

@@ -25,12 +25,15 @@ app.use(express.json());
 const connectDB = async () => {
   try {
     if (mongoose.connection.readyState === 0) {
-      if (!process.env.MONGO_URI) {
-        console.error('MONGO_URI not found in environment variables');
+      const MONGO_URI = process.env.MONGO_URI;
+      if (!MONGO_URI) {
+        console.log('MONGO_URI not found, running without database');
         return;
       }
-      await mongoose.connect(process.env.MONGO_URI);
-      console.log('MongoDB connected successfully');
+      await mongoose.connect(MONGO_URI);
+      // Log connected host when available
+      const host = mongoose.connection?.host || mongoose.connection?.client?.s?.hosts?.[0] || 'unknown';
+      console.log(`MongoDB connected ✅: ${host}`);
     }
   } catch (error) {
     console.error('MongoDB connection error:', error);
@@ -57,6 +60,11 @@ app.get('/api', (req, res) => {
     hasGoogleClientId: !!process.env.GOOGLE_CLIENT_ID,
     hasMongoUri: !!process.env.MONGO_URI
   });
+});
+
+// Lightweight test endpoint (useful for smoke tests)
+app.get('/api/test', (req, res) => {
+  res.json({ message: 'Backend is working!', timestamp: new Date().toISOString() });
 });
 
 app.get('/api/health', (req, res) => {

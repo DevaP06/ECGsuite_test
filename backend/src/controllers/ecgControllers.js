@@ -1,4 +1,5 @@
 import ECGAnalysis from '../models/ECGAnalysis.js';
+import { sendResponse } from '../utils/responseHandler.js';
 
 // Save ECG analysis record
 export const saveAnalysis = async (req, res) => {
@@ -9,9 +10,9 @@ export const saveAnalysis = async (req, res) => {
     const record = new ECGAnalysis({ user: userId, diagnosis, imagePath, date: new Date() });
     await record.save();
 
-    res.status(201).json({ message: 'Analysis saved', record });
+    return sendResponse(res, 201, true, 'Analysis saved', record);
   } catch (error) {
-    res.status(500).json({ error: 'Could not save analysis' });
+    return sendResponse(res, 500, false, 'Could not save analysis');
   }
 };
 
@@ -20,8 +21,8 @@ export const getUserAnalyses = async (req, res) => {
   try {
     const { userId } = req.user;
     const records = await ECGAnalysis.find({ user: userId }).sort({ date: -1 });
-    res.json(records);
+    return sendResponse(res, 200, true, 'Analyses fetched successfully', records);
   } catch (error) {
-    res.status(500).json({ error: 'Could not fetch analyses' });
+    return sendResponse(res, 500, false, 'Could not fetch analyses');
   }
 };

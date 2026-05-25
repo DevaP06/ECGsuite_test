@@ -1,5 +1,6 @@
 // src/controllers/waitlistController.js
 import Waitlist from '../models/Waitlist.js';
+import { sendResponse } from '../utils/responseHandler.js';
 
 // Add user to waitlist
 export const addToWaitlist = async (req, res) => {
@@ -8,42 +9,26 @@ export const addToWaitlist = async (req, res) => {
 
     // Validate input
     if (!email || !name) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Email and name are required' 
-      });
+      return sendResponse(res, 400, false, 'Email and name are required');
     }
 
     // Check if already on waitlist
     const existingEntry = await Waitlist.findOne({ email });
     if (existingEntry) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'You are already on the waitlist!' 
-      });
+      return sendResponse(res, 400, false, 'You are already on the waitlist!');
     }
 
     // Create new waitlist entry
     const waitlistEntry = new Waitlist({ email, name });
     await waitlistEntry.save();
 
-    res.status(201).json({ 
-      success: true, 
-      message: 'Successfully added to waitlist!',
-      data: waitlistEntry
-    });
+    return sendResponse(res, 201, true, 'Successfully added to waitlist!', waitlistEntry);
   } catch (error) {
     console.error('Waitlist error:', error);
     if (error.code === 11000) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'This email is already on our waitlist!' 
-      });
+      return sendResponse(res, 400, false, 'This email is already on our waitlist!');
     }
-    res.status(500).json({ 
-      success: false, 
-      message: 'Error adding to waitlist' 
-    });
+    return sendResponse(res, 500, false, 'Error adding to waitlist');
   }
 };
 
@@ -55,11 +40,7 @@ export const getUserWaitlistStatus = async (req, res) => {
     const waitlistEntry = await Waitlist.findOne({ userId });
     
     if (!waitlistEntry) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'User not on waitlist',
-        onWaitlist: false
-      });
+      return sendResponse(res, 404, false, 'User not on waitlist', { onWaitlist: false });
     }
 
     // Get user's position in waitlist (how many are ahead of them)
@@ -68,10 +49,9 @@ export const getUserWaitlistStatus = async (req, res) => {
       status: { $ne: 'rejected' }
     });
 
-    res.status(200).json({ 
-      success: true,
+    return sendResponse(res, 200, true, 'Waitlist status fetched successfully', {
       onWaitlist: true,
-      data: {
+      waitlist: {
         name: waitlistEntry.name,
         email: waitlistEntry.email,
         status: waitlistEntry.status,
@@ -82,10 +62,7 @@ export const getUserWaitlistStatus = async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching user waitlist status:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Error fetching waitlist status' 
-    });
+    return sendResponse(res, 500, false, 'Error fetching waitlist status');
   }
 };
 
@@ -101,23 +78,13 @@ export const linkWaitlistToUser = async (req, res) => {
     );
 
     if (!waitlistEntry) {
-      return res.status(404).json({
-        success: false,
-        message: 'Waitlist entry not found'
-      });
+      return sendResponse(res, 404, false, 'Waitlist entry not found');
     }
 
-    res.status(200).json({
-      success: true,
-      message: 'Waitlist linked to user account',
-      data: waitlistEntry
-    });
+    return sendResponse(res, 200, true, 'Waitlist linked to user account', waitlistEntry);
   } catch (error) {
     console.error('Error linking waitlist:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error linking waitlist'
-    });
+    return sendResponse(res, 500, false, 'Error linking waitlist');
   }
 };
 
@@ -125,17 +92,13 @@ export const linkWaitlistToUser = async (req, res) => {
 export const getWaitlist = async (req, res) => {
   try {
     const waitlist = await Waitlist.find().sort({ createdAt: -1 });
-    res.status(200).json({ 
-      success: true, 
+    return sendResponse(res, 200, true, 'Waitlist fetched successfully', {
       count: waitlist.length,
-      data: waitlist 
+      waitlist
     });
   } catch (error) {
     console.error('Error fetching waitlist:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Error fetching waitlist' 
-    });
+    return sendResponse(res, 500, false, 'Error fetching waitlist');
   }
 };
 
@@ -145,23 +108,16 @@ export const checkWaitlistStatus = async (req, res) => {
     const { email } = req.query;
     
     if (!email) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Email is required' 
-      });
+      return sendResponse(res, 400, false, 'Email is required');
     }
 
     const entry = await Waitlist.findOne({ email });
-    res.status(200).json({ 
-      success: true, 
+    return sendResponse(res, 200, true, 'Waitlist status checked successfully', {
       onWaitlist: !!entry,
       status: entry?.status || null
     });
   } catch (error) {
     console.error('Error checking waitlist:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Error checking waitlist status' 
-    });
+    return sendResponse(res, 500, false, 'Error checking waitlist status');
   }
 };
