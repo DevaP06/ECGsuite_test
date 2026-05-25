@@ -62,3 +62,8 @@ Thumbs.db
 **/.venv/backend/src/ml-models/.venv/
 
 frontend/node_modules/
+
+__pycache__/
+*.pyc
+*.tsbuildinfo
+backend/public/temp/
