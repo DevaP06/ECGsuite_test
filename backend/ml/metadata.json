@@ -1,0 +1,317 @@
+[
+ {
+   "Acronym Name": "1AVB",
+   "Full Name": "1 degree atrioventricular block",
+   "Snomed_CT": 270492004
+ },
+ {
+   "Acronym Name": "2AVB",
+   "Full Name": "2 degree atrioventricular block",
+   "Snomed_CT": 195042002
+ },
+ {
+   "Acronym Name": "2AVB1",
+   "Full Name": "2 degree atrioventricular block(Type one)",
+   "Snomed_CT": 54016002
+ },
+ {
+   "Acronym Name": "2AVB2",
+   "Full Name": "2 degree atrioventricular block(Type two)",
+   "Snomed_CT": 28189009
+ },
+ {
+   "Acronym Name": "3AVB",
+   "Full Name": "3 degree atrioventricular block",
+   "Snomed_CT": 27885002
+ },
+ {
+   "Acronym Name": "ABI",
+   "Full Name": "atrial bigeminy",
+   "Snomed_CT": 251173003
+ },
+ {
+   "Acronym Name": "ALS",
+   "Full Name": "Axis left shift",
+   "Snomed_CT": 39732003
+ },
+ {
+   "Acronym Name": "APB",
+   "Full Name": "atrial premature beats",
+   "Snomed_CT": 284470004
+ },
+ {
+   "Acronym Name": "AQW",
+   "Full Name": "abnormal Q wave",
+   "Snomed_CT": 164917005
+ },
+ {
+   "Acronym Name": "ARS",
+   "Full Name": "Axis right shift",
+   "Snomed_CT": 47665007
+ },
+ {
+   "Acronym Name": "AVB",
+   "Full Name": "atrioventricular block",
+   "Snomed_CT": 233917008
+ },
+ {
+   "Acronym Name": "CCR",
+   "Full Name": "countercolockwise rotation",
+   "Snomed_CT": 251199005
+ },
+ {
+   "Acronym Name": "CR",
+   "Full Name": "colockwise rotation",
+   "Snomed_CT": 251198002
+ },
+ {
+   "Acronym Name": "ERV",
+   "Full Name": "Early repolarization of the ventricles",
+   "Snomed_CT": 428417006
+ },
+ {
+   "Acronym Name": "FQRS",
+   "Full Name": "fQRS Wave",
+   "Snomed_CT": 164942001
+ },
+ {
+   "Acronym Name": "IDC",
+   "Full Name": "Interior differences conduction",
+   "Snomed_CT": 698252002
+ },
+ {
+   "Acronym Name": "IVB",
+   "Full Name": "Intraventricular block",
+   "Snomed_CT": 698252002
+ },
+ {
+   "Acronym Name": "JEB",
+   "Full Name": "junctional escape beat",
+   "Snomed_CT": 426995002
+ },
+ {
+   "Acronym Name": "JPT",
+   "Full Name": "junctional premature beat",
+   "Snomed_CT": 251164006
+ },
+ {
+   "Acronym Name": "LBBB",
+   "Full Name": "left bundle branch block",
+   "Snomed_CT": 164909002
+ },
+ {
+   "Acronym Name": "LBBBB",
+   "Full Name": "left back bundle branch block",
+   "Snomed_CT": 164909002
+ },
+ {
+   "Acronym Name": "LFBBB",
+   "Full Name": "left front bundle branch block",
+   "Snomed_CT": 164909002
+ },
+ {
+   "Acronym Name": "LVH",
+   "Full Name": "left ventricle hypertrophy",
+   "Snomed_CT": 164873001
+ },
+ {
+   "Acronym Name": "LVQRSAL",
+   "Full Name": "lower voltage QRS in all lead",
+   "Snomed_CT": 251146004
+ },
+ {
+   "Acronym Name": "LVQRSCL",
+   "Full Name": "lower voltage QRS in chest lead",
+   "Snomed_CT": 251148003
+ },
+ {
+   "Acronym Name": "LVQRSLL",
+   "Full Name": "lower voltage QRS in limb lead",
+   "Snomed_CT": 251147008
+ },
+ {
+   "Acronym Name": "MI",
+   "Full Name": "myocardial infarction",
+   "Snomed_CT": 164865005
+ },
+ {
+   "Acronym Name": "MIBW",
+   "Full Name": "myocardial infraction in back wall",
+   "Snomed_CT": 164865005
+ },
+ {
+   "Acronym Name": "MIFW",
+   "Full Name": "Myocardial infgraction in the front wall",
+   "Snomed_CT": 164865005
+ },
+ {
+   "Acronym Name": "MILW",
+   "Full Name": "Myocardial infraction in the lower wall",
+   "Snomed_CT": 164865005
+ },
+ {
+   "Acronym Name": "MISW",
+   "Full Name": "Myocardial infraction in the side wall",
+   "Snomed_CT": 164865005
+ },
+ {
+   "Acronym Name": "PRIE",
+   "Full Name": "PR interval extension",
+   "Snomed_CT": 164947007
+ },
+ {
+   "Acronym Name": "PWC",
+   "Full Name": "P wave Change",
+   "Snomed_CT": 164912004
+ },
+ {
+   "Acronym Name": "QTIE",
+   "Full Name": "QT interval extension",
+   "Snomed_CT": 111975006
+ },
+ {
+   "Acronym Name": "RAH",
+   "Full Name": "right atrial hypertrophy",
+   "Snomed_CT": 446358003
+ },
+ {
+   "Acronym Name": "RBBB",
+   "Full Name": "right bundle branch block",
+   "Snomed_CT": 59118001
+ },
+ {
+   "Acronym Name": "RVH",
+   "Full Name": "right ventricle hypertrophy",
+   "Snomed_CT": 89792004
+ },
+ {
+   "Acronym Name": "STDD",
+   "Full Name": "ST drop down",
+   "Snomed_CT": 429622005
+ },
+ {
+   "Acronym Name": "STE",
+   "Full Name": "ST extension",
+   "Snomed_CT": 164930006
+ },
+ {
+   "Acronym Name": "STTC",
+   "Full Name": "ST-T Change",
+   "Snomed_CT": 428750005
+ },
+ {
+   "Acronym Name": "STTU",
+   "Full Name": "ST tilt up",
+   "Snomed_CT": 164931005
+ },
+ {
+   "Acronym Name": "TWC",
+   "Full Name": "T wave Change",
+   "Snomed_CT": 164934002
+ },
+ {
+   "Acronym Name": "TWO",
+   "Full Name": "T wave opposite",
+   "Snomed_CT": 59931005
+ },
+ {
+   "Acronym Name": "UW",
+   "Full Name": "U wave",
+   "Snomed_CT": 164937009
+ },
+ {
+   "Acronym Name": "VB",
+   "Full Name": "ventricular bigeminy",
+   "Snomed_CT": 11157007
+ },
+ {
+   "Acronym Name": "VEB",
+   "Full Name": "ventricular escape beat",
+   "Snomed_CT": 75532003
+ },
+ {
+   "Acronym Name": "VFW",
+   "Full Name": "ventricular fusion wave",
+   "Snomed_CT": 13640000
+ },
+ {
+   "Acronym Name": "VPB",
+   "Full Name": "ventricular premature beat",
+   "Snomed_CT": 17338001
+ },
+ {
+   "Acronym Name": "VPE",
+   "Full Name": "ventricular preexcitation",
+   "Snomed_CT": 195060002
+ },
+ {
+   "Acronym Name": "VET",
+   "Full Name": "ventricular escape trigeminy",
+   "Snomed_CT": 251180001
+ },
+ {
+   "Acronym Name": "WAVN",
+   "Full Name": "Wandering in the atrioventricalualr node",
+   "Snomed_CT": 195101003
+ },
+ {
+   "Acronym Name": "WPW",
+   "Full Name": "WPW",
+   "Snomed_CT": 74390002
+ },
+ {
+   "Acronym Name": "SB",
+   "Full Name": "Sinus Bradycardia",
+   "Snomed_CT": 426177001
+ },
+ {
+   "Acronym Name": "SR",
+   "Full Name": "Sinus Rhythm",
+   "Snomed_CT": 426783006
+ },
+ {
+   "Acronym Name": "AFIB",
+   "Full Name": "Atrial Fibrillation",
+   "Snomed_CT": 164889003
+ },
+ {
+   "Acronym Name": "ST",
+   "Full Name": "Sinus Tachycardia",
+   "Snomed_CT": 427084000
+ },
+ {
+   "Acronym Name": "AF",
+   "Full Name": "Atrial Flutter",
+   "Snomed_CT": 164890007
+ },
+ {
+   "Acronym Name": "SA",
+   "Full Name": "Sinus Irregularity",
+   "Snomed_CT": 427393009
+ },
+ {
+   "Acronym Name": "SVT",
+   "Full Name": "Supraventricular Tachycardia",
+   "Snomed_CT": 426761007
+ },
+ {
+   "Acronym Name": "AT",
+   "Full Name": "Atrial Tachycardia",
+   "Snomed_CT": 713422000
+ },
+ {
+   "Acronym Name": "AVNRT",
+   "Full Name": "Atrioventricular  Node Reentrant Tachycardia",
+   "Snomed_CT": 233896004
+ },
+ {
+   "Acronym Name": "AVRT",
+   "Full Name": "Atrioventricular Reentrant Tachycardia",
+   "Snomed_CT": 233897008
+ },
+ {
+   "Acronym Name": "SAAWR",
+   "Full Name": "Sinus Atrium to Atrial Wandering Rhythm",
+   "Snomed_CT": 195101003
+ }
+]

@@ -823,6 +823,31 @@ class LightECGNetInference:
             fixed_threshold=self.fixed_threshold,
         )
         return result["predicted_labels"], result["pred_probs"]
+    
+
+    def predict_signal_array(self, signal):
+        """
+            signal: numpy array (12,5000)
+
+            Returns:
+                dict {class_name: probability}
+        """
+
+        probs = predict_signal(
+            signal,
+            self.models,
+            self.device,
+            n_tta=self.n_tta,
+            use_amp=(self.device.type == "cuda"),
+            amp_dtype=self.amp_dtype,
+        )
+
+        return dict(
+            zip(
+                self.classes,
+                probs.tolist()
+            )
+        )
 
     def predict_proba(self, mat_path):
         """
