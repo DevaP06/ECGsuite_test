@@ -12,8 +12,6 @@ build/
 *.joblib
 
 # Large data files
-*.csv
-*.json
 !vercel.json
 *.xlsx
 
