@@ -22,6 +22,11 @@ import PatientDetail from './pages/PatientDetail';
 import ECGDetail from './pages/ECGDetails';
 import ECGUpload from './pages/ECGUpload';
 import DiagnosisDetail from './pages/DiagnosisDetail';
+
+import { AuthProvider } from './features/auth/useAuth';
+import AuthGuard from './components/common/AuthGuard';
+import { Toaster } from 'react-hot-toast';
+
 const router = createBrowserRouter(
   createRoutesFromElements(
     <Route path="/" element={<MainLayout />}>
@@ -35,13 +40,16 @@ const router = createBrowserRouter(
         <Route path="try-beta" element={<TryBetaPage />} />
         <Route path= "Sign-Up-Page" element = {<SignUpPage />} />
         <Route path="careers" element={<Careers />} />
-        <Route path="dashboard" element={<Dashboard />} />
-        <Route path="patients" element={<Patients />} />
-        <Route path="patients/:id" element={<PatientDetail />} />
-        <Route path="patients/:id/ecg/:ecgId" element={<ECGDetail />} />
-        <Route path="ecgupload" element={<ECGUpload />} />
-        <Route path="diagnosisdetail/:id/ecg/:ecgId" element={<DiagnosisDetail />} />
-        <Route path="diagnosisdetail" element={<DiagnosisDetail />} />
+        
+        {/* Protected Routes */}
+        <Route path="dashboard" element={<AuthGuard><Dashboard /></AuthGuard>} />
+        <Route path="patients" element={<AuthGuard><Patients /></AuthGuard>} />
+        <Route path="patients/:id" element={<AuthGuard><PatientDetail /></AuthGuard>} />
+        <Route path="patients/:id/ecg/:ecgId" element={<AuthGuard><ECGDetail /></AuthGuard>} />
+        <Route path="ecgupload" element={<AuthGuard><ECGUpload /></AuthGuard>} />
+        <Route path="diagnosisdetail/:id/ecg/:ecgId" element={<AuthGuard><DiagnosisDetail /></AuthGuard>} />
+        <Route path="diagnosisdetail/:id" element={<AuthGuard><DiagnosisDetail /></AuthGuard>} />
+        <Route path="diagnosisdetail" element={<AuthGuard><DiagnosisDetail /></AuthGuard>} />
 
     </Route>
   )
@@ -50,9 +58,13 @@ const router = createBrowserRouter(
 const App = () => {
   return (
     <div className="min-h-screen">
-      <RouterProvider router={router} />
+      <AuthProvider>
+        <Toaster position="top-right" />
+        <RouterProvider router={router} />
+      </AuthProvider>
     </div>
   );
 };
 
 export default App;
+

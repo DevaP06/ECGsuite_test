@@ -1,9 +1,13 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 import DashboardLayout from "../components/layout/DashboardLayout";
+import { ecgService } from "../services/ecgService";
+import UploadProgress from "../components/ecg/UploadProgress";
 
 export default function ECGUpload() {
+  const navigate = useNavigate();
   const [form, setForm] = useState({
-    patientId: "",
     name: "",
     age: "",
     gender: "",
@@ -11,6 +15,8 @@ export default function ECGUpload() {
   });
 
   const [file, setFile] = useState<File | null>(null);
+  const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle');
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -18,66 +24,133 @@ export default function ECGUpload() {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      setFile(e.target.files[0]);
+      const selectedFile = e.target.files[0];
+      const allowedExtensions = ['.png', '.jpg', '.jpeg', '.mat'];
+      const fileExtension = selectedFile.name.substring(selectedFile.name.lastIndexOf('.')).toLowerCase();
+
+      if (!allowedExtensions.includes(fileExtension)) {
+        toast.error("Unsupported file type! Only .png, .jpg, .jpeg, and .mat files are supported.");
+        e.target.value = "";
+        setFile(null);
+        return;
+      }
+
+      setFile(selectedFile);
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Submitting ECG:", form, file);
-    alert("ECG uploaded (mock)!");
+
+    // Validation
+    if (!form.name.trim()) {
+      toast.error("Patient name is required.");
+      return;
+    }
+    if (!form.age) {
+      toast.error("Patient age is required.");
+      return;
+    }
+    if (Number(form.age) <= 0 || Number(form.age) > 120) {
+      toast.error("Please enter a valid age between 1 and 120.");
+      return;
+    }
+    if (!form.gender) {
+      toast.error("Patient gender is required.");
+      return;
+    }
+    if (!file) {
+      toast.error("Please select an ECG file to upload.");
+      return;
+    }
+
+    setUploadStatus('uploading');
+    setUploadProgress(0);
+
+    const formData = new FormData();
+    formData.append("ecgFile", file);
+    formData.append("patientName", form.name.trim());
+    formData.append("patientAge", form.age);
+    formData.append("patientGender", form.gender.toLowerCase());
+    if (form.notes.trim()) {
+      formData.append("notes", form.notes.trim());
+    }
+
+    try {
+      const result = await ecgService.uploadECG(formData, (progressEvent) => {
+        if (progressEvent.total) {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          setUploadProgress(Math.min(percentCompleted, 99));
+        }
+      });
+
+      if (result.success && result.analysisId) {
+        setUploadProgress(100);
+        setUploadStatus('success');
+        toast.success("ECG uploaded and analyzed successfully!");
+        
+        setTimeout(() => {
+          navigate(`/diagnosisdetail/${result.analysisId}`);
+        }, 1000);
+      } else {
+        throw new Error("Invalid response from server.");
+      }
+    } catch (err: unknown) {
+      setUploadStatus('error');
+      const error = err as { response?: { data?: { message?: string; error?: string } }; message?: string };
+      const errMsg = error.response?.data?.message || error.response?.data?.error || error.message || "Failed to upload and analyze ECG.";
+      toast.error(errMsg);
+    }
   };
+
+  const isUploading = uploadStatus === 'uploading';
 
   return (
     <DashboardLayout>
       <div className="max-w-2xl mx-auto bg-white shadow rounded-lg p-6">
-        <h2 className="text-2xl font-bold mb-6">Upload ECG</h2>
+        <h2 className="text-2xl font-bold mb-6 text-slate-800">Upload ECG for AI Diagnosis</h2>
+        
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Patient Details */}
-          <div>
-            <label className="block text-sm font-medium mb-1">Patient ID</label>
-            <input
-              type="text"
-              name="patientId"
-              value={form.patientId}
-              onChange={handleChange}
-              className="w-full border px-3 py-2 rounded"
-              placeholder="Enter patient ID"
-            />
-          </div>
-
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium mb-1">Name</label>
+              <label className="block text-sm font-semibold text-slate-700 mb-1">Patient Name *</label>
               <input
                 type="text"
                 name="name"
                 value={form.name}
                 onChange={handleChange}
-                className="w-full border px-3 py-2 rounded"
-                placeholder="Patient name"
+                disabled={isUploading}
+                required
+                className="w-full border border-slate-300 px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                placeholder="Patient full name"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Age</label>
+              <label className="block text-sm font-semibold text-slate-700 mb-1">Age *</label>
               <input
                 type="number"
                 name="age"
+                min="1"
+                max="120"
                 value={form.age}
                 onChange={handleChange}
-                className="w-full border px-3 py-2 rounded"
-                placeholder="Age"
+                disabled={isUploading}
+                required
+                className="w-full border border-slate-300 px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                placeholder="Patient age"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Gender</label>
+            <label className="block text-sm font-semibold text-slate-700 mb-1">Gender *</label>
             <select
               name="gender"
               value={form.gender}
               onChange={handleChange}
-              className="w-full border px-3 py-2 rounded"
+              disabled={isUploading}
+              required
+              className="w-full border border-slate-300 px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
             >
               <option value="">Select gender</option>
               <option value="Male">Male</option>
@@ -87,40 +160,46 @@ export default function ECGUpload() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Clinical Notes</label>
+            <label className="block text-sm font-semibold text-slate-700 mb-1">Clinical Notes</label>
             <textarea
               name="notes"
               value={form.notes}
               onChange={handleChange}
-              className="w-full border px-3 py-2 rounded"
+              disabled={isUploading}
+              className="w-full border border-slate-300 px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
               rows={3}
-              placeholder="Any relevant notes (e.g. chest pain, post-surgery)"
+              placeholder="E.g. chest pain, hypertension, previous infarct"
             />
           </div>
 
-          {/* ECG Upload */}
           <div>
-            <label className="block text-sm font-medium mb-1">Upload ECG File</label>
+            <label className="block text-sm font-semibold text-slate-700 mb-1">Upload ECG File *</label>
             <input
               type="file"
-              accept=".csv,.pdf,.png,.jpg"
+              accept=".png,.jpg,.jpeg,.mat"
               onChange={handleFileChange}
-              className="w-full"
+              disabled={isUploading}
+              required
+              className="w-full border border-slate-300 px-3 py-2 rounded file:mr-4 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
             />
-            {file && (
-              <p className="text-sm text-gray-500 mt-1">
-                Selected file: <span className="font-medium">{file.name}</span>
-              </p>
-            )}
+            <p className="text-xs text-slate-400 mt-1">
+              Supported formats: .png, .jpg, .jpeg, .mat (Max size: 20MB)
+            </p>
           </div>
 
-          {/* Submit */}
-          <div className="pt-4">
+          <UploadProgress progress={uploadProgress} status={uploadStatus} />
+
+          <div className="pt-2">
             <button
               type="submit"
-              className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
+              disabled={isUploading}
+              className={`w-full text-white py-2.5 rounded font-semibold transition shadow ${
+                isUploading 
+                  ? "bg-blue-400 cursor-not-allowed" 
+                  : "bg-blue-600 hover:bg-blue-700 active:scale-98"
+              }`}
             >
-              Upload ECG
+              {isUploading ? "Uploading & Analyzing..." : "Upload & Analyze ECG"}
             </button>
           </div>
         </form>

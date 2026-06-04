@@ -48,22 +48,31 @@ const RegisterPage = () => {
       });
       
       // Redirect to login page after successful registration
-      navigate("/login");
-    } catch (err: any) {
+      navigate("/Sign-Up-Page");
+    } catch (err: unknown) {
       console.error('Registration error:', err);
       
+      const error = err as {
+        response?: {
+          data?: string | { message?: string; error?: string };
+        };
+        message?: string;
+      };
+
       // Better error message handling
       let errorMessage = "Registration failed";
-      if (err.response?.data) {
-        if (typeof err.response.data === 'string') {
-          errorMessage = err.response.data;
-        } else if (err.response.data.error) {
-          errorMessage = err.response.data.error;
-        } else if (err.response.data.message) {
-          errorMessage = err.response.data.message;
+      if (error.response?.data) {
+        if (typeof error.response.data === 'string') {
+          errorMessage = error.response.data;
+        } else if (typeof error.response.data === 'object' && error.response.data !== null) {
+          if (error.response.data.error) {
+            errorMessage = error.response.data.error;
+          } else if (error.response.data.message) {
+            errorMessage = error.response.data.message;
+          }
         }
-      } else if (err.message) {
-        errorMessage = err.message;
+      } else if (error.message) {
+        errorMessage = error.message;
       }
       
       setError(errorMessage);
@@ -86,7 +95,7 @@ const RegisterPage = () => {
           )}
 
           {/* Google Sign Up */}
-          <div id="google-signup-button" className="mb-4 flex justify-center"></div>
+          <div id="google-signup-button" className="mb-4 w-full flex justify-center min-h-[44px]"></div>
 
           {/* Divider */}
           <div className="flex items-center my-6">
@@ -165,7 +174,7 @@ const RegisterPage = () => {
           {/* Login */}
           <p className="mt-4 text-center text-sm text-gray-400">
             Already have an account?{" "}
-            <Link to="/login" className="text-blue-400 hover:underline">
+            <Link to="/Sign-Up-Page" className="text-blue-400 hover:underline">
               Sign in
             </Link>
           </p>

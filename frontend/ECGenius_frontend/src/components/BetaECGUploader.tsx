@@ -1,6 +1,7 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import AxiosInstance from "../AxiosInstance";
+import { useAuth } from "../features/auth/useAuth";
 
 interface ServerResponse {
   success: boolean;
@@ -9,7 +10,7 @@ interface ServerResponse {
     analysisId?: string;
     fileName?: string;
     filePath?: string;
-    analysisResult?: Record<string, any>;
+    analysisResult?: Record<string, unknown>;
     error?: string;
   };
 }
@@ -23,19 +24,12 @@ const BetaECGUploader: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [serverResponse, setServerResponse] = useState<ServerResponse | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(true);
+  
+  const { session } = useAuth();
+  const isAuthenticated = !!session;
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      AxiosInstance.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      setIsAuthenticated(true);
-    } else {
-      setIsAuthenticated(false);
-    }
-  }, []);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -74,12 +68,21 @@ const BetaECGUploader: React.FC = () => {
         message: data.message || "Analysis complete.",
         data: data.data,
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       setServerResponse(null);
+      const errorVal = err as {
+        response?: {
+          data?: {
+            message?: string;
+            error?: string;
+          };
+        };
+        message?: string;
+      };
       setError(
-        err.response?.data?.message ||
-        err.response?.data?.error ||
-        err.message ||
+        errorVal.response?.data?.message ||
+        errorVal.response?.data?.error ||
+        errorVal.message ||
         "Failed to send data. Please try again."
       );
     } finally {
@@ -243,7 +246,7 @@ const BetaECGUploader: React.FC = () => {
                       {Object.entries(serverResponse.data.analysisResult).map(([key, value]) => (
                     <li key={key} className="flex justify-between">
                       <span className="font-medium">{key}:</span>
-                      <span>{value !== null ? value.toString() : "N/A"}</span>
+                      <span>{value !== null && value !== undefined ? String(value) : "N/A"}</span>
                     </li>
                   ))}
                 </ul>
