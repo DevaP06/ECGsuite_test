@@ -1,25 +1,42 @@
+import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+import { Info } from 'lucide-react';
 
-const explainData = [
-  { lead: "Lead I", importance: 0.7 },
-  { lead: "Lead II", importance: 0.9 },
-  { lead: "V1", importance: 0.5 },
-  { lead: "V2", importance: 0.6 },
-  { lead: "V3", importance: 0.8 },
-];
+interface ExplainabilityChartProps {
+  leadImportance?: Record<string, number>;
+}
 
-export default function ExplainabilityChart() {
+export const ExplainabilityChart: React.FC<ExplainabilityChartProps> = ({ leadImportance }) => {
+  const chartData = leadImportance && Object.keys(leadImportance).length > 0
+    ? Object.entries(leadImportance).map(([lead, importance]) => ({
+        lead: lead.startsWith('Lead') ? lead : `Lead ${lead}`,
+        importance,
+      }))
+    : [];
+
+  const hasData = chartData.length > 0;
+
   return (
     <div className="bg-white shadow rounded-lg p-6">
-      <h3 className="text-lg font-semibold mb-4">Explainability Insights</h3>
-      <ResponsiveContainer width="100%" height={250}>
-        <BarChart data={explainData}>
-          <XAxis dataKey="lead" />
-          <YAxis domain={[0, 1]} />
-          <Tooltip />
-          <Bar dataKey="importance" fill="#3b82f6" />
-        </BarChart>
-      </ResponsiveContainer>
+      <h3 className="text-lg font-bold text-slate-800 mb-4">Explainability Insights (AI Attention Leads)</h3>
+      
+      {!hasData ? (
+        <div className="flex flex-col items-center justify-center py-10 px-4 bg-slate-50 border border-slate-200 border-dashed rounded-lg text-slate-500">
+          <Info className="w-8 h-8 mb-2 text-slate-400" />
+          <p className="text-sm text-center">Explainability data not available.</p>
+        </div>
+      ) : (
+        <ResponsiveContainer width="100%" height={250}>
+          <BarChart data={chartData}>
+            <XAxis dataKey="lead" />
+            <YAxis domain={[0, 1]} />
+            <Tooltip formatter={(value: unknown) => [`${(Number(value) * 100).toFixed(0)}%`, "AI Weight"]} />
+            <Bar dataKey="importance" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      )}
     </div>
   );
-}
+};
+
+export default ExplainabilityChart;

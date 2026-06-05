@@ -1,10 +1,20 @@
 import { useState } from "react";
 import { Bell, Search, Moon, Sun } from "lucide-react";
+import { useAuth } from "../../features/auth/useAuth";
+import { useNavigate } from "react-router-dom";
 
 export default function TopBar() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
+  const { signout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    signout();
+    navigate("/Sign-Up-Page");
+  };
+
 
   return (
     <header className="flex justify-between items-center bg-white shadow px-6 py-3 sticky top-0 z-20">
@@ -67,7 +77,7 @@ export default function TopBar() {
             <div className="absolute right-0 mt-2 w-40 bg-white shadow-lg rounded-md text-sm">
               <a href="/profile" className="block px-4 py-2 hover:bg-gray-100">Profile</a>
               <a href="/settings" className="block px-4 py-2 hover:bg-gray-100">Settings</a>
-              <button className="block w-full text-left px-4 py-2 hover:bg-gray-100">Logout</button>
+              <button onClick={handleLogout} className="block w-full text-left px-4 py-2 hover:bg-gray-100">Logout</button>
             </div>
           )}
         </div>

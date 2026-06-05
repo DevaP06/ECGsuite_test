@@ -3,6 +3,7 @@ import AxiosInstance from '../AxiosInstance';
 
 declare global {
   interface Window {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     google: any;
   }
 }
@@ -34,7 +35,7 @@ export const useGoogleAuth = () => {
     if (window.google) {
       window.google.accounts.id.initialize({
         client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
-        callback: async (response: any) => {
+        callback: async (response: { credential: string }) => {
           try {
             console.log('Google response received:', response);
 
@@ -50,13 +51,15 @@ export const useGoogleAuth = () => {
             const payload = resp.data || {};
 
             // Store token and user so frontend can authenticate subsequent requests
-            if (payload.token) {
+            if (payload.token && payload.user) {
+              const sessionData = {
+                token: payload.token,
+                user: payload.user
+              };
+              localStorage.setItem('ecg:session', JSON.stringify(sessionData));
               localStorage.setItem('token', payload.token);
-              AxiosInstance.defaults.headers.common['Authorization'] = `Bearer ${payload.token}`;
-            }
-
-            if (payload.user) {
               localStorage.setItem('user', JSON.stringify(payload.user));
+              AxiosInstance.defaults.headers.common['Authorization'] = `Bearer ${payload.token}`;
             }
 
             // Show success message
@@ -76,7 +79,16 @@ export const useGoogleAuth = () => {
               window.location.href = '/';
             }, 3000);
 
-          } catch (error: any) {
+          } catch (err: unknown) {
+            const error = err as {
+              response?: {
+                data?: {
+                  error?: string;
+                  message?: string;
+                };
+              };
+              message?: string;
+            };
             console.error('Google authentication failed:', error);
 
             // Show error message
@@ -108,19 +120,48 @@ export const useGoogleAuth = () => {
 
   const renderGoogleButton = useCallback((elementId: string, buttonText: 'signin_with' | 'signup_with' = 'signin_with') => {
     const checkAndRender = () => {
-      if (window.google && document.getElementById(elementId)) {
+      const container = document.getElementById(elementId);
+      if (window.google && container) {
         try {
           initializeGoogleAuth();
-          window.google.accounts.id.renderButton(
-            document.getElementById(elementId),
-            {
-              theme: 'filled_blue',
-              size: 'large',
-              width: '100%',
-              text: buttonText,
-              shape: 'rectangular'
-            }
-          );
+
+          const render = () => {
+            if (!container) return;
+            container.innerHTML = '';
+            const containerWidth = container.clientWidth || 382;
+            // Google caps width between 200px and 400px
+            const targetWidth = Math.min(Math.max(containerWidth, 200), 400);
+
+            window.google.accounts.id.renderButton(
+              container,
+              {
+                theme: 'outline',
+                size: 'large',
+                width: targetWidth.toString(),
+                text: buttonText,
+                shape: 'rectangular',
+                logo_alignment: 'left'
+              }
+            );
+          };
+
+          render();
+
+          // Responsive resize handler
+          let timeoutId: NodeJS.Timeout;
+          const handleResize = () => {
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => {
+              const currentElement = document.getElementById(elementId);
+              if (currentElement) {
+                render();
+              } else {
+                window.removeEventListener('resize', handleResize);
+              }
+            }, 150);
+          };
+
+          window.addEventListener('resize', handleResize);
           console.log('Google button rendered successfully');
         } catch (error) {
           console.error('Error rendering Google button:', error);

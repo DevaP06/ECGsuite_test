@@ -1,9 +1,8 @@
-
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import signupImage from "../assets/signuppage.png";
-import AxiosInstance from "../AxiosInstance";
 import { useGoogleAuth } from "../hooks/useGoogleAuth";
+import { useAuth } from "../features/auth/useAuth";
 
 const LoginPage = () => {
   const [formData, setFormData] = useState({
@@ -14,6 +13,7 @@ const LoginPage = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { renderGoogleButton } = useGoogleAuth();
+  const { signin } = useAuth();
 
   useEffect(() => {
     renderGoogleButton('google-signin-button', 'signin_with');
@@ -32,31 +32,28 @@ const LoginPage = () => {
     setError("");
 
     try {
-      const response = await AxiosInstance.post("/auth/login", formData);
-      const payload = response.data?.data || {};
-
-      if (payload.token) {
-        localStorage.setItem('token', payload.token);
-        AxiosInstance.defaults.headers.common['Authorization'] = `Bearer ${payload.token}`;
-      }
-
-      if (payload.user) {
-        localStorage.setItem('user', JSON.stringify(payload.user));
-      }
-
+      await signin(formData.emailOrUsername, formData.password);
       navigate("/dashboard");
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const error = err as {
+        response?: {
+          data?: string | { message?: string; error?: string };
+        };
+        message?: string;
+      };
       let errorMessage = "Login failed";
-      if (err.response?.data) {
-        if (typeof err.response.data === 'string') {
-          errorMessage = err.response.data;
-        } else if (err.response.data.message) {
-          errorMessage = err.response.data.message;
-        } else if (err.response.data.error) {
-          errorMessage = err.response.data.error;
+      if (error.response?.data) {
+        if (typeof error.response.data === 'string') {
+          errorMessage = error.response.data;
+        } else if (typeof error.response.data === 'object' && error.response.data !== null) {
+          if (error.response.data.message) {
+            errorMessage = error.response.data.message;
+          } else if (error.response.data.error) {
+            errorMessage = error.response.data.error;
+          }
         }
-      } else if (err.message) {
-        errorMessage = err.message;
+      } else if (error.message) {
+        errorMessage = error.message;
       }
 
       setError(errorMessage);
@@ -64,6 +61,7 @@ const LoginPage = () => {
       setLoading(false);
     }
   };
+
 
   return (
     <div className="flex h-screen bg-black text-white">
@@ -77,7 +75,7 @@ const LoginPage = () => {
             </div>
           )}
 
-          <div id="google-signin-button" className="mb-4 flex justify-center"></div>
+          <div id="google-signin-button" className="mb-4 w-full flex justify-center min-h-[44px]"></div>
 
           <div className="flex items-center my-6">
             <div className="flex-grow border-t border-gray-700"></div>
