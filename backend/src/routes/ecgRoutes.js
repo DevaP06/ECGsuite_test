@@ -7,6 +7,7 @@ import { fileURLToPath } from 'url';
 import ECGAnalysis from '../models/ECGAnalysis.js';
 import { predictECG } from '../services/mlService.js';
 import { sendResponse } from '../utils/responseHandler.js';
+import { logAction } from '../services/auditService.js';
 
 
 const __filename = fileURLToPath(import.meta.url);
@@ -166,6 +167,7 @@ router.post('/upload', upload.single('ecgFile'), async (req, res) => {
     });
 
     await ecgAnalysis.save();
+    logAction({ req, userId, entityType: 'ECG_ANALYSIS', entityId: ecgAnalysis._id, action: 'UPLOAD', newValue: { fileName: ecgAnalysis.fileName, status: ecgAnalysis.status } });
 
     if (mlUnavailable) {
       return sendResponse(res, 202, true, 'ECG uploaded — analysis pending (ML service unavailable)', {
@@ -280,10 +282,12 @@ router.delete('/analysis/:id', async (req, res) => {
     const userId = req.user.id;
 
     const analysis = await ECGAnalysis.findOneAndDelete({ _id: id, userId });
-    
+
     if (!analysis) {
       return res.status(404).json({ error: 'ECG analysis not found' });
     }
+
+    logAction({ req, userId, entityType: 'ECG_ANALYSIS', entityId: analysis._id, action: 'DELETE', oldValue: { fileName: analysis.fileName, status: analysis.status } });
 
     res.json({
       success: true,

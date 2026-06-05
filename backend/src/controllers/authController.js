@@ -6,6 +6,7 @@ import {
   logoutUserService,
 } from '../services/authService.js';
 import { verifyGoogleUser } from '../services/googleAuthService.js';
+import { logAction } from '../services/auditService.js';
 
 export const registerUser = asyncHandler(async (req, res) => {
   const result = await registerUserService(req.body);
@@ -17,6 +18,7 @@ export const registerUser = asyncHandler(async (req, res) => {
 
 export const loginUser = asyncHandler(async (req, res) => {
   const result = await loginUserService(req.body);
+  logAction({ req, userId: result.user.id, entityType: 'USER', entityId: result.user.id, action: 'LOGIN' });
   return sendResponse(res, 200, true, 'Login successful', {
     token: result.token,
     user: result.user
