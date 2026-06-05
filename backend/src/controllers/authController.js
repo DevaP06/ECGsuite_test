@@ -30,6 +30,10 @@ export const logoutUser = asyncHandler(async (req, res) => {
   return sendResponse(res, 200, true, result.message, null);
 });
 
+export const getMe = asyncHandler(async (req, res) => {
+  return sendResponse(res, 200, true, 'User fetched successfully', { user: req.user });
+});
+
 export const googleAuth = asyncHandler(async (req, res) => {
   const { credential } = req.body;
   const result = await verifyGoogleUser(credential);

@@ -79,7 +79,7 @@ app.use('/api/waitlist', waitlistRoutes);
 
 // Domain routes
 app.use('/api/ecg', protect, ecgRoutes);
-app.use('/api/ml', mlRoutes);
+app.use('/api/ml', protect, mlRoutes);
 
 // Error handling middleware
 app.use((error, req, res, next) => {

@@ -5,6 +5,7 @@ import { promises as fsp } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import ECGAnalysis from '../models/ECGAnalysis.js';
+import SpecialistReview from '../models/SpecialistReview.js';
 import { predictECG } from '../services/mlService.js';
 import { sendResponse } from '../utils/responseHandler.js';
 import { logAction } from '../services/auditService.js';
@@ -226,26 +227,29 @@ router.post('/upload', upload.single('ecgFile'), async (req, res) => {
   }
 });
 
-// Get user's ECG analyses
+// Get user's ECG analyses (paginated)
 router.get('/my-analyses', async (req, res) => {
   try {
     const userId = req.user.id;
-    const analyses = await ECGAnalysis.find({ userId })
-      .sort({ createdAt: -1 })
-      .select('-filePath'); // Don't send file paths
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 10));
+    const skip = (page - 1) * limit;
 
-    res.json({
-      success: true,
+    const filter = { userId };
+    if (req.query.status) filter.status = req.query.status;
+
+    const [analyses, total] = await Promise.all([
+      ECGAnalysis.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).select('-filePath'),
+      ECGAnalysis.countDocuments(filter)
+    ]);
+
+    return sendResponse(res, 200, true, 'Analyses fetched successfully', {
       analyses,
-      count: analyses.length
+      pagination: { total, page, limit, pages: Math.ceil(total / limit) }
     });
-
   } catch (error) {
     console.error('Error fetching ECG analyses:', error);
-    res.status(500).json({ 
-      error: 'Failed to fetch ECG analyses',
-      message: error.message 
-    });
+    return sendResponse(res, 500, false, 'Failed to fetch ECG analyses');
   }
 });
 
@@ -332,6 +336,73 @@ router.patch('/analysis/:id/notes', async (req, res) => {
       error: 'Failed to update notes',
       message: error.message 
     });
+  }
+});
+
+// Submit specialist review (CARDIOLOGIST only)
+router.post('/analysis/:id/specialist-review', async (req, res) => {
+  try {
+    if (req.user.role !== 'CARDIOLOGIST') {
+      return sendResponse(res, 403, false, 'Only cardiologists can submit specialist reviews');
+    }
+
+    const { id } = req.params;
+    const { expertDiagnosis, overrideReason, reviewNotes, reviewStatus } = req.body;
+    const cardiologistId = req.user._id || req.user.id;
+
+    const analysis = await ECGAnalysis.findById(id);
+    if (!analysis) {
+      return sendResponse(res, 404, false, 'ECG analysis not found');
+    }
+
+    const review = new SpecialistReview({
+      analysisId: id,
+      cardiologistId,
+      reviewStatus: reviewStatus || 'completed',
+      expertDiagnosis,
+      overrideReason,
+      reviewNotes,
+      reviewDate: new Date()
+    });
+
+    await review.save();
+    logAction({ req, userId: cardiologistId, entityType: 'SPECIALIST_REVIEW', entityId: review._id, action: 'REVIEW', newValue: { analysisId: id, reviewStatus: review.reviewStatus } });
+
+    return sendResponse(res, 201, true, 'Specialist review submitted', { review });
+  } catch (error) {
+    console.error('Error submitting specialist review:', error);
+    return sendResponse(res, 500, false, 'Failed to submit specialist review');
+  }
+});
+
+// Get all analyses for a patient (CARDIOLOGIST or ADMIN only)
+router.get('/patients/:id/analyses', async (req, res) => {
+  try {
+    const { role } = req.user;
+    if (role !== 'CARDIOLOGIST' && role !== 'ADMIN') {
+      return sendResponse(res, 403, false, 'Access restricted to cardiologists and admins');
+    }
+
+    const { id } = req.params;
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 10));
+    const skip = (page - 1) * limit;
+
+    const filter = { userId: id };
+    if (req.query.status) filter.status = req.query.status;
+
+    const [analyses, total] = await Promise.all([
+      ECGAnalysis.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).select('-filePath'),
+      ECGAnalysis.countDocuments(filter)
+    ]);
+
+    return sendResponse(res, 200, true, 'Patient analyses fetched successfully', {
+      analyses,
+      pagination: { total, page, limit, pages: Math.ceil(total / limit) }
+    });
+  } catch (error) {
+    console.error('Error fetching patient analyses:', error);
+    return sendResponse(res, 500, false, 'Failed to fetch patient analyses');
   }
 });
 
