@@ -13,6 +13,7 @@ function toUserResponse(user) {
     id: user._id,
     username: user.username,
     email: user.email,
+    role: user.role,
     profilePicture: user.profilePicture,
     authProvider: user.authProvider
   };
@@ -104,9 +105,12 @@ export async function verifyGoogleUser(credential) {
     await user.save();
   }
 
+  user.lastLogin = new Date();
+  await user.save({ validateModifiedOnly: true });
+
   return {
     isNewUser,
-    token: generateToken(user._id),
+    token: generateToken(user._id, user.role),
     user: toUserResponse(user)
   };
 }

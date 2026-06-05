@@ -14,6 +14,9 @@ const protect = async (req, res, next) => {
 
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       req.user = await User.findById(decoded.id).select('-password');
+      if (!req.user) {
+        return sendResponse(res, 401, false, 'User no longer exists');
+      }
       return next();
     } catch (err) {
       return sendResponse(res, 401, false, 'Not authorized, token failed');

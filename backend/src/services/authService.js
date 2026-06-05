@@ -11,7 +11,8 @@ function toUserResponse(user) {
   return {
     id: user._id,
     username: user.username,
-    email: user.email
+    email: user.email,
+    role: user.role
   };
 }
 
@@ -31,7 +32,7 @@ export async function registerUserService(body) {
   await newUser.save();
 
   return {
-    token: generateToken(newUser._id),
+    token: generateToken(newUser._id, newUser.role),
     user: toUserResponse(newUser)
   };
 }
@@ -56,8 +57,11 @@ export async function loginUserService(body) {
     throw createError('Incorrect password', 401);
   }
 
+  user.lastLogin = new Date();
+  await user.save({ validateModifiedOnly: true });
+
   return {
-    token: generateToken(user._id),
+    token: generateToken(user._id, user.role),
     user: toUserResponse(user)
   };
 }

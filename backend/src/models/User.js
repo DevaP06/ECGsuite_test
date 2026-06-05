@@ -39,6 +39,38 @@ const userSchema = new mongoose.Schema(
         type:String,
         enum:["local","google"],
         default:"local"
+    },
+
+    role:{
+        type:String,
+        enum:["PATIENT","PHC_DOCTOR","CARDIOLOGIST","ADMIN"],
+        default:"PHC_DOCTOR"
+    },
+
+    fullName:{
+        type:String,
+        trim:true
+    },
+
+    phone:{
+        type:String,
+        trim:true
+    },
+
+    status:{
+        type:String,
+        enum:["active","inactive","suspended"],
+        default:"active"
+    },
+
+    isVerified:{
+        type:Boolean,
+        default:false
+    },
+
+    lastLogin:{
+        type:Date,
+        default:null
     }
 
 },

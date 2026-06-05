@@ -1,15 +1,15 @@
 import jwt from 'jsonwebtoken';
 
-export const generateToken = (id) => {
+export const generateToken = (id, role) => {
   if (!process.env.JWT_SECRET) {
     throw new Error('JWT_SECRET is not set in environment');
   }
 
   return jwt.sign(
-    { id },
+    { id, role },
     process.env.JWT_SECRET,
     {
-      expiresIn: '7d'
+      expiresIn: '30d'
     }
   );
 };
