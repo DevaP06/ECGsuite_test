@@ -28,6 +28,17 @@ fs.mkdirSync(failedUploadDir, { recursive: true });
 
 const router = express.Router();
 
+// Derive extension from MIME type — never from user-provided filename
+const MIME_TO_EXT = {
+  'image/jpeg': '.jpg',
+  'image/png': '.png',
+  'image/tiff': '.tif',
+  'text/csv': '.csv',
+  'application/json': '.json',
+  'application/vnd.ms-excel': '.xls',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '.xlsx'
+};
+
 // Configure multer for ECG file uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -35,7 +46,8 @@ const storage = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, 'ecg-' + uniqueSuffix + path.extname(file.originalname));
+    const ext = MIME_TO_EXT[file.mimetype] || '.bin';
+    cb(null, 'ecg-' + uniqueSuffix + ext);
   }
 });
 

@@ -2,6 +2,14 @@ import axios from "axios";
 import FormData from "form-data";
 import fs from "fs";
 import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Trusted upload directories — constructed from this file's own location, never from user input
+const TEMP_ECG_DIR = path.resolve(__dirname, "../../../temp_uploads/ecg");
+const PROCESSED_ECG_DIR = path.resolve(__dirname, "../../../uploads/ecg/processed");
 
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 1000;
@@ -12,19 +20,22 @@ export async function predictECG(filePath, age, gender) {
   const flaskUrl = process.env.FLASK_URL;
   if (!flaskUrl) throw new Error("FLASK_URL is not set in environment");
 
-  // Prevent path traversal: resolve and verify the file stays under the uploads directory
-  const resolved = path.resolve(filePath);
-  const uploadsRoot = path.resolve("uploads");
-  const tempRoot = path.resolve("temp_uploads");
-  if (!resolved.startsWith(uploadsRoot) && !resolved.startsWith(tempRoot)) {
-    throw new Error("Invalid file path: outside permitted upload directory");
+  // path.basename() strips all directory components — CodeQL-recognized path sanitizer.
+  // We then join with a hardcoded trusted directory so the full path is never user-controlled.
+  const safeFilename = path.basename(filePath);
+  const safePath = fs.existsSync(path.join(TEMP_ECG_DIR, safeFilename))
+    ? path.join(TEMP_ECG_DIR, safeFilename)
+    : path.join(PROCESSED_ECG_DIR, safeFilename);
+
+  if (!fs.existsSync(safePath)) {
+    throw new Error("Upload file not found in permitted directory");
   }
 
   const internalKey = process.env.INTERNAL_API_KEY;
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     const form = new FormData();
-    form.append("file", fs.createReadStream(resolved));
+    form.append("file", fs.createReadStream(safePath));
     if (age !== undefined) form.append("age", String(age));
     if (gender !== undefined) form.append("gender", String(gender));
 
