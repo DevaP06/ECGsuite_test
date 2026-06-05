@@ -1,6 +1,7 @@
 import axios from "axios";
 import FormData from "form-data";
 import fs from "fs";
+import path from "path";
 
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 1000;
@@ -11,11 +12,19 @@ export async function predictECG(filePath, age, gender) {
   const flaskUrl = process.env.FLASK_URL;
   if (!flaskUrl) throw new Error("FLASK_URL is not set in environment");
 
+  // Prevent path traversal: resolve and verify the file stays under the uploads directory
+  const resolved = path.resolve(filePath);
+  const uploadsRoot = path.resolve("uploads");
+  const tempRoot = path.resolve("temp_uploads");
+  if (!resolved.startsWith(uploadsRoot) && !resolved.startsWith(tempRoot)) {
+    throw new Error("Invalid file path: outside permitted upload directory");
+  }
+
   const internalKey = process.env.INTERNAL_API_KEY;
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     const form = new FormData();
-    form.append("file", fs.createReadStream(filePath));
+    form.append("file", fs.createReadStream(resolved));
     if (age !== undefined) form.append("age", String(age));
     if (gender !== undefined) form.append("gender", String(gender));
 
