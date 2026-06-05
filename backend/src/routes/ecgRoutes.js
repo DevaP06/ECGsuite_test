@@ -160,9 +160,14 @@ router.post('/upload', uploadLimiter, upload.single('ecgFile'), async (req, res)
     const genderValue = mapGenderToNumeric(patientGender);
     const startedAt = Date.now();
 
-    const prediction = await predictECG(req.file.path, age, genderValue);
+    // path.basename() is the CodeQL-recognised path sanitizer — strips all directory
+    // components so no user-influenced value ever reaches a file system API directly.
+    const safeFilename = path.basename(req.file.filename);
+    const safeSourcePath = path.join(tempUploadDir, safeFilename);
+
+    const prediction = await predictECG(safeSourcePath, age, genderValue);
     const processingTime = Date.now() - startedAt;
-    finalFilePath = await moveFile(req.file.path, processedUploadDir, req.file.filename);
+    finalFilePath = await moveFile(safeSourcePath, processedUploadDir, safeFilename);
 
     const mlUnavailable = prediction === null;
     const analysisResult = mlUnavailable ? null : toAnalysisResult(prediction, processingTime);
@@ -205,12 +210,13 @@ router.post('/upload', uploadLimiter, upload.single('ecgFile'), async (req, res)
   } catch (error) {
     console.error('ECG upload error:', error);
 
-    // Use finalFilePath if file was already moved; fall back to original temp path
-    const pathToMove = finalFilePath || req.file?.path;
-    const filename = req.file?.filename || (pathToMove ? path.basename(pathToMove) : null);
-    if (pathToMove && filename) {
+    // Sanitize again in catch — req.file may or may not exist depending on where the error occurred
+    const safeErrFilename = req.file ? path.basename(req.file.filename) : null;
+    const safeErrSourcePath = safeErrFilename ? path.join(tempUploadDir, safeErrFilename) : null;
+    const pathToMove = finalFilePath || safeErrSourcePath;
+    if (pathToMove && safeErrFilename) {
       try {
-        await moveFile(pathToMove, failedUploadDir, filename);
+        await moveFile(pathToMove, failedUploadDir, safeErrFilename);
       } catch (moveError) {
         console.error('Failed to move ECG file to failed folder:', moveError);
       }
@@ -224,9 +230,9 @@ router.post('/upload', uploadLimiter, upload.single('ecgFile'), async (req, res)
       try {
         const ecgAnalysis = new ECGAnalysis({
           userId,
-          fileName: req.file.filename,
+          fileName: safeErrFilename,
           originalName: req.file.originalname,
-          filePath: finalFilePath || req.file.path,
+          filePath: finalFilePath || safeErrSourcePath,
           fileSize: req.file.size,
           patientInfo: {
             name: patientName,
