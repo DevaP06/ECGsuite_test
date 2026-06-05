@@ -125,8 +125,10 @@ router.post('/upload', upload.single('ecgFile'), async (req, res) => {
 
     const prediction = await predictECG(req.file.path, age, genderValue);
     const processingTime = Date.now() - startedAt;
-    const analysisResult = toAnalysisResult(prediction, processingTime);
     const finalFilePath = await moveFile(req.file.path, processedUploadDir, req.file.filename);
+
+    const mlUnavailable = prediction === null;
+    const analysisResult = mlUnavailable ? null : toAnalysisResult(prediction, processingTime);
 
     const ecgAnalysis = new ECGAnalysis({
       userId,
@@ -140,12 +142,20 @@ router.post('/upload', upload.single('ecgFile'), async (req, res) => {
         gender: patientGender
       },
       notes,
-      status: 'completed',
-      analysisResult,
-      processedAt: new Date()
+      status: mlUnavailable ? 'pending' : 'completed',
+      ...(analysisResult && { analysisResult }),
+      ...(mlUnavailable ? {} : { processedAt: new Date() })
     });
 
     await ecgAnalysis.save();
+
+    if (mlUnavailable) {
+      return sendResponse(res, 202, true, 'ECG uploaded — analysis pending (ML service unavailable)', {
+        analysisId: ecgAnalysis._id,
+        fileName: req.file.filename,
+        filePath: finalFilePath
+      });
+    }
 
     return sendResponse(res, 201, true, 'ECG analyzed successfully', {
       analysisId: ecgAnalysis._id,
