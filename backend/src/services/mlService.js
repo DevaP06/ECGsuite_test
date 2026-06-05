@@ -33,11 +33,13 @@ export async function predictECG(filePath, age, gender) {
       return response.data;
     } catch (err) {
       const isLast = attempt === MAX_RETRIES;
+      // Only retry on network-level failures (Flask unreachable). A 5xx response
+      // means Flask IS running and actively rejected the request — that's not retryable.
       const isFlaskDown =
         err.code === "ECONNREFUSED" ||
         err.code === "ECONNRESET" ||
         err.code === "ETIMEDOUT" ||
-        err.response?.status >= 500;
+        !err.response;
 
       if (isFlaskDown && isLast) return null;
       if (isFlaskDown && !isLast) {

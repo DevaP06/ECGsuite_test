@@ -7,7 +7,9 @@ export async function predict(req, res) {
       return res.status(400).json({ message: "No ECG image uploaded" });
     }
 
-    const result = await predictECG(req.file.path);
+    const age = req.body.age !== undefined ? Number(req.body.age) : undefined;
+    const gender = req.body.gender !== undefined ? Number(req.body.gender) : undefined;
+    const result = await predictECG(req.file.path, age, gender);
 
     fs.unlinkSync(req.file.path);
 

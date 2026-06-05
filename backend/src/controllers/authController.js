@@ -31,7 +31,10 @@ export const logoutUser = asyncHandler(async (req, res) => {
 });
 
 export const getMe = asyncHandler(async (req, res) => {
-  return sendResponse(res, 200, true, 'User fetched successfully', { user: req.user });
+  const { _id, username, email, role, fullName, phone, profilePicture, authProvider, isVerified, status, lastLogin, createdAt } = req.user;
+  return sendResponse(res, 200, true, 'User fetched successfully', {
+    user: { id: _id, username, email, role, fullName, phone, profilePicture, authProvider, isVerified, status, lastLogin, createdAt }
+  });
 });
 
 export const googleAuth = asyncHandler(async (req, res) => {
