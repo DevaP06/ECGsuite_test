@@ -4,13 +4,19 @@ import fs from 'fs';
 import { promises as fsp } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import mongoose from 'mongoose';
 import ECGAnalysis from '../models/ECGAnalysis.js';
+import SpecialistReview from '../models/SpecialistReview.js';
 import { predictECG } from '../services/mlService.js';
 import { sendResponse } from '../utils/responseHandler.js';
+import { logAction } from '../services/auditService.js';
+import { uploadLimiter, mlLimiter, readLimiter } from '../middleware/rateLimiter.js';
 
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+const VALID_STATUSES = ['uploaded', 'processing', 'pending', 'completed', 'failed', 'archived'];
 
 const tempUploadDir = path.resolve(__dirname, '../../temp_uploads/ecg');
 const processedUploadDir = path.resolve(__dirname, '../../uploads/ecg/processed');
@@ -22,6 +28,17 @@ fs.mkdirSync(failedUploadDir, { recursive: true });
 
 const router = express.Router();
 
+// Derive extension from MIME type — never from user-provided filename
+const MIME_TO_EXT = {
+  'image/jpeg': '.jpg',
+  'image/png': '.png',
+  'image/tiff': '.tif',
+  'text/csv': '.csv',
+  'application/json': '.json',
+  'application/vnd.ms-excel': '.xls',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '.xlsx'
+};
+
 // Configure multer for ECG file uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -29,7 +46,8 @@ const storage = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, 'ecg-' + uniqueSuffix + path.extname(file.originalname));
+    const ext = MIME_TO_EXT[file.mimetype] || '.bin';
+    cb(null, 'ecg-' + uniqueSuffix + ext);
   }
 });
 
@@ -90,6 +108,15 @@ const toAnalysisResult = (prediction, processingTime) => {
       ? payload.abnormality
       : [];
 
+  // labelProbabilities: accept object or Map-like from Flask
+  const rawProbs = payload.label_probabilities ?? payload.labelProbabilities ?? topRhythms ?? {};
+  const labelProbabilities = Object.fromEntries(
+    Object.entries(rawProbs).map(([k, v]) => [
+      k,
+      typeof v === 'string' ? Number.parseFloat(v.replace('%', '')) : Number(v)
+    ])
+  );
+
   return {
     rhythm: bestRhythm,
     heartRate: imageAnalysis.heart_rate ?? payload.heartRate ?? payload.VentricularRate ?? payload.ventricularRate ?? null,
@@ -99,7 +126,16 @@ const toAnalysisResult = (prediction, processingTime) => {
     confidence: Number.isFinite(parsedConfidence) ? parsedConfidence : (payload.confidence ?? payload.score ?? 0),
     aiModel: payload.aiModel || 'ecg_genius_v1',
     modelVersion: payload.modelVersion || 'v1.0.0',
-    processingTime
+    processingTime,
+    predictedLabels: Array.isArray(payload.predicted_labels ?? payload.predictedLabels)
+      ? (payload.predicted_labels ?? payload.predictedLabels)
+      : [],
+    labelProbabilities,
+    signalMetrics: payload.signal_metrics ?? payload.signalMetrics ?? null,
+    ontologyEnrichment: Array.isArray(payload.ontology_enrichment ?? payload.ontologyEnrichment)
+      ? (payload.ontology_enrichment ?? payload.ontologyEnrichment)
+      : [],
+    explanation: payload.explanation ?? null
   };
 };
 
@@ -111,7 +147,8 @@ const moveFile = async (sourcePath, destinationDir, destinationName) => {
 };
 
 // Upload ECG file
-router.post('/upload', upload.single('ecgFile'), async (req, res) => {
+router.post('/upload', uploadLimiter, upload.single('ecgFile'), async (req, res) => {
+  let finalFilePath = null;
   try {
     if (!req.file) {
       return sendResponse(res, 400, false, 'No ECG file uploaded');
@@ -123,10 +160,17 @@ router.post('/upload', upload.single('ecgFile'), async (req, res) => {
     const genderValue = mapGenderToNumeric(patientGender);
     const startedAt = Date.now();
 
-    const prediction = await predictECG(req.file.path, age, genderValue);
+    // path.basename() is the CodeQL-recognised path sanitizer — strips all directory
+    // components so no user-influenced value ever reaches a file system API directly.
+    const safeFilename = path.basename(req.file.filename);
+    const safeSourcePath = path.join(tempUploadDir, safeFilename);
+
+    const prediction = await predictECG(safeSourcePath, age, genderValue);
     const processingTime = Date.now() - startedAt;
-    const analysisResult = toAnalysisResult(prediction, processingTime);
-    const finalFilePath = await moveFile(req.file.path, processedUploadDir, req.file.filename);
+    finalFilePath = await moveFile(safeSourcePath, processedUploadDir, safeFilename);
+
+    const mlUnavailable = prediction === null;
+    const analysisResult = mlUnavailable ? null : toAnalysisResult(prediction, processingTime);
 
     const ecgAnalysis = new ECGAnalysis({
       userId,
@@ -140,12 +184,21 @@ router.post('/upload', upload.single('ecgFile'), async (req, res) => {
         gender: patientGender
       },
       notes,
-      status: 'completed',
-      analysisResult,
-      processedAt: new Date()
+      status: mlUnavailable ? 'pending' : 'completed',
+      ...(analysisResult && { analysisResult }),
+      ...(mlUnavailable ? {} : { processedAt: new Date() })
     });
 
     await ecgAnalysis.save();
+    logAction({ req, userId, entityType: 'ECG_ANALYSIS', entityId: ecgAnalysis._id, action: 'UPLOAD', newValue: { fileName: ecgAnalysis.fileName, status: ecgAnalysis.status } });
+
+    if (mlUnavailable) {
+      return sendResponse(res, 202, true, 'ECG uploaded — analysis pending (ML service unavailable)', {
+        analysisId: ecgAnalysis._id,
+        fileName: req.file.filename,
+        filePath: finalFilePath
+      });
+    }
 
     return sendResponse(res, 201, true, 'ECG analyzed successfully', {
       analysisId: ecgAnalysis._id,
@@ -157,37 +210,44 @@ router.post('/upload', upload.single('ecgFile'), async (req, res) => {
   } catch (error) {
     console.error('ECG upload error:', error);
 
-    if (req.file?.path) {
+    // Sanitize again in catch — req.file may or may not exist depending on where the error occurred
+    const safeErrFilename = req.file ? path.basename(req.file.filename) : null;
+    const safeErrSourcePath = safeErrFilename ? path.join(tempUploadDir, safeErrFilename) : null;
+    const pathToMove = finalFilePath || safeErrSourcePath;
+    if (pathToMove && safeErrFilename) {
       try {
-        await moveFile(req.file.path, failedUploadDir, req.file.filename);
+        await moveFile(pathToMove, failedUploadDir, safeErrFilename);
       } catch (moveError) {
         console.error('Failed to move ECG file to failed folder:', moveError);
       }
     }
 
-    const { patientName, patientAge, patientGender, notes } = req.body;
-    const userId = req.user?._id || req.user?.id;
+    // Only save a failed record when we have enough required fields
+    if (req.file) {
+      const { patientName, patientAge, patientGender, notes } = req.body;
+      const userId = req.user?._id || req.user?.id;
 
-    try {
-      const ecgAnalysis = new ECGAnalysis({
-        userId,
-        fileName: req.file?.filename,
-        originalName: req.file?.originalname,
-        filePath: req.file?.path,
-        fileSize: req.file?.size,
-        patientInfo: {
-          name: patientName,
-          age: Number(patientAge || 0),
-          gender: patientGender
-        },
-        notes,
-        status: 'failed',
-        failureReason: error.message
-      });
+      try {
+        const ecgAnalysis = new ECGAnalysis({
+          userId,
+          fileName: safeErrFilename,
+          originalName: req.file.originalname,
+          filePath: finalFilePath || safeErrSourcePath,
+          fileSize: req.file.size,
+          patientInfo: {
+            name: patientName,
+            age: Number(patientAge || 0),
+            gender: patientGender
+          },
+          notes,
+          status: 'failed',
+          failureReason: error.message
+        });
 
-      await ecgAnalysis.save();
-    } catch (saveError) {
-      console.error('Failed to save failed ECG analysis:', saveError);
+        await ecgAnalysis.save();
+      } catch (saveError) {
+        console.error('Failed to save failed ECG analysis:', saveError);
+      }
     }
 
     return sendResponse(res, 500, false, 'Failed to upload and analyze ECG file', {
@@ -196,26 +256,34 @@ router.post('/upload', upload.single('ecgFile'), async (req, res) => {
   }
 });
 
-// Get user's ECG analyses
-router.get('/my-analyses', async (req, res) => {
+// Get user's ECG analyses (paginated)
+router.get('/my-analyses', readLimiter, async (req, res) => {
   try {
-    const userId = req.user.id;
-    const analyses = await ECGAnalysis.find({ userId })
-      .sort({ createdAt: -1 })
-      .select('-filePath'); // Don't send file paths
+    const userId = new mongoose.Types.ObjectId(String(req.user._id || req.user.id));
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 10));
+    const skip = (page - 1) * limit;
 
-    res.json({
-      success: true,
+    const filter = { userId };
+    if (req.query.status) {
+      if (!VALID_STATUSES.includes(String(req.query.status))) {
+        return sendResponse(res, 400, false, `Invalid status. Must be one of: ${VALID_STATUSES.join(', ')}`);
+      }
+      filter.status = String(req.query.status);
+    }
+
+    const [analyses, total] = await Promise.all([
+      ECGAnalysis.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).select('-filePath'),
+      ECGAnalysis.countDocuments(filter)
+    ]);
+
+    return sendResponse(res, 200, true, 'Analyses fetched successfully', {
       analyses,
-      count: analyses.length
+      pagination: { total, page, limit, pages: Math.ceil(total / limit) }
     });
-
   } catch (error) {
     console.error('Error fetching ECG analyses:', error);
-    res.status(500).json({ 
-      error: 'Failed to fetch ECG analyses',
-      message: error.message 
-    });
+    return sendResponse(res, 500, false, 'Failed to fetch ECG analyses');
   }
 });
 
@@ -252,10 +320,12 @@ router.delete('/analysis/:id', async (req, res) => {
     const userId = req.user.id;
 
     const analysis = await ECGAnalysis.findOneAndDelete({ _id: id, userId });
-    
+
     if (!analysis) {
       return res.status(404).json({ error: 'ECG analysis not found' });
     }
+
+    logAction({ req, userId, entityType: 'ECG_ANALYSIS', entityId: analysis._id, action: 'DELETE', oldValue: { fileName: analysis.fileName, status: analysis.status } });
 
     res.json({
       success: true,
@@ -300,6 +370,83 @@ router.patch('/analysis/:id/notes', async (req, res) => {
       error: 'Failed to update notes',
       message: error.message 
     });
+  }
+});
+
+// Submit specialist review (CARDIOLOGIST only)
+router.post('/analysis/:id/specialist-review', mlLimiter, async (req, res) => {
+  try {
+    if (req.user.role !== 'CARDIOLOGIST') {
+      return sendResponse(res, 403, false, 'Only cardiologists can submit specialist reviews');
+    }
+
+    const { id } = req.params;
+    const { expertDiagnosis, overrideReason, reviewNotes, reviewStatus } = req.body;
+    const cardiologistId = req.user._id || req.user.id;
+
+    const analysis = await ECGAnalysis.findById(id);
+    if (!analysis) {
+      return sendResponse(res, 404, false, 'ECG analysis not found');
+    }
+
+    const review = new SpecialistReview({
+      analysisId: id,
+      cardiologistId,
+      reviewStatus: reviewStatus || 'completed',
+      expertDiagnosis,
+      overrideReason,
+      reviewNotes,
+      reviewDate: new Date()
+    });
+
+    await review.save();
+    logAction({ req, userId: cardiologistId, entityType: 'SPECIALIST_REVIEW', entityId: review._id, action: 'REVIEW', newValue: { analysisId: id, reviewStatus: review.reviewStatus } });
+
+    return sendResponse(res, 201, true, 'Specialist review submitted', { review });
+  } catch (error) {
+    console.error('Error submitting specialist review:', error);
+    return sendResponse(res, 500, false, 'Failed to submit specialist review');
+  }
+});
+
+// Get all analyses for a patient (CARDIOLOGIST or ADMIN only)
+router.get('/patients/:id/analyses', readLimiter, async (req, res) => {
+  try {
+    const { role } = req.user;
+    if (role !== 'CARDIOLOGIST' && role !== 'ADMIN') {
+      return sendResponse(res, 403, false, 'Access restricted to cardiologists and admins');
+    }
+
+    const rawId = String(req.params.id);
+    if (!rawId.match(/^[a-f\d]{24}$/i)) {
+      return sendResponse(res, 400, false, 'Invalid patient ID');
+    }
+    const patientId = new mongoose.Types.ObjectId(rawId);
+
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 10));
+    const skip = (page - 1) * limit;
+
+    const filter = { userId: patientId };
+    if (req.query.status) {
+      if (!VALID_STATUSES.includes(String(req.query.status))) {
+        return sendResponse(res, 400, false, `Invalid status. Must be one of: ${VALID_STATUSES.join(', ')}`);
+      }
+      filter.status = String(req.query.status);
+    }
+
+    const [analyses, total] = await Promise.all([
+      ECGAnalysis.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).select('-filePath'),
+      ECGAnalysis.countDocuments(filter)
+    ]);
+
+    return sendResponse(res, 200, true, 'Patient analyses fetched successfully', {
+      analyses,
+      pagination: { total, page, limit, pages: Math.ceil(total / limit) }
+    });
+  } catch (error) {
+    console.error('Error fetching patient analyses:', error);
+    return sendResponse(res, 500, false, 'Failed to fetch patient analyses');
   }
 });
 

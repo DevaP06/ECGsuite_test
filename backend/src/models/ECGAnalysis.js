@@ -25,12 +25,15 @@ const ecgAnalysisSchema = new mongoose.Schema({
   fileSize: {
     type: Number,
     required: true,
-    max: 10 * 1024 * 1024
+    max: 20 * 1024 * 1024
   },
   fileType: {
     type: String,
-    enum: ['image', 'csv', 'json', 'excel'],
-    
+    enum: ['image', 'csv', 'json', 'excel', 'mat']
+  },
+  storageUrl: {
+    type: String,
+    trim: true
   },
   patientInfo: {
     type: patientInfoSchema,
@@ -43,7 +46,7 @@ const ecgAnalysisSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['uploaded', 'processing', 'completed', 'failed', 'archived'],
+    enum: ['uploaded', 'processing', 'pending', 'completed', 'failed', 'archived'],
     default: 'uploaded'
   },
   failureReason: {

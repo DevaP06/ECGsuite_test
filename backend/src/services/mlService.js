@@ -1,19 +1,76 @@
 import axios from "axios";
 import FormData from "form-data";
 import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
 
-const ML_API_URL = "http://127.0.0.1:8001/predict";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-export async function predictECG(filePath) {
-  const form = new FormData();
+// Trusted upload directories — constructed from this file's own location, never from user input
+const TEMP_ECG_DIR = path.resolve(__dirname, "../../../temp_uploads/ecg");
+const PROCESSED_ECG_DIR = path.resolve(__dirname, "../../../uploads/ecg/processed");
 
-  form.append("file", fs.createReadStream(filePath));
+const MAX_RETRIES = 3;
+const RETRY_DELAY_MS = 1000;
 
-  const response = await axios.post(ML_API_URL, form, {
-    headers: form.getHeaders(),
-    maxBodyLength: Infinity,
-    maxContentLength: Infinity,
-  });
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-  return response.data;
+export async function predictECG(filePath, age, gender) {
+  const flaskUrl = process.env.FLASK_URL;
+  if (!flaskUrl) throw new Error("FLASK_URL is not set in environment");
+
+  // path.basename() strips all directory components — CodeQL-recognized path sanitizer.
+  // We then join with a hardcoded trusted directory so the full path is never user-controlled.
+  const safeFilename = path.basename(filePath);
+  const safePath = fs.existsSync(path.join(TEMP_ECG_DIR, safeFilename))
+    ? path.join(TEMP_ECG_DIR, safeFilename)
+    : path.join(PROCESSED_ECG_DIR, safeFilename);
+
+  if (!fs.existsSync(safePath)) {
+    throw new Error("Upload file not found in permitted directory");
+  }
+
+  const internalKey = process.env.INTERNAL_API_KEY;
+
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    const form = new FormData();
+    form.append("file", fs.createReadStream(safePath));
+    if (age !== undefined) form.append("age", String(age));
+    if (gender !== undefined) form.append("gender", String(gender));
+
+    try {
+      const response = await axios.post(`${flaskUrl}/analyze-ecg`, form, {
+        headers: {
+          ...form.getHeaders(),
+          ...(internalKey ? { "X-Internal-Key": internalKey } : {}),
+        },
+        maxBodyLength: Infinity,
+        maxContentLength: Infinity,
+        timeout: 30000,
+      });
+
+      return response.data;
+    } catch (err) {
+      const isLast = attempt === MAX_RETRIES;
+      // Only retry on network-level failures (Flask unreachable). A 5xx response
+      // means Flask IS running and actively rejected the request — that's not retryable.
+      const isFlaskDown =
+        err.code === "ECONNREFUSED" ||
+        err.code === "ECONNRESET" ||
+        err.code === "ETIMEDOUT" ||
+        !err.response;
+
+      if (isFlaskDown && isLast) return null;
+      if (isFlaskDown && !isLast) {
+        await sleep(RETRY_DELAY_MS);
+        continue;
+      }
+
+      // Non-retryable error (4xx, bad request, etc.)
+      throw err;
+    }
+  }
+
+  return null;
 }

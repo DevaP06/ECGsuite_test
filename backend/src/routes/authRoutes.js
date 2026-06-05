@@ -1,11 +1,14 @@
 import express from 'express';
-import { registerUser, loginUser, logoutUser, googleAuth } from '../controllers/authController.js';
+import { registerUser, loginUser, logoutUser, googleAuth, getMe } from '../controllers/authController.js';
+import protect from '../middleware/auth.middleWare.js';
+import { authLimiter, readLimiter } from '../middleware/rateLimiter.js';
 
 const router = express.Router();
 
-router.post('/register', registerUser);
-router.post('/login', loginUser);
+router.post('/register', authLimiter, registerUser);
+router.post('/login', authLimiter, loginUser);
 router.post('/logout', logoutUser);
-router.post('/google', googleAuth);
+router.post('/google', authLimiter, googleAuth);
+router.get('/me', readLimiter, protect, getMe);
 
 export default router;
