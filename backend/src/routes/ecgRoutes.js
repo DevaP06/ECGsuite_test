@@ -90,6 +90,15 @@ const toAnalysisResult = (prediction, processingTime) => {
       ? payload.abnormality
       : [];
 
+  // labelProbabilities: accept object or Map-like from Flask
+  const rawProbs = payload.label_probabilities ?? payload.labelProbabilities ?? topRhythms ?? {};
+  const labelProbabilities = Object.fromEntries(
+    Object.entries(rawProbs).map(([k, v]) => [
+      k,
+      typeof v === 'string' ? Number.parseFloat(v.replace('%', '')) : Number(v)
+    ])
+  );
+
   return {
     rhythm: bestRhythm,
     heartRate: imageAnalysis.heart_rate ?? payload.heartRate ?? payload.VentricularRate ?? payload.ventricularRate ?? null,
@@ -99,7 +108,16 @@ const toAnalysisResult = (prediction, processingTime) => {
     confidence: Number.isFinite(parsedConfidence) ? parsedConfidence : (payload.confidence ?? payload.score ?? 0),
     aiModel: payload.aiModel || 'ecg_genius_v1',
     modelVersion: payload.modelVersion || 'v1.0.0',
-    processingTime
+    processingTime,
+    predictedLabels: Array.isArray(payload.predicted_labels ?? payload.predictedLabels)
+      ? (payload.predicted_labels ?? payload.predictedLabels)
+      : [],
+    labelProbabilities,
+    signalMetrics: payload.signal_metrics ?? payload.signalMetrics ?? null,
+    ontologyEnrichment: Array.isArray(payload.ontology_enrichment ?? payload.ontologyEnrichment)
+      ? (payload.ontology_enrichment ?? payload.ontologyEnrichment)
+      : [],
+    explanation: payload.explanation ?? null
   };
 };
 

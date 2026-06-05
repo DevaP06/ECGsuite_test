@@ -47,6 +47,26 @@ const analysisResultSchema = new mongoose.Schema({
   processingTime: {
     type: Number,
     default: 0
+  },
+  predictedLabels: [{
+    type: String
+  }],
+  labelProbabilities: {
+    type: Map,
+    of: Number
+  },
+  signalMetrics: {
+    type: mongoose.Schema.Types.Mixed,
+    default: null
+  },
+  ontologyEnrichment: [{
+    term: String,
+    label: String,
+    system: String
+  }],
+  explanation: {
+    type: mongoose.Schema.Types.Mixed,
+    default: null
   }
 });
 
