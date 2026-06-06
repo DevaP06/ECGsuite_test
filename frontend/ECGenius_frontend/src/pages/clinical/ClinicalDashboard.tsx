@@ -9,8 +9,9 @@ import { extractErrorMessage } from '../../utils/errorUtils';
 import { getDashboardRoute } from '../../features/auth/roleUtils';
 import EvidenceFusionPanel from '../../components/clinical/EvidenceFusionPanel';
 import RiskFactorPanel from '../../components/clinical/RiskFactorPanel';
-import ReviewStatusPanel from '../../components/clinical/ReviewStatusPanel';
 import ClinicalActionsPanel from '../../components/clinical/ClinicalActionsPanel';
+import RequestReviewButton from '../../components/review/RequestReviewButton';
+import ReviewStatusTracker from '../../components/review/ReviewStatusTracker';
 import type { ECGAnalysis } from '../../types/ecg';
 import type { AnswersMap } from '../../types/questionnaire';
 
@@ -109,14 +110,17 @@ export default function ClinicalDashboard() {
             <ArrowLeft className="w-4 h-4" />
             Back to Diagnosis
           </button>
-          <button
-            type="button"
-            onClick={() => navigate(`/questionnaire/${analysisId}`)}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-sm font-semibold text-white transition"
-          >
-            <ClipboardList className="w-4 h-4" />
-            Edit Clinical History
-          </button>
+          <div className="flex items-center gap-2">
+            <RequestReviewButton analysisId={analysisId ?? ''} />
+            <button
+              type="button"
+              onClick={() => navigate(`/questionnaire/${analysisId}`)}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-sm font-semibold text-white transition"
+            >
+              <ClipboardList className="w-4 h-4" />
+              Edit Clinical History
+            </button>
+          </div>
         </div>
 
         {/* Patient summary */}
@@ -183,7 +187,7 @@ export default function ClinicalDashboard() {
         {/* Actions + Review */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           <ClinicalActionsPanel ontologyItems={ontologyItems} />
-          <ReviewStatusPanel />
+          <ReviewStatusTracker analysisId={analysisId ?? ''} />
         </div>
 
       </div>

@@ -40,9 +40,10 @@ import DoctorInsightsPage from './pages/doctor/DoctorInsightsPage';
 import ReviewRequestPage from './pages/doctor/ReviewRequestPage';
 import ClinicalDashboardEntryPage from './pages/doctor/ClinicalDashboardEntryPage';
 
-// Cardiologist placeholder pages
+// Cardiologist pages
 import ReviewQueuePage from './pages/cardiologist/ReviewQueuePage';
 import CaseReviewsPage from './pages/cardiologist/CaseReviewsPage';
+import CaseReviewPage from './pages/cardiologist/CaseReviewPage';
 import CardiologistInsightsPage from './pages/cardiologist/CardiologistInsightsPage';
 import AnalyticsPage from './pages/cardiologist/AnalyticsPage';
 import OntologyRulesPage from './pages/cardiologist/OntologyRulesPage';
@@ -123,6 +124,10 @@ const router = createBrowserRouter(
       <Route
         path="cardiologist/reviews"
         element={<RoleGuard allowedRoles={['CARDIOLOGIST']}><CaseReviewsPage /></RoleGuard>}
+      />
+      <Route
+        path="cardiologist/review/:reviewId"
+        element={<RoleGuard allowedRoles={['CARDIOLOGIST']}><CaseReviewPage /></RoleGuard>}
       />
       <Route
         path="cardiologist/insights"
