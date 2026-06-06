@@ -132,6 +132,7 @@ const toAnalysisResult = (prediction, processingTime) => {
       : [],
     labelProbabilities,
     signalMetrics: payload.signal_metrics ?? payload.signalMetrics ?? null,
+    isEmergency: payload.is_emergency ?? payload.isEmergency ?? false,
     ontologyEnrichment: Array.isArray(payload.ontology_enrichment ?? payload.ontologyEnrichment)
       ? (payload.ontology_enrichment ?? payload.ontologyEnrichment)
       : [],
