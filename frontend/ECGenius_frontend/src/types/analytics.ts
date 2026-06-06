@@ -53,3 +53,26 @@ export interface CardiologistInsights {
   topAbnormalities: { label: string; count: number }[];
   conditionTrends: { date: string; condition: string; count: number }[];
 }
+
+// Active learning feedback types — Task 40
+export type FeedbackType =
+  | 'model_correct'
+  | 'model_incorrect'
+  | 'needs_more_data'
+  | 'false_positive'
+  | 'false_negative';
+
+export interface FeedbackPayload {
+  analysisId: string;
+  feedbackType: FeedbackType;
+  notes?: string;
+}
+
+export interface FeedbackRecord {
+  _id: string;
+  analysisId: string;
+  cardiologistId: string;
+  feedbackType: FeedbackType;
+  notes?: string;
+  createdAt: string;
+}

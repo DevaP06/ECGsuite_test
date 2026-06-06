@@ -7,7 +7,9 @@ import { Link, useNavigate } from 'react-router-dom';
 import AppShell from '../../layouts/AppShell';
 import { useAuth } from '../../features/auth/useAuth';
 import { reviewService } from '../../services/reviewService';
+import { analyticsService } from '../../services/analyticsService';
 import type { ReviewQueueItem, ReviewPriority } from '../../types/review';
+import type { ReviewMetrics } from '../../types/analytics';
 
 function PlaceholderCard({
   title, description, icon: Icon, accent = 'text-slate-400', bg = 'bg-gray-100', to,
@@ -143,6 +145,25 @@ function ReviewQueuePreview() {
 export default function CardiologistDashboard() {
   const { session } = useAuth();
   const name = session?.user?.username ?? 'Cardiologist';
+  const [metrics, setMetrics] = useState<ReviewMetrics | null>(null);
+  const [statsLoading, setStatsLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const m = await analyticsService.getReviewMetrics('day');
+        if (!cancelled) setMetrics(m);
+      } catch {
+        // non-fatal — stats show "—"
+      } finally {
+        if (!cancelled) setStatsLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const hasStats = metrics && metrics.accuracy.totalReviewed > 0;
 
   return (
     <AppShell title="Cardiologist Dashboard">
@@ -154,10 +175,28 @@ export default function CardiologistDashboard() {
 
       {/* Quick stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <StatCard label="Pending Reviews"  value="—" sub="Awaiting backend" accent="text-amber-600" />
-        <StatCard label="Cases Today"      value="—" sub="Awaiting backend" />
-        <StatCard label="Completed Today"  value="—" sub="Awaiting backend" accent="text-emerald-600" />
-        <StatCard label="Avg Review Time"  value="—" sub="Awaiting backend" />
+        <StatCard
+          label="Pending Reviews"
+          value={statsLoading ? '…' : hasStats ? String(metrics!.pendingCount) : '—'}
+          sub={hasStats ? 'Today' : 'Awaiting backend'}
+          accent="text-amber-600"
+        />
+        <StatCard
+          label="Total Reviewed"
+          value={statsLoading ? '…' : hasStats ? String(metrics!.accuracy.totalReviewed) : '—'}
+          sub={hasStats ? 'Today' : 'Awaiting backend'}
+        />
+        <StatCard
+          label="Completed Today"
+          value={statsLoading ? '…' : hasStats ? String(metrics!.completedToday) : '—'}
+          sub={hasStats ? 'Cases resolved' : 'Awaiting backend'}
+          accent="text-emerald-600"
+        />
+        <StatCard
+          label="Avg Review Time"
+          value={statsLoading ? '…' : hasStats ? `${metrics!.avgReviewMinutes}m` : '—'}
+          sub={hasStats ? 'Per case' : 'Awaiting backend'}
+        />
       </div>
 
       {/* Live review queue preview */}
@@ -214,6 +253,7 @@ export default function CardiologistDashboard() {
           icon={ShieldCheck}
           accent="text-red-500"
           bg="bg-red-50"
+          to="/cardiologist/validation"
         />
       </div>
 

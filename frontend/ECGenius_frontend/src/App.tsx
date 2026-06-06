@@ -45,8 +45,10 @@ import ReviewQueuePage from './pages/cardiologist/ReviewQueuePage';
 import CaseReviewsPage from './pages/cardiologist/CaseReviewsPage';
 import CaseReviewPage from './pages/cardiologist/CaseReviewPage';
 import CardiologistInsightsPage from './pages/cardiologist/CardiologistInsightsPage';
-import AnalyticsPage from './pages/cardiologist/AnalyticsPage';
+import AnalyticsDashboardPage from './pages/cardiologist/AnalyticsDashboardPage';
 import OntologyRulesPage from './pages/cardiologist/OntologyRulesPage';
+import AnnotationWorkspacePage from './pages/cardiologist/AnnotationWorkspacePage';
+import ValidationDashboardPage from './pages/cardiologist/ValidationDashboardPage';
 
 // Patient placeholder pages
 import MyReportsPage from './pages/patient/MyReportsPage';
@@ -135,7 +137,15 @@ const router = createBrowserRouter(
       />
       <Route
         path="cardiologist/analytics"
-        element={<RoleGuard allowedRoles={['CARDIOLOGIST']}><AnalyticsPage /></RoleGuard>}
+        element={<RoleGuard allowedRoles={['CARDIOLOGIST']}><AnalyticsDashboardPage /></RoleGuard>}
+      />
+      <Route
+        path="cardiologist/validation"
+        element={<RoleGuard allowedRoles={['CARDIOLOGIST']}><ValidationDashboardPage /></RoleGuard>}
+      />
+      <Route
+        path="cardiologist/annotation/:analysisId"
+        element={<RoleGuard allowedRoles={['CARDIOLOGIST']}><AnnotationWorkspacePage /></RoleGuard>}
       />
       <Route
         path="cardiologist/ontology"

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft, Loader2, AlertTriangle, RefreshCw, User,
+  ArrowLeft, Loader2, AlertTriangle, RefreshCw, User, PencilLine,
 } from 'lucide-react';
 import AppShell from '../../layouts/AppShell';
 import EvidenceFusionPanel from '../../components/clinical/EvidenceFusionPanel';
@@ -105,9 +105,21 @@ export default function CaseReviewPage() {
             <ArrowLeft className="w-4 h-4" />
             Back to Review Queue
           </button>
-          <span className="text-xs font-mono bg-gray-100 text-slate-500 rounded px-2 py-1">
-            {_id.slice(-12)}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-mono bg-gray-100 text-slate-500 rounded px-2 py-1">
+              {_id.slice(-12)}
+            </span>
+            {review?.reviewStatus === 'completed' && (
+              <button
+                type="button"
+                onClick={() => navigate(`/cardiologist/annotation/${_id}`)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold transition"
+              >
+                <PencilLine className="w-4 h-4" />
+                Continue to Annotation
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Patient summary */}
