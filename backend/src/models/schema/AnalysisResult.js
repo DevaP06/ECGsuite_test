@@ -21,15 +21,7 @@ const analysisResultSchema = new mongoose.Schema({
     min: 0,
     max: 600
   },
-  abnormalities: [{
-    type: String,
-    enum: [
-      'st_elevation', 'st_depression', 't_wave_inversion',
-      'q_wave', 'r_wave_progression', 'left_bundle_branch_block',
-      'right_bundle_branch_block', 'left_ventricular_hypertrophy',
-      'right_ventricular_hypertrophy', 'atrial_enlargement'
-    ]
-  }],
+  abnormalities: [{ type: String }],
   confidence: {
     type: Number,
     min: 0,
