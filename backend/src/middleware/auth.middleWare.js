@@ -27,3 +27,10 @@ const protect = async (req, res, next) => {
 };
 
 export default protect;
+
+export const requireRole = (...roles) => (req, res, next) => {
+  if (!req.user || !roles.includes(req.user.role)) {
+    return sendResponse(res, 403, false, 'Access denied: insufficient permissions');
+  }
+  return next();
+};
