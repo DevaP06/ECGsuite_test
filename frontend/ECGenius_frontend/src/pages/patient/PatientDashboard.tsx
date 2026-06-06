@@ -1,38 +1,109 @@
-import { Upload, FileText, AlertTriangle, Clock, History, Bell } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Upload, AlertTriangle, History, TrendingUp, Loader2, ArrowRight } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import AppShell from '../../layouts/AppShell';
 import { useAuth } from '../../features/auth/useAuth';
+import { ecgService } from '../../services/ecgService';
+import TrendAnalytics from '../../components/patients/TrendAnalytics';
+import type { ECGAnalysis } from '../../types/ecg';
+import { extractErrorMessage } from '../../utils/errorUtils';
 
-function PlaceholderCard({
-  title, description, icon: Icon, accent = 'text-slate-400', bg = 'bg-gray-100', to,
-}: {
-  title: string;
-  description: string;
-  icon: React.ComponentType<{ className?: string }>;
-  accent?: string;
-  bg?: string;
-  to?: string;
-}) {
-  const inner = (
-    <div className="bg-white rounded-xl border border-dashed border-gray-200 p-6 flex flex-col gap-3 hover:border-blue-200 hover:shadow-sm transition">
-      <div className={`w-9 h-9 rounded-lg ${bg} flex items-center justify-center`}>
-        <Icon className={`w-5 h-5 ${accent}`} />
-      </div>
-      <div>
-        <h4 className="text-sm font-semibold text-slate-700">{title}</h4>
-        <p className="text-xs text-slate-400 mt-0.5 leading-relaxed">{description}</p>
-      </div>
-      <span className="text-xs font-medium text-blue-500 bg-blue-50 rounded-full px-2.5 py-0.5 self-start">
-        Coming soon
-      </span>
-    </div>
+// ─── Status badge ─────────────────────────────────────────────────────────────
+function StatusBadge({ status }: { status: string }) {
+  const classes =
+    status === 'completed'  ? 'bg-emerald-50 text-emerald-700' :
+    status === 'failed'     ? 'bg-red-50 text-red-700'         :
+    status === 'processing' ? 'bg-yellow-50 text-yellow-700'   :
+                              'bg-slate-50 text-slate-600';
+  return (
+    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full capitalize ${classes}`}>
+      {status}
+    </span>
   );
-  return to ? <Link to={to}>{inner}</Link> : <>{inner}</>;
 }
 
+// ─── Recent Reports mini-list ─────────────────────────────────────────────────
+function RecentReports({ analyses }: { analyses: ECGAnalysis[] }) {
+  const navigate = useNavigate();
+  const recent = [...analyses]
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 5);
+
+  if (!recent.length) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-sm text-slate-500 mb-3">No ECG reports yet.</p>
+        <Link
+          to="/ecgupload"
+          className="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-800 font-semibold transition"
+        >
+          <Upload className="w-4 h-4" /> Upload your first ECG
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="divide-y divide-gray-50">
+      {recent.map((a) => {
+        const isFailed = a.status === 'failed';
+        const path = isFailed
+          ? `/analysis-failed/${a._id}`
+          : `/diagnosisdetail/${a._id}`;
+        return (
+          <div
+            key={a._id}
+            onClick={() => navigate(path)}
+            className="flex items-center justify-between py-3 cursor-pointer hover:bg-blue-50/30 -mx-2 px-2 rounded-lg transition"
+          >
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-slate-800 truncate">
+                {a.analysisResult?.rhythm
+                  ? a.analysisResult.rhythm.replace(/_/g, ' ')
+                  : isFailed
+                  ? 'Failed Analysis'
+                  : 'ECG Upload'}
+              </p>
+              <p className="text-xs text-slate-400">
+                {new Date(a.createdAt).toLocaleDateString(undefined, {
+                  year: 'numeric', month: 'short', day: 'numeric',
+                })}
+              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <StatusBadge status={a.status} />
+              <ArrowRight className="w-3.5 h-3.5 text-slate-300" />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── Dashboard ────────────────────────────────────────────────────────────────
 export default function PatientDashboard() {
   const { session } = useAuth();
   const name = session?.user?.username ?? 'there';
+
+  const [analyses, setAnalyses] = useState<ECGAnalysis[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await ecgService.getMyAnalyses();
+        if (!cancelled) setAnalyses(data);
+      } catch (err: unknown) {
+        if (!cancelled) setLoadError(extractErrorMessage(err, 'Could not load reports'));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   return (
     <AppShell title="My Health Dashboard">
@@ -69,47 +140,88 @@ export default function PatientDashboard() {
         </p>
       </div>
 
-      {/* Module grid */}
-      <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4">My Modules</h3>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <PlaceholderCard
-          title="My Reports"
-          description="View AI analysis results for your previously uploaded ECGs."
-          icon={FileText}
-          accent="text-blue-500"
-          bg="bg-blue-50"
-          to="/patient/reports"
-        />
-        <PlaceholderCard
-          title="Risk Summary"
-          description="A rolling summary of your heart health indicators and risk trends over time."
-          icon={AlertTriangle}
-          accent="text-amber-500"
-          bg="bg-amber-50"
+      {/* Two-column: Recent Reports + Trend Summary */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 mb-8">
+
+        {/* Recent Reports */}
+        <div className="lg:col-span-2 bg-white rounded-xl border border-gray-100 shadow-sm p-5 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <History className="w-4 h-4 text-slate-400" />
+              <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide">Recent Reports</h3>
+            </div>
+            <Link
+              to="/patient/history"
+              className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 font-semibold transition"
+            >
+              Full history <ArrowRight className="w-3 h-3" />
+            </Link>
+          </div>
+
+          {loading ? (
+            <div className="flex items-center justify-center py-6">
+              <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
+            </div>
+          ) : loadError ? (
+            <p className="text-xs text-slate-400 text-center py-4">{loadError}</p>
+          ) : (
+            <RecentReports analyses={analyses} />
+          )}
+        </div>
+
+        {/* Trend Analytics */}
+        <div className="lg:col-span-3">
+          <div className="flex items-center gap-2 mb-3">
+            <TrendingUp className="w-4 h-4 text-slate-400" />
+            <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide">Trend Summary</h3>
+          </div>
+          {loading ? (
+            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6 flex items-center justify-center min-h-[200px]">
+              <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
+            </div>
+          ) : (
+            <TrendAnalytics analyses={analyses} />
+          )}
+        </div>
+      </div>
+
+      {/* Risk summary + History quick-links */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Link
           to="/patient/risk"
-        />
-        <PlaceholderCard
-          title="History"
-          description="Complete timeline of your ECG uploads, diagnoses, and review outcomes."
-          icon={History}
-          accent="text-slate-500"
-          bg="bg-slate-100"
+          className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition flex items-start gap-4"
+        >
+          <div className="w-9 h-9 rounded-lg bg-amber-50 flex items-center justify-center shrink-0">
+            <AlertTriangle className="w-5 h-5 text-amber-500" />
+          </div>
+          <div>
+            <h4 className="text-sm font-semibold text-slate-700">Risk Summary</h4>
+            <p className="text-xs text-slate-400 mt-0.5 leading-relaxed">
+              Rolling summary of your heart health indicators and risk trends over time.
+            </p>
+            <span className="text-xs font-medium text-blue-500 bg-blue-50 rounded-full px-2.5 py-0.5 mt-2 inline-block">
+              Coming soon
+            </span>
+          </div>
+        </Link>
+
+        <Link
           to="/patient/history"
-        />
-        <PlaceholderCard
-          title="Review Status"
-          description="Track whether a cardiologist has reviewed your referred case."
-          icon={Clock}
-          accent="text-purple-500"
-          bg="bg-purple-50"
-        />
-        <PlaceholderCard
-          title="Emergency Alerts"
-          description="Notifications for any critical findings detected in your ECG analyses."
-          icon={Bell}
-          accent="text-red-500"
-          bg="bg-red-50"
-        />
+          className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition flex items-start gap-4"
+        >
+          <div className="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
+            <History className="w-5 h-5 text-slate-500" />
+          </div>
+          <div>
+            <h4 className="text-sm font-semibold text-slate-700">Full History</h4>
+            <p className="text-xs text-slate-400 mt-0.5 leading-relaxed">
+              Complete timeline of your ECG uploads, diagnoses, and review outcomes.
+            </p>
+            <span className="text-xs font-medium text-blue-500 bg-blue-50 rounded-full px-2.5 py-0.5 mt-2 inline-block">
+              Coming soon
+            </span>
+          </div>
+        </Link>
       </div>
     </AppShell>
   );

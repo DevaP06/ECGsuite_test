@@ -18,9 +18,10 @@ import TryBetaPage from './pages/TryBetaPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import Careers from './pages/Careers';
-import Patients from './pages/Patients';
-import PatientDetail from './pages/PatientDetail';
 import ECGDetail from './pages/ECGDetails';
+import PatientListPage from './pages/patients/PatientListPage';
+import PatientDetailPage from './pages/patients/PatientDetailPage';
+import PatientRegistrationPage from './pages/patients/PatientRegistrationPage';
 import ECGUpload from './pages/ECGUpload';
 import DiagnosisDetail from './pages/DiagnosisDetail';
 import RoleSelectPage from './pages/RoleSelectPage';
@@ -206,14 +207,19 @@ const router = createBrowserRouter(
         element={<AuthGuard><FailedAnalysisPage /></AuthGuard>}
       />
 
-      {/* ── Patient management (Doctor only) ─────────────────────────── */}
+      {/* ── Patient management (Doctor + Cardiologist) ───────────────── */}
+      {/* /patients/register MUST precede /patients/:patientId */}
       <Route
-        path="patients"
-        element={<RoleGuard allowedRoles={['PHC_DOCTOR']}><Patients /></RoleGuard>}
+        path="patients/register"
+        element={<RoleGuard allowedRoles={['PHC_DOCTOR']}><PatientRegistrationPage /></RoleGuard>}
       />
       <Route
-        path="patients/:id"
-        element={<RoleGuard allowedRoles={['PHC_DOCTOR']}><PatientDetail /></RoleGuard>}
+        path="patients"
+        element={<RoleGuard allowedRoles={['PHC_DOCTOR', 'CARDIOLOGIST']}><PatientListPage /></RoleGuard>}
+      />
+      <Route
+        path="patients/:patientId"
+        element={<RoleGuard allowedRoles={['PHC_DOCTOR', 'CARDIOLOGIST']}><PatientDetailPage /></RoleGuard>}
       />
       <Route
         path="patients/:id/ecg/:ecgId"
