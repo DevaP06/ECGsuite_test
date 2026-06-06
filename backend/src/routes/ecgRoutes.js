@@ -317,7 +317,7 @@ router.get('/analysis/:id', readLimiter, async (req, res) => {
   }
 });
 
-// Delete ECG analysis (owner only)
+// Delete ECG analysis (owner only) — cascades to SpecialistReview
 router.delete('/analysis/:id', async (req, res) => {
   try {
     const rawId = String(req.params.id);
@@ -330,6 +330,8 @@ router.delete('/analysis/:id', async (req, res) => {
     if (!analysis) {
       return sendResponse(res, 404, false, 'ECG analysis not found');
     }
+
+    await SpecialistReview.deleteMany({ analysisId: rawId });
 
     logAction({ req, userId, entityType: 'ECG_ANALYSIS', entityId: analysis._id, action: 'DELETE', oldValue: { fileName: analysis.fileName, status: analysis.status } });
     return sendResponse(res, 200, true, 'ECG analysis deleted successfully', null);
@@ -470,6 +472,17 @@ router.patch('/reviews/:reviewId', mlLimiter, async (req, res) => {
       return sendResponse(res, 400, false, `Invalid reviewStatus. Must be one of: ${VALID_REVIEW_STATUSES.join(', ')}`);
     }
 
+    const existing = await SpecialistReview.findById(rawId);
+    if (!existing) {
+      return sendResponse(res, 404, false, 'Specialist review not found');
+    }
+
+    // Pending reviews are unowned — any cardiologist can claim them.
+    // In-review/completed reviews are locked to the cardiologist who claimed them.
+    if (existing.reviewStatus !== 'pending' && String(existing.cardiologistId) !== String(cardiologistId)) {
+      return sendResponse(res, 403, false, 'This review is already being handled by another cardiologist');
+    }
+
     const updates = { cardiologistId };
     if (reviewStatus) updates.reviewStatus = reviewStatus;
     if (expertDiagnosis !== undefined) updates.expertDiagnosis = expertDiagnosis;
@@ -478,9 +491,6 @@ router.patch('/reviews/:reviewId', mlLimiter, async (req, res) => {
     if (reviewStatus === 'completed') updates.reviewDate = new Date();
 
     const review = await SpecialistReview.findByIdAndUpdate(rawId, updates, { new: true, runValidators: true });
-    if (!review) {
-      return sendResponse(res, 404, false, 'Specialist review not found');
-    }
 
     logAction({ req, userId: cardiologistId, entityType: 'SPECIALIST_REVIEW', entityId: review._id, action: 'REVIEW', newValue: updates });
     return sendResponse(res, 200, true, 'Review updated successfully', { review });
