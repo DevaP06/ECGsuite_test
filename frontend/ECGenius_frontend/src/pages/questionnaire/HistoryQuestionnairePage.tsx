@@ -9,6 +9,7 @@ import QuestionnaireProgress from '../../components/questionnaire/QuestionnaireP
 import QuestionnaireSummary from '../../components/questionnaire/QuestionnaireSummary';
 
 import { ecgService } from '../../services/ecgService';
+import { extractErrorMessage } from '../../utils/errorUtils';
 import {
   fetchQuestionnaire,
   submitQuestionnaire,
@@ -74,8 +75,7 @@ export default function HistoryQuestionnairePage() {
         }
       } catch (err: unknown) {
         if (cancelled) return;
-        const msg = (err as { message?: string }).message ?? 'Failed to load questionnaire';
-        setLoadError(msg);
+        setLoadError(extractErrorMessage(err, 'Failed to load questionnaire'));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -167,8 +167,7 @@ export default function HistoryQuestionnairePage() {
       toast.success('Clinical history submitted successfully');
       navigate(`/clinical-dashboard/${analysisId}`);
     } catch (err: unknown) {
-      const axErr = err as { response?: { data?: { message?: string } }; message?: string };
-      toast.error(axErr.response?.data?.message ?? axErr.message ?? 'Submission failed. Please try again.');
+      toast.error(extractErrorMessage(err, 'Submission failed. Please try again.'));
     } finally {
       setSubmitting(false);
     }

@@ -12,6 +12,7 @@ import ECGWaveformViewer from "../components/ecg/ECGWaveformViewer";
 import PDFExportButton from "../components/common/PDFExportButton";
 import { ecgService } from "../services/ecgService";
 import { isDoctor, getDashboardRoute } from "../features/auth/roleUtils";
+import { extractErrorMessage } from "../utils/errorUtils";
 import type { ECGAnalysis } from "../types/ecg";
 import EmergencyOverlay from "../components/common/EmergencyOverlay";
 
@@ -33,8 +34,7 @@ export default function DiagnosisDetail() {
       const data = await ecgService.getAnalysis(id);
       setAnalysis(data);
     } catch (err: unknown) {
-      const errorMsg = err as { response?: { data?: { error?: string; message?: string } }; message?: string };
-      setError(errorMsg.response?.data?.error || errorMsg.response?.data?.message || errorMsg.message || "Failed to fetch ECG analysis.");
+      setError(extractErrorMessage(err, 'Failed to fetch ECG analysis.'));
     } finally {
       setLoading(false);
     }

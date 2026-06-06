@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import AxiosInstance from "../AxiosInstance";
 import { useGoogleAuth } from "../hooks/useGoogleAuth";
 import signupImage from "../assets/signuppage.png";
+import { extractErrorMessage } from "../utils/errorUtils";
 
 const RegisterPage = () => {
   const [formData, setFormData] = useState({
@@ -51,31 +52,7 @@ const RegisterPage = () => {
       navigate("/login");
     } catch (err: unknown) {
       console.error('Registration error:', err);
-      
-      const error = err as {
-        response?: {
-          data?: string | { message?: string; error?: string };
-        };
-        message?: string;
-      };
-
-      // Better error message handling
-      let errorMessage = "Registration failed";
-      if (error.response?.data) {
-        if (typeof error.response.data === 'string') {
-          errorMessage = error.response.data;
-        } else if (typeof error.response.data === 'object' && error.response.data !== null) {
-          if (error.response.data.error) {
-            errorMessage = error.response.data.error;
-          } else if (error.response.data.message) {
-            errorMessage = error.response.data.message;
-          }
-        }
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-      
-      setError(errorMessage);
+      setError(extractErrorMessage(err, 'Registration failed'));
     } finally {
       setLoading(false);
     }

@@ -4,6 +4,7 @@ import toast from "react-hot-toast";
 import AppShell from "../layouts/AppShell";
 import { ecgService } from "../services/ecgService";
 import UploadProgress from "../components/ecg/UploadProgress";
+import { extractErrorMessage } from "../utils/errorUtils";
 
 export default function ECGUpload() {
   const navigate = useNavigate();
@@ -87,19 +88,24 @@ export default function ECGUpload() {
       if (result.success && result.analysisId) {
         setUploadProgress(100);
         setUploadStatus('success');
-        toast.success("ECG uploaded and analyzed successfully!");
-        
-        setTimeout(() => {
-          navigate(`/diagnosisdetail/${result.analysisId}`);
-        }, 1000);
+
+        if (result.status === 'failed') {
+          toast.error("ECG analysis failed. Please review the failure report.");
+          setTimeout(() => {
+            navigate(`/analysis-failed/${result.analysisId}`);
+          }, 1000);
+        } else {
+          toast.success("ECG uploaded and analyzed successfully!");
+          setTimeout(() => {
+            navigate(`/diagnosisdetail/${result.analysisId}`);
+          }, 1000);
+        }
       } else {
         throw new Error("Invalid response from server.");
       }
     } catch (err: unknown) {
       setUploadStatus('error');
-      const error = err as { response?: { data?: { message?: string; error?: string } }; message?: string };
-      const errMsg = error.response?.data?.message || error.response?.data?.error || error.message || "Failed to upload and analyze ECG.";
-      toast.error(errMsg);
+      toast.error(extractErrorMessage(err, 'Failed to upload and analyze ECG.'));
     }
   };
 
