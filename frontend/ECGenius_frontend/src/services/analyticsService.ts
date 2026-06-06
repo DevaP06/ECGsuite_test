@@ -3,7 +3,12 @@
 // Returns sensible empty shapes on 404.
 
 import AxiosInstance from '../AxiosInstance';
-import type { ReviewMetrics, CardiologistInsights } from '../types/analytics';
+import type {
+  ReviewMetrics,
+  CardiologistInsights,
+  FeedbackPayload,
+  FeedbackRecord,
+} from '../types/analytics';
 
 function is404(err: unknown): boolean {
   const e = err as Record<string, unknown>;
@@ -66,5 +71,12 @@ export const analyticsService = {
       }
       throw err;
     }
+  },
+
+  // POST /api/analytics/feedback  (CARDIOLOGIST — pending)
+  async submitFeedback(payload: FeedbackPayload): Promise<FeedbackRecord> {
+    const res = await AxiosInstance.post<unknown>('/api/analytics/feedback', payload);
+    const body = res.data as Record<string, unknown>;
+    return (body.feedback ?? body) as FeedbackRecord;
   },
 };
