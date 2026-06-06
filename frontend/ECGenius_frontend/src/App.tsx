@@ -7,6 +7,7 @@ import {
 } from 'react-router-dom';
 
 import MainLayout from './pages/MainLayout';
+import ErrorPage from './pages/ErrorPage';
 import HomePage from './pages/HomePage';
 import About from './pages/About';
 import NotFound from './pages/NotFound';
@@ -24,7 +25,8 @@ import ECGUpload from './pages/ECGUpload';
 import DiagnosisDetail from './pages/DiagnosisDetail';
 import RoleSelectPage from './pages/RoleSelectPage';
 import HistoryQuestionnairePage from './pages/questionnaire/HistoryQuestionnairePage';
-import ClinicalDashboardPlaceholder from './pages/ClinicalDashboardPlaceholder';
+import ClinicalDashboard from './pages/clinical/ClinicalDashboard';
+import FailedAnalysisPage from './pages/analysis/FailedAnalysisPage';
 
 // Role dashboards
 import DoctorDashboard from './pages/doctor/DoctorDashboard';
@@ -68,7 +70,7 @@ function DashboardRedirect() {
 
 const router = createBrowserRouter(
   createRoutesFromElements(
-    <Route path="/" element={<MainLayout />}>
+    <Route path="/" element={<MainLayout />} errorElement={<ErrorPage />}>
       {/* ── Public routes ─────────────────────────────────────────────── */}
       <Route index element={<HomePage />} />
       <Route path="about" element={<About />} />
@@ -197,7 +199,11 @@ const router = createBrowserRouter(
       />
       <Route
         path="clinical-dashboard/:analysisId"
-        element={<AuthGuard><ClinicalDashboardPlaceholder /></AuthGuard>}
+        element={<AuthGuard><ClinicalDashboard /></AuthGuard>}
+      />
+      <Route
+        path="analysis-failed/:analysisId"
+        element={<AuthGuard><FailedAnalysisPage /></AuthGuard>}
       />
 
       {/* ── Patient management (Doctor only) ─────────────────────────── */}

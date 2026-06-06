@@ -4,6 +4,7 @@ import signupImage from "../assets/signuppage.png";
 import { useGoogleAuth } from "../hooks/useGoogleAuth";
 import { useAuth } from "../features/auth/useAuth";
 import { getDashboardRoute } from "../features/auth/roleUtils";
+import { extractErrorMessage } from "../utils/errorUtils";
 
 const LoginPage = () => {
   const [formData, setFormData] = useState({
@@ -36,28 +37,7 @@ const LoginPage = () => {
       await signin(formData.emailOrUsername, formData.password);
       navigate(getDashboardRoute());
     } catch (err: unknown) {
-      const error = err as {
-        response?: {
-          data?: string | { message?: string; error?: string };
-        };
-        message?: string;
-      };
-      let errorMessage = "Login failed";
-      if (error.response?.data) {
-        if (typeof error.response.data === 'string') {
-          errorMessage = error.response.data;
-        } else if (typeof error.response.data === 'object' && error.response.data !== null) {
-          if (error.response.data.message) {
-            errorMessage = error.response.data.message;
-          } else if (error.response.data.error) {
-            errorMessage = error.response.data.error;
-          }
-        }
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-
-      setError(errorMessage);
+      setError(extractErrorMessage(err, 'Login failed'));
     } finally {
       setLoading(false);
     }
