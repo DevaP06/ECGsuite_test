@@ -2,13 +2,16 @@ import { useState, useEffect } from 'react';
 import {
   Upload, Users, Activity, AlertTriangle, ClipboardList,
   Clock, FlaskConical, Brain, UserPlus, ArrowRight, Loader2,
+  Zap, AlertCircle,
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import AppShell from '../../layouts/AppShell';
 import { useAuth } from '../../features/auth/useAuth';
 import { patientService } from '../../services/patientService';
+import { reviewService } from '../../services/reviewService';
 import { extractErrorMessage } from '../../utils/errorUtils';
 import type { PatientListItem } from '../../types/patient';
+import type { ReviewQueueItem, ReviewPriority } from '../../types/review';
 
 // ─── Shared sub-components ────────────────────────────────────────────────────
 function PlaceholderCard({
@@ -44,6 +47,92 @@ function StatCard({ label, value, sub, accent }: { label: string; value: string;
       <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{label}</p>
       <p className={`text-3xl font-bold mt-1 ${accent ?? 'text-slate-800'}`}>{value}</p>
       {sub && <p className="text-xs text-slate-400 mt-0.5">{sub}</p>}
+    </div>
+  );
+}
+
+// ─── Priority badge helper ────────────────────────────────────────────────────
+const PRIORITY_ICON: Record<ReviewPriority, React.ElementType> = {
+  normal:   Clock,
+  urgent:   Zap,
+  critical: AlertCircle,
+};
+const PRIORITY_COLOR: Record<ReviewPriority, string> = {
+  normal:   'text-blue-500',
+  urgent:   'text-amber-500',
+  critical: 'text-red-500',
+};
+
+// ─── Pending Review Requests ──────────────────────────────────────────────────
+function PendingReviewRequests() {
+  const [requests, setRequests] = useState<ReviewQueueItem[]>([]);
+  const [loading, setLoading]   = useState(true);
+  const [err, setErr]           = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await reviewService.getMyRequests();
+        if (!cancelled) setRequests(data);
+      } catch (e: unknown) {
+        if (!cancelled) setErr(extractErrorMessage(e, 'Could not load review requests'));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 space-y-3">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide">Review Requests</h3>
+        <Link
+          to="/doctor/review-request"
+          className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 font-semibold transition"
+        >
+          View all <ArrowRight className="w-3 h-3" />
+        </Link>
+      </div>
+
+      {loading ? (
+        <div className="flex items-center justify-center py-6">
+          <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
+        </div>
+      ) : err ? (
+        <p className="text-xs text-slate-400 text-center py-4">{err}</p>
+      ) : requests.length === 0 ? (
+        <div className="text-center py-5">
+          <p className="text-xs text-slate-400 mb-1">No review requests submitted yet.</p>
+          <span className="text-xs text-blue-500 bg-blue-50 rounded-full px-2 py-0.5 font-semibold">
+            Backend integration pending
+          </span>
+        </div>
+      ) : (
+        <div className="divide-y divide-gray-50">
+          {requests.slice(0, 5).map((r) => {
+            const PIcon = PRIORITY_ICON[r.priority] ?? Clock;
+            const pColor = PRIORITY_COLOR[r.priority] ?? 'text-slate-400';
+            return (
+              <div key={r._id} className="flex items-center justify-between py-2.5 gap-2">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-slate-800 truncate">
+                    {r.patientName ?? 'Unknown Patient'}
+                  </p>
+                  <p className="text-xs text-slate-400 truncate">{r.primaryDiagnosis ?? '—'}</p>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <PIcon className={`w-3.5 h-3.5 ${pColor}`} />
+                  <span className={`text-xs font-semibold capitalize ${pColor}`}>
+                    {r.priority}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -182,17 +271,16 @@ export default function DoctorDashboard() {
         </Link>
       </div>
 
-      {/* Two-column: Recent Patients + Module grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 mb-8">
-        {/* Recent Patients — wider column */}
-        <div className="lg:col-span-2">
-          <RecentPatients />
-        </div>
+      {/* Two-column: Recent Patients + Review Requests */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <RecentPatients />
+        <PendingReviewRequests />
+      </div>
 
-        {/* Module cards */}
-        <div className="lg:col-span-3">
-          <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4">Modules</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {/* Module grid */}
+      <div className="mb-8">
+        <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4">Modules</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <PlaceholderCard
               title="Recent ECG Uploads"
               description="Latest uploaded ECG analyses and their AI results."
@@ -240,7 +328,6 @@ export default function DoctorDashboard() {
               bg="bg-teal-50"
             />
           </div>
-        </div>
       </div>
     </AppShell>
   );

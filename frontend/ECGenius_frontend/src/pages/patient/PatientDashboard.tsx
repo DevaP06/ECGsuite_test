@@ -5,6 +5,7 @@ import AppShell from '../../layouts/AppShell';
 import { useAuth } from '../../features/auth/useAuth';
 import { ecgService } from '../../services/ecgService';
 import TrendAnalytics from '../../components/patients/TrendAnalytics';
+import ReviewStatusTracker from '../../components/review/ReviewStatusTracker';
 import type { ECGAnalysis } from '../../types/ecg';
 import { extractErrorMessage } from '../../utils/errorUtils';
 
@@ -105,6 +106,12 @@ export default function PatientDashboard() {
     return () => { cancelled = true; };
   }, []);
 
+  const latestCompletedId = loading
+    ? undefined
+    : [...analyses]
+        .filter((a) => a.status === 'completed')
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0]?._id;
+
   return (
     <AppShell title="My Health Dashboard">
       {/* Welcome */}
@@ -184,6 +191,13 @@ export default function PatientDashboard() {
           )}
         </div>
       </div>
+
+      {/* Specialist review status for most recent completed analysis */}
+      {latestCompletedId && (
+        <div className="mb-8">
+          <ReviewStatusTracker analysisId={latestCompletedId} />
+        </div>
+      )}
 
       {/* Risk summary + History quick-links */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
