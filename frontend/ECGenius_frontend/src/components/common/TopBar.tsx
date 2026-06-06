@@ -12,7 +12,7 @@ export default function TopBar() {
 
   const handleLogout = () => {
     signout();
-    navigate("/Sign-Up-Page");
+    navigate("/login");
   };
 
 

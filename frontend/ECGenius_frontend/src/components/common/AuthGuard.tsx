@@ -10,7 +10,7 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
   const { session } = useAuth();
 
   if (!session) {
-    return <Navigate to="/Sign-Up-Page" replace />;
+    return <Navigate to="/login" replace />;
   }
 
   return <>{children}</>;

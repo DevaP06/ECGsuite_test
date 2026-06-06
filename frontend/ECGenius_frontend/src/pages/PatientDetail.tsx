@@ -1,5 +1,5 @@
 import { useParams } from "react-router-dom";
-import DashboardLayout from "../components/layout/DashboardLayout";
+import AppShell from "../layouts/AppShell";
 import PatientHeader from "../components/Patients/PatientHeader";
 import PatientVitals from "../components/Patients/PatientVitals";
 import PatientHistory from "../components/Patients/PatientHistory";
@@ -12,7 +12,7 @@ export default function PatientDetail() {
   const { id: _id } = useParams();
 
   return (
-    <DashboardLayout>
+    <AppShell title="Patient Detail">
       <div className="space-y-6">
         <PatientHeader name="John Smith" age={58} gender="Male" lastVisit="2025-10-15" />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -28,6 +28,6 @@ export default function PatientDetail() {
           <PatientECGs />
         </div>
       </div>
-    </DashboardLayout>
+    </AppShell>
   );
 }

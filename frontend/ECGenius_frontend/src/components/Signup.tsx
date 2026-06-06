@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import signupImage from "../assets/signuppage.png";
 import { useGoogleAuth } from "../hooks/useGoogleAuth";
 import { useAuth } from "../features/auth/useAuth";
+import { getDashboardRoute } from "../features/auth/roleUtils";
 
 const LoginPage = () => {
   const [formData, setFormData] = useState({
@@ -33,7 +34,7 @@ const LoginPage = () => {
 
     try {
       await signin(formData.emailOrUsername, formData.password);
-      navigate("/dashboard");
+      navigate(getDashboardRoute());
     } catch (err: unknown) {
       const error = err as {
         response?: {
@@ -126,7 +127,7 @@ const LoginPage = () => {
 
           <p className="mt-4 text-center text-sm text-gray-400">
             Not registered?{" "}
-            <Link to="/Sign-Up-Page" className="text-blue-400 hover:underline">
+            <Link to="/register" className="text-blue-400 hover:underline">
               Create account
             </Link>
           </p>

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import DashboardLayout from "../components/layout/DashboardLayout";
+import AppShell from "../layouts/AppShell";
 import { ecgService } from "../services/ecgService";
 import UploadProgress from "../components/ecg/UploadProgress";
 
@@ -106,7 +106,7 @@ export default function ECGUpload() {
   const isUploading = uploadStatus === 'uploading';
 
   return (
-    <DashboardLayout>
+    <AppShell title="Upload ECG">
       <div className="max-w-2xl mx-auto bg-white shadow rounded-lg p-6">
         <h2 className="text-2xl font-bold mb-6 text-slate-800">Upload ECG for AI Diagnosis</h2>
         
@@ -204,6 +204,6 @@ export default function ECGUpload() {
           </div>
         </form>
       </div>
-    </DashboardLayout>
+    </AppShell>
   );
 }

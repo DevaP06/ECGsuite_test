@@ -63,6 +63,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         localStorage.removeItem("ecg:session");
         localStorage.removeItem("token");
         localStorage.removeItem("user");
+        localStorage.removeItem("ecg:role"); // TEMPORARY: clear locally-stored role selection
         setSession(null);
       },
     }),

@@ -1,16 +1,25 @@
 import { useEffect, useState, useCallback } from "react";
-import { useParams, Link } from "react-router-dom";
-import { Loader2, ArrowLeft, RefreshCw, AlertTriangle } from "lucide-react";
-import DashboardLayout from "../components/layout/DashboardLayout";
+import { useParams, Link, useNavigate } from "react-router-dom";
+import { Loader2, ArrowLeft, RefreshCw, AlertTriangle, ClipboardList } from "lucide-react";
+import AppShell from "../layouts/AppShell";
 import DiagnosisOverview from "../components/diagnosis/DiagnosisOverview";
 import ExplainabilityChart from "../components/diagnosis/ExplainabilityChart";
 import RecommendationsPanel from "../components/diagnosis/RecommendationsPanel";
+import OntologyPanel from "../components/diagnosis/OntologyPanel";
+import MetricsGrid from "../components/ecg/MetricsGrid";
+import ECGHeatmap from "../components/ecg/ECGHeatmap";
+import ECGWaveformViewer from "../components/ecg/ECGWaveformViewer";
+import PDFExportButton from "../components/common/PDFExportButton";
 import { ecgService } from "../services/ecgService";
+import { isDoctor, getDashboardRoute } from "../features/auth/roleUtils";
 import type { ECGAnalysis } from "../types/ecg";
 import EmergencyOverlay from "../components/common/EmergencyOverlay";
 
 export default function DiagnosisDetail() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const doctorView = isDoctor();
+  const dashboardPath = getDashboardRoute();
   const [analysis, setAnalysis] = useState<ECGAnalysis | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -37,18 +46,18 @@ export default function DiagnosisDetail() {
 
   if (loading) {
     return (
-      <DashboardLayout>
+      <AppShell title="Diagnosis Detail">
         <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
           <Loader2 className="w-12 h-12 animate-spin text-blue-600" />
           <p className="text-slate-600 font-semibold text-lg">Analyzing ECG and retrieving report...</p>
         </div>
-      </DashboardLayout>
+      </AppShell>
     );
   }
 
   if (error || !analysis) {
     return (
-      <DashboardLayout>
+      <AppShell title="Diagnosis Detail">
         <div className="max-w-xl mx-auto mt-10 bg-white border border-red-200 shadow-sm rounded-lg p-6 text-center">
           <div className="flex justify-center mb-4">
             <div className="bg-red-50 text-red-600 rounded-full p-3">
@@ -59,7 +68,7 @@ export default function DiagnosisDetail() {
           <p className="text-slate-600 mb-6">{error || "The requested analysis could not be found."}</p>
           <div className="flex gap-4 justify-center">
             <Link
-              to="/dashboard"
+              to={dashboardPath}
               className="flex items-center gap-2 px-4 py-2 border border-slate-300 rounded hover:bg-slate-50 transition"
             >
               <ArrowLeft className="w-4 h-4" />
@@ -74,7 +83,7 @@ export default function DiagnosisDetail() {
             </button>
           </div>
         </div>
-      </DashboardLayout>
+      </AppShell>
     );
   }
 
@@ -82,17 +91,22 @@ export default function DiagnosisDetail() {
   const showEmergency = hasEmergency && !emergencyAcknowledged;
 
   const emergencyItem = analysis.analysisResult?.ontologyEnrichment?.find(item => item.isEmergency);
-  const emergencyConditionName = emergencyItem?.displayName || 
+  const emergencyConditionName = emergencyItem?.displayName ||
     (analysis.analysisResult?.rhythm === 'ventricular_tachycardia' ? 'Ventricular Tachycardia' : 'ST-Segment Elevation');
-  const emergencyAction = emergencyItem?.recommendedTests?.join(", ") || 
+  const emergencyAction = emergencyItem?.recommendedTests?.join(", ") ||
     "Immediate hospitalization, oxygen support, and notification of the cardiology team.";
 
   const recommendedTests = analysis.analysisResult?.ontologyEnrichment?.flatMap(
     item => item.recommendedTests
   ) || [];
 
+  const signalMetrics = analysis.analysisResult?.signalMetrics ?? null;
+  const heatmapUrl = analysis.analysisResult?.explanation?.heatmapUrl ?? null;
+  const waveformAnnotations = analysis.analysisResult?.explanation?.waveformAnnotations ?? null;
+  const rawSignalData = analysis.analysisResult?.explanation?.rawSignalData ?? null;
+
   return (
-    <DashboardLayout>
+    <AppShell title="Diagnosis Detail">
       {showEmergency && (
         <EmergencyOverlay
           condition={emergencyConditionName}
@@ -104,17 +118,37 @@ export default function DiagnosisDetail() {
       )}
 
       <div className="space-y-6">
+        {/* Header bar */}
         <div className="flex justify-between items-center">
           <Link
-            to="/dashboard"
+            to={dashboardPath}
             className="flex items-center gap-2 text-slate-600 hover:text-blue-600 transition text-sm font-semibold"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>Back to Dashboard</span>
           </Link>
-          <span className="text-xs text-slate-400">Analysis ID: {analysis._id}</span>
+          <div className="flex items-center gap-3">
+            {doctorView && id && (
+              <button
+                type="button"
+                onClick={() => navigate(`/questionnaire/${id}`)}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-sm font-semibold text-white transition"
+              >
+                <ClipboardList className="w-4 h-4" />
+                Clinical History
+              </button>
+            )}
+            {id && (
+              <PDFExportButton
+                analysisId={id}
+                patientName={analysis.patientInfo.name}
+              />
+            )}
+            <span className="text-xs text-slate-400">Analysis ID: {analysis._id}</span>
+          </div>
         </div>
 
+        {/* Patient header */}
         <div className="bg-white shadow rounded-lg p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-1">
             <h2 className="text-2xl font-bold text-slate-800">AI Diagnosis Report</h2>
@@ -138,6 +172,7 @@ export default function DiagnosisDetail() {
           </div>
         </div>
 
+        {/* Quick stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="bg-white p-4 rounded-lg shadow text-center">
             <span className="text-xs text-slate-500 uppercase font-semibold">Heart Rate</span>
@@ -165,6 +200,13 @@ export default function DiagnosisDetail() {
           </div>
         </div>
 
+        {/* Full metrics grid (Task 10) */}
+        <div className="space-y-2">
+          <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide px-1">Signal Metrics</h3>
+          <MetricsGrid metrics={signalMetrics} loading={loading} />
+        </div>
+
+        {/* Main analysis grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
             <DiagnosisOverview
@@ -172,19 +214,27 @@ export default function DiagnosisDetail() {
               rhythm={analysis.analysisResult?.rhythm}
               abnormalities={analysis.analysisResult?.abnormalities}
             />
-
             <ExplainabilityChart
               leadImportance={analysis.analysisResult?.explanation?.leadImportance}
             />
+            {/* Ontology panel (Task 12) */}
+            <OntologyPanel items={analysis.analysisResult?.ontologyEnrichment} />
           </div>
 
-          <div>
-            <RecommendationsPanel
-              recommendedTests={recommendedTests}
-            />
+          <div className="space-y-6">
+            <RecommendationsPanel recommendedTests={recommendedTests} />
           </div>
         </div>
+
+        {/* Explainability row (Tasks 13 + 14) */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <ECGHeatmap heatmapUrl={heatmapUrl} />
+          <ECGWaveformViewer
+            rawSignalData={rawSignalData}
+            waveformAnnotations={waveformAnnotations}
+          />
+        </div>
       </div>
-    </DashboardLayout>
+    </AppShell>
   );
 }

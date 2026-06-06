@@ -6,9 +6,11 @@ export interface PatientInfo {
 
 export interface SignalMetrics {
   heartRate: number | null;
-  prInterval?: number;
+  prInterval?: number | null;
   qrsDuration: number | null;
   qtInterval: number | null;
+  qtcInterval?: number | null;
+  rrInterval?: number | null;
 }
 
 export interface OntologyItem {
@@ -18,11 +20,25 @@ export interface OntologyItem {
   isEmergency: boolean;
   severity: string;
   recommendedTests: string[];
+  snomedCode?: string;
+  snomedDisplay?: string;
+  icd10Code?: string;
+  icd10Display?: string;
+  confidence?: number;
+  evidence?: string[];
+}
+
+export interface WaveformAnnotation {
+  pWave?: { startIdx?: number; endIdx?: number; confidence?: number };
+  qrs?: { startIdx?: number; endIdx?: number; confidence?: number };
+  tWave?: { startIdx?: number; endIdx?: number; confidence?: number };
 }
 
 export interface ExplanationData {
   heatmapUrl?: string;
   leadImportance?: Record<string, number>;
+  waveformAnnotations?: WaveformAnnotation;
+  rawSignalData?: number[];
 }
 
 export interface AnalysisResult {
