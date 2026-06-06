@@ -30,7 +30,7 @@ export const patientService = {
       `/api/patients?${params.toString()}`
     );
     // Normalise envelope variants: { data, total } or { patients, total }
-    const body = res.data as Record<string, unknown>;
+    const body = res.data as unknown as Record<string, unknown>;
     const data = (body.data ?? body.patients ?? []) as PatientListItem[];
     const total = (typeof body.total === 'number' ? body.total : data.length);
     const page = (typeof body.page === 'number' ? body.page : (query.page ?? 1));
@@ -40,14 +40,14 @@ export const patientService = {
 
   async getPatient(id: string): Promise<Patient> {
     const res = await AxiosInstance.get<Patient>(`/api/patients/${id}`);
-    const body = res.data as Record<string, unknown>;
+    const body = res.data as unknown as Record<string, unknown>;
     // Support envelope: { patient: {...} } or flat
     return (body.patient ?? body) as Patient;
   },
 
   async createPatient(payload: CreatePatientPayload): Promise<Patient> {
     const res = await AxiosInstance.post<Patient>('/api/patients', payload);
-    const body = res.data as Record<string, unknown>;
+    const body = res.data as unknown as Record<string, unknown>;
     return (body.patient ?? body) as Patient;
   },
 

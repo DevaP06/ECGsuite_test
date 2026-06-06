@@ -1,12 +1,12 @@
 import { useParams } from "react-router-dom";
 import AppShell from "../layouts/AppShell";
-import PatientHeader from "../components/Patients/PatientHeader";
-import PatientVitals from "../components/Patients/PatientVitals";
-import PatientHistory from "../components/Patients/PatientHistory";
-import PatientLabs from "../components/Patients/PatientLabs";
-import PatientMedications from "../components/Patients/PatientMedication";
-import PatientAppointments from "../components/Patients/PatientAppointments";
-import PatientECGs from "../components/Patients/PatientECGs";
+import PatientHeader from "../components/patients/PatientHeader";
+import PatientVitals from "../components/patients/PatientVitals";
+import PatientHistory from "../components/patients/PatientHistory";
+import PatientLabs from "../components/patients/PatientLabs";
+import PatientMedications from "../components/patients/PatientMedication";
+import PatientAppointments from "../components/patients/PatientAppointments";
+import PatientECGs from "../components/patients/PatientECGs";
 
 export default function PatientDetail() {
   const { id: _id } = useParams();
