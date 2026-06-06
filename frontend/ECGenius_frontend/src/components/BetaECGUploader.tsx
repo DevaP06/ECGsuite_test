@@ -112,7 +112,7 @@ const BetaECGUploader: React.FC = () => {
       {!isAuthenticated && (
         <div className="mb-6 rounded-lg border border-pink-500/40 bg-pink-500/10 p-4 text-sm text-pink-200">
           <p className="mb-2">You need to sign in before using the beta analyzer.</p>
-          <Link to="/Sign-Up-Page" className="font-semibold text-white underline underline-offset-4">
+          <Link to="/login" className="font-semibold text-white underline underline-offset-4">
             Go to sign in
           </Link>
         </div>

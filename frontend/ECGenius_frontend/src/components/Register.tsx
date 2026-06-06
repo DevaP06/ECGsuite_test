@@ -48,7 +48,7 @@ const RegisterPage = () => {
       });
       
       // Redirect to login page after successful registration
-      navigate("/Sign-Up-Page");
+      navigate("/login");
     } catch (err: unknown) {
       console.error('Registration error:', err);
       
@@ -174,7 +174,7 @@ const RegisterPage = () => {
           {/* Login */}
           <p className="mt-4 text-center text-sm text-gray-400">
             Already have an account?{" "}
-            <Link to="/Sign-Up-Page" className="text-blue-400 hover:underline">
+            <Link to="/login" className="text-blue-400 hover:underline">
               Sign in
             </Link>
           </p>
