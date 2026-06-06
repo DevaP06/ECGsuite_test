@@ -32,6 +32,7 @@ export const ROLE_NAV_ITEMS: Record<UserRole, NavItem[]> = {
   ],
   CARDIOLOGIST: [
     { label: 'Dashboard',          path: '/cardiologist/dashboard', icon: 'Home'          },
+    { label: 'Patients',           path: '/patients',               icon: 'Users'         },
     { label: 'Review Queue',       path: '/cardiologist/queue',     icon: 'ClipboardList',isPlaceholder: true },
     { label: 'Case Reviews',       path: '/cardiologist/reviews',   icon: 'CheckCircle',  isPlaceholder: true },
     { label: 'AI Insights',        path: '/cardiologist/insights',  icon: 'Activity',     isPlaceholder: true },

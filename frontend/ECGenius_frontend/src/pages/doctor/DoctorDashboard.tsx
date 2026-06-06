@@ -1,11 +1,16 @@
+import { useState, useEffect } from 'react';
 import {
   Upload, Users, Activity, AlertTriangle, ClipboardList,
-  Clock, FlaskConical, Brain,
+  Clock, FlaskConical, Brain, UserPlus, ArrowRight, Loader2,
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import AppShell from '../../layouts/AppShell';
 import { useAuth } from '../../features/auth/useAuth';
+import { patientService } from '../../services/patientService';
+import { extractErrorMessage } from '../../utils/errorUtils';
+import type { PatientListItem } from '../../types/patient';
 
+// ─── Shared sub-components ────────────────────────────────────────────────────
 function PlaceholderCard({
   title, description, icon: Icon, accent = 'text-slate-400', bg = 'bg-gray-100', to,
 }: {
@@ -43,6 +48,90 @@ function StatCard({ label, value, sub, accent }: { label: string; value: string;
   );
 }
 
+// ─── Recent Patients mini-list ────────────────────────────────────────────────
+function RecentPatients() {
+  const navigate = useNavigate();
+  const [patients, setPatients] = useState<PatientListItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await patientService.getPatients({
+          sort: 'createdAt', dir: 'desc', pageSize: 5,
+        });
+        if (!cancelled) setPatients(res.data);
+      } catch (err: unknown) {
+        if (!cancelled) setErrorMsg(extractErrorMessage(err, 'Could not load patients'));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 space-y-3">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide">Recent Patients</h3>
+        <Link
+          to="/patients"
+          className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 font-semibold transition"
+        >
+          View all <ArrowRight className="w-3 h-3" />
+        </Link>
+      </div>
+
+      {loading ? (
+        <div className="flex items-center justify-center py-6">
+          <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
+        </div>
+      ) : errorMsg ? (
+        <p className="text-xs text-slate-400 text-center py-4">{errorMsg}</p>
+      ) : patients.length === 0 ? (
+        <div className="text-center py-6">
+          <p className="text-xs text-slate-400 mb-3">No patients registered yet.</p>
+          <Link
+            to="/patients/register"
+            className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 font-semibold transition"
+          >
+            <UserPlus className="w-3.5 h-3.5" /> Register first patient
+          </Link>
+        </div>
+      ) : (
+        <div className="divide-y divide-gray-50">
+          {patients.map((p) => (
+            <div
+              key={p._id}
+              onClick={() => navigate(`/patients/${p._id}`)}
+              className="flex items-center justify-between py-2.5 cursor-pointer hover:bg-blue-50/30 -mx-2 px-2 rounded-lg transition"
+            >
+              <div>
+                <p className="text-sm font-semibold text-slate-800">{p.name}</p>
+                <p className="text-xs text-slate-500">
+                  {p.age} · {p.gender}
+                  {p.totalECGs !== undefined && ` · ${p.totalECGs} ECG${p.totalECGs !== 1 ? 's' : ''}`}
+                </p>
+              </div>
+              <div className="text-right shrink-0">
+                {p.lastVisit && (
+                  <p className="text-xs text-slate-400">
+                    {new Date(p.lastVisit).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                  </p>
+                )}
+                <ArrowRight className="w-3.5 h-3.5 text-slate-300 ml-auto mt-0.5" />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Dashboard ────────────────────────────────────────────────────────────────
 export default function DoctorDashboard() {
   const { session } = useAuth();
   const name = session?.user?.username ?? 'Doctor';
@@ -84,63 +173,74 @@ export default function DoctorDashboard() {
         </Link>
 
         <Link
-          to="/doctor/clinical"
+          to="/patients/register"
           className="group bg-white border border-gray-100 rounded-xl p-6 shadow-sm hover:shadow-md transition"
         >
-          <FlaskConical className="w-8 h-8 mb-4 text-emerald-500" />
-          <h3 className="text-lg font-bold text-slate-800">Clinical Dashboard</h3>
-          <p className="text-sm text-slate-500 mt-1">Access patient clinical history and evidence fusion.</p>
+          <UserPlus className="w-8 h-8 mb-4 text-emerald-500" />
+          <h3 className="text-lg font-bold text-slate-800">Register Patient</h3>
+          <p className="text-sm text-slate-500 mt-1">Create a new patient record before ECG upload.</p>
         </Link>
       </div>
 
-      {/* Module grid */}
-      <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4">Modules</h3>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <PlaceholderCard
-          title="Recent ECG Uploads"
-          description="Latest uploaded ECG analyses and their AI results."
-          icon={Activity}
-          accent="text-blue-500"
-          bg="bg-blue-50"
-          to="/doctor/insights"
-        />
-        <PlaceholderCard
-          title="Recent Patients"
-          description="Recently updated patient records and consultations."
-          icon={Users}
-          accent="text-slate-500"
-          bg="bg-slate-100"
-        />
-        <PlaceholderCard
-          title="AI Insights"
-          description="Aggregated condition trends and confidence distributions from recent analyses."
-          icon={Brain}
-          accent="text-purple-500"
-          bg="bg-purple-50"
-          to="/doctor/insights"
-        />
-        <PlaceholderCard
-          title="Critical Alerts"
-          description="Tier 1 emergency findings requiring immediate clinical action."
-          icon={AlertTriangle}
-          accent="text-red-500"
-          bg="bg-red-50"
-        />
-        <PlaceholderCard
-          title="Review Requests"
-          description="Send ECG cases to a cardiologist for specialist review and override."
-          icon={ClipboardList}
-          accent="text-amber-500"
-          bg="bg-amber-50"
-          to="/doctor/review-request"
-        />
-        <PlaceholderCard
-          title="Upcoming Appointments"
-          description="Scheduled patient follow-ups and consultation reminders."
-          icon={Clock}
-          accent="text-teal-500"
-          bg="bg-teal-50"
-        />
+      {/* Two-column: Recent Patients + Module grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 mb-8">
+        {/* Recent Patients — wider column */}
+        <div className="lg:col-span-2">
+          <RecentPatients />
+        </div>
+
+        {/* Module cards */}
+        <div className="lg:col-span-3">
+          <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4">Modules</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <PlaceholderCard
+              title="Recent ECG Uploads"
+              description="Latest uploaded ECG analyses and their AI results."
+              icon={Activity}
+              accent="text-blue-500"
+              bg="bg-blue-50"
+              to="/doctor/insights"
+            />
+            <PlaceholderCard
+              title="AI Insights"
+              description="Aggregated condition trends and confidence distributions from recent analyses."
+              icon={Brain}
+              accent="text-purple-500"
+              bg="bg-purple-50"
+              to="/doctor/insights"
+            />
+            <PlaceholderCard
+              title="Critical Alerts"
+              description="Tier 1 emergency findings requiring immediate clinical action."
+              icon={AlertTriangle}
+              accent="text-red-500"
+              bg="bg-red-50"
+            />
+            <PlaceholderCard
+              title="Review Requests"
+              description="Send ECG cases to a cardiologist for specialist review and override."
+              icon={ClipboardList}
+              accent="text-amber-500"
+              bg="bg-amber-50"
+              to="/doctor/review-request"
+            />
+            <PlaceholderCard
+              title="Clinical Dashboard"
+              description="Access patient clinical history and evidence fusion."
+              icon={FlaskConical}
+              accent="text-emerald-500"
+              bg="bg-emerald-50"
+              to="/doctor/clinical"
+            />
+            <PlaceholderCard
+              title="Upcoming Appointments"
+              description="Scheduled patient follow-ups and consultation reminders."
+              icon={Clock}
+              accent="text-teal-500"
+              bg="bg-teal-50"
+            />
+          </div>
+        </div>
       </div>
     </AppShell>
   );
