@@ -59,10 +59,17 @@ const analysisResultSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.Mixed,
     default: null
   },
+  isEmergency: {
+    type: Boolean,
+    default: false
+  },
   ontologyEnrichment: [{
-    term: String,
-    label: String,
-    system: String
+    displayName: String,
+    confidenceTier: String,
+    urgencyTier: String,
+    isEmergency: { type: Boolean, default: false },
+    severity: String,
+    recommendedTests: [{ type: String }]
   }],
   explanation: {
     type: mongoose.Schema.Types.Mixed,
