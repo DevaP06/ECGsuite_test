@@ -1,5 +1,5 @@
 import AppShell from "../layouts/AppShell";
-import PatientsTable from "../components/Patients/PatientsTables";
+import PatientsTable from "../components/patients/PatientsTables";
 
 export default function Patients() {
   return (

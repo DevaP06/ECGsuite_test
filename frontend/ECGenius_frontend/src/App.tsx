@@ -7,6 +7,7 @@ import {
 } from 'react-router-dom';
 
 import MainLayout from './pages/MainLayout';
+import ErrorPage from './pages/ErrorPage';
 import HomePage from './pages/HomePage';
 import About from './pages/About';
 import NotFound from './pages/NotFound';
@@ -17,14 +18,16 @@ import TryBetaPage from './pages/TryBetaPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import Careers from './pages/Careers';
-import Patients from './pages/Patients';
-import PatientDetail from './pages/PatientDetail';
 import ECGDetail from './pages/ECGDetails';
+import PatientListPage from './pages/patients/PatientListPage';
+import PatientDetailPage from './pages/patients/PatientDetailPage';
+import PatientRegistrationPage from './pages/patients/PatientRegistrationPage';
 import ECGUpload from './pages/ECGUpload';
 import DiagnosisDetail from './pages/DiagnosisDetail';
 import RoleSelectPage from './pages/RoleSelectPage';
 import HistoryQuestionnairePage from './pages/questionnaire/HistoryQuestionnairePage';
-import ClinicalDashboardPlaceholder from './pages/ClinicalDashboardPlaceholder';
+import ClinicalDashboard from './pages/clinical/ClinicalDashboard';
+import FailedAnalysisPage from './pages/analysis/FailedAnalysisPage';
 
 // Role dashboards
 import DoctorDashboard from './pages/doctor/DoctorDashboard';
@@ -37,12 +40,15 @@ import DoctorInsightsPage from './pages/doctor/DoctorInsightsPage';
 import ReviewRequestPage from './pages/doctor/ReviewRequestPage';
 import ClinicalDashboardEntryPage from './pages/doctor/ClinicalDashboardEntryPage';
 
-// Cardiologist placeholder pages
+// Cardiologist pages
 import ReviewQueuePage from './pages/cardiologist/ReviewQueuePage';
 import CaseReviewsPage from './pages/cardiologist/CaseReviewsPage';
+import CaseReviewPage from './pages/cardiologist/CaseReviewPage';
 import CardiologistInsightsPage from './pages/cardiologist/CardiologistInsightsPage';
-import AnalyticsPage from './pages/cardiologist/AnalyticsPage';
+import AnalyticsDashboardPage from './pages/cardiologist/AnalyticsDashboardPage';
 import OntologyRulesPage from './pages/cardiologist/OntologyRulesPage';
+import AnnotationWorkspacePage from './pages/cardiologist/AnnotationWorkspacePage';
+import ValidationDashboardPage from './pages/cardiologist/ValidationDashboardPage';
 
 // Patient placeholder pages
 import MyReportsPage from './pages/patient/MyReportsPage';
@@ -68,7 +74,7 @@ function DashboardRedirect() {
 
 const router = createBrowserRouter(
   createRoutesFromElements(
-    <Route path="/" element={<MainLayout />}>
+    <Route path="/" element={<MainLayout />} errorElement={<ErrorPage />}>
       {/* ── Public routes ─────────────────────────────────────────────── */}
       <Route index element={<HomePage />} />
       <Route path="about" element={<About />} />
@@ -122,12 +128,24 @@ const router = createBrowserRouter(
         element={<RoleGuard allowedRoles={['CARDIOLOGIST']}><CaseReviewsPage /></RoleGuard>}
       />
       <Route
+        path="cardiologist/review/:reviewId"
+        element={<RoleGuard allowedRoles={['CARDIOLOGIST']}><CaseReviewPage /></RoleGuard>}
+      />
+      <Route
         path="cardiologist/insights"
         element={<RoleGuard allowedRoles={['CARDIOLOGIST']}><CardiologistInsightsPage /></RoleGuard>}
       />
       <Route
         path="cardiologist/analytics"
-        element={<RoleGuard allowedRoles={['CARDIOLOGIST']}><AnalyticsPage /></RoleGuard>}
+        element={<RoleGuard allowedRoles={['CARDIOLOGIST']}><AnalyticsDashboardPage /></RoleGuard>}
+      />
+      <Route
+        path="cardiologist/validation"
+        element={<RoleGuard allowedRoles={['CARDIOLOGIST']}><ValidationDashboardPage /></RoleGuard>}
+      />
+      <Route
+        path="cardiologist/annotation/:analysisId"
+        element={<RoleGuard allowedRoles={['CARDIOLOGIST']}><AnnotationWorkspacePage /></RoleGuard>}
       />
       <Route
         path="cardiologist/ontology"
@@ -197,17 +215,26 @@ const router = createBrowserRouter(
       />
       <Route
         path="clinical-dashboard/:analysisId"
-        element={<AuthGuard><ClinicalDashboardPlaceholder /></AuthGuard>}
+        element={<AuthGuard><ClinicalDashboard /></AuthGuard>}
+      />
+      <Route
+        path="analysis-failed/:analysisId"
+        element={<AuthGuard><FailedAnalysisPage /></AuthGuard>}
       />
 
-      {/* ── Patient management (Doctor only) ─────────────────────────── */}
+      {/* ── Patient management (Doctor + Cardiologist) ───────────────── */}
+      {/* /patients/register MUST precede /patients/:patientId */}
       <Route
-        path="patients"
-        element={<RoleGuard allowedRoles={['PHC_DOCTOR']}><Patients /></RoleGuard>}
+        path="patients/register"
+        element={<RoleGuard allowedRoles={['PHC_DOCTOR']}><PatientRegistrationPage /></RoleGuard>}
       />
       <Route
-        path="patients/:id"
-        element={<RoleGuard allowedRoles={['PHC_DOCTOR']}><PatientDetail /></RoleGuard>}
+        path="patients"
+        element={<RoleGuard allowedRoles={['PHC_DOCTOR', 'CARDIOLOGIST']}><PatientListPage /></RoleGuard>}
+      />
+      <Route
+        path="patients/:patientId"
+        element={<RoleGuard allowedRoles={['PHC_DOCTOR', 'CARDIOLOGIST']}><PatientDetailPage /></RoleGuard>}
       />
       <Route
         path="patients/:id/ecg/:ecgId"
