@@ -50,6 +50,8 @@ import ecgRoutes from './src/routes/ecgRoutes.js';
 import mlRoutes from './src/routes/mlRoutes.js';
 import waitlistRoutes from './src/routes/waitlistRoutes.js';
 import adminRoutes from './src/routes/adminRoutes.js';
+import patientRoutes from './src/routes/patientRoutes.js';
+import questionnaireRoutes from './src/routes/questionnaireRoutes.js';
 import protect, { requireRole } from './src/middleware/auth.middleWare.js';
 import { mlLimiter, readLimiter } from './src/middleware/rateLimiter.js';
 
@@ -83,6 +85,8 @@ app.use('/api/waitlist', waitlistRoutes);
 app.use('/api/ecg', protect, ecgRoutes);
 app.use('/api/ml', mlLimiter, protect, mlRoutes);
 app.use('/api/admin', readLimiter, protect, requireRole('ADMIN'), adminRoutes);
+app.use('/api/patients', readLimiter, protect, patientRoutes);
+app.use('/api/questionnaire', readLimiter, protect, questionnaireRoutes);
 
 // Error handling middleware
 app.use((error, req, res, next) => {
@@ -108,7 +112,9 @@ app.use((req, res) => {
       '/api/auth/me',
       '/api/ecg/...',
       '/api/ml/...',
-      '/api/admin/...'
+      '/api/admin/...',
+      '/api/patients/...',
+      '/api/questionnaire/...'
     ]
   });
 });

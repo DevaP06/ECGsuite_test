@@ -8,6 +8,11 @@ const ecgAnalysisSchema = new mongoose.Schema({
     ref: 'User',
     required: true
   },
+  patientId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Patient',
+    default: null
+  },
   fileName: {
     type: String,
     required: true,
@@ -115,6 +120,7 @@ const ecgAnalysisSchema = new mongoose.Schema({
 
 // Indexes for better query performance
 ecgAnalysisSchema.index({ userId: 1, createdAt: -1 });
+ecgAnalysisSchema.index({ patientId: 1, createdAt: -1 });
 ecgAnalysisSchema.index({ status: 1 });
 ecgAnalysisSchema.index({ 'patientInfo.name': 1 });
 ecgAnalysisSchema.index({ tags: 1 });
