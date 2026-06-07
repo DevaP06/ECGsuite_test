@@ -31,6 +31,8 @@ import ClinicalQuestionnairePage from './pages/ClinicalQuestionnairePage';
 import ClinicalDashboard from './pages/clinical/ClinicalDashboard';
 import FailedAnalysisPage from './pages/analysis/FailedAnalysisPage';
 import AuditTrailPage from './pages/AuditTrailPage';
+import ProfilePage from './pages/profile/ProfilePage';
+import SettingsPage from './pages/settings/SettingsPage';
 
 // Role dashboards
 import DoctorDashboard from './pages/doctor/DoctorDashboard';
@@ -267,6 +269,10 @@ const router = createBrowserRouter(
         path="patients/:id/ecg/:ecgId"
         element={<RoleGuard allowedRoles={['PHC_DOCTOR']}><ECGDetail /></RoleGuard>}
       />
+
+      {/* ── Profile & Settings (all authenticated users) ─────────────── */}
+      <Route path="profile" element={<AuthGuard><ProfilePage /></AuthGuard>} />
+      <Route path="settings" element={<AuthGuard><SettingsPage /></AuthGuard>} />
 
       {/* ── Diagnosis detail (all authenticated users) ───────────────── */}
       <Route path="diagnosisdetail/:id/ecg/:ecgId" element={<AuthGuard><DiagnosisDetail /></AuthGuard>} />

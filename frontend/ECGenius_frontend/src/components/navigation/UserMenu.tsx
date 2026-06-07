@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, ChevronDown, User } from 'lucide-react';
+import { LogOut, ChevronDown, User, Settings } from 'lucide-react';
 import { useAuth } from '../../features/auth/useAuth';
 import { getRole } from '../../features/auth/roleUtils';
 import { ROLE_DISPLAY_NAMES } from '../../types/rbac';
@@ -23,6 +23,11 @@ export default function UserMenu() {
   const handleLogout = () => {
     signout();
     navigate('/login');
+  };
+
+  const goTo = (path: string) => {
+    setOpen(false);
+    navigate(path);
   };
 
   const initials = session?.user?.username
@@ -58,13 +63,21 @@ export default function UserMenu() {
               {roleLabel}
             </span>
           </div>
-          <a
-            href="#"
-            className="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-gray-50 transition"
+          <button
+            onClick={() => goTo('/profile')}
+            className="flex items-center gap-2 w-full px-4 py-2 text-sm text-slate-700 hover:bg-gray-50 transition"
           >
             <User className="w-4 h-4 text-gray-400" />
             Profile
-          </a>
+          </button>
+          <button
+            onClick={() => goTo('/settings')}
+            className="flex items-center gap-2 w-full px-4 py-2 text-sm text-slate-700 hover:bg-gray-50 transition"
+          >
+            <Settings className="w-4 h-4 text-gray-400" />
+            Settings
+          </button>
+          <div className="border-t border-gray-100 my-1" />
           <button
             onClick={handleLogout}
             className="flex items-center gap-2 w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition"

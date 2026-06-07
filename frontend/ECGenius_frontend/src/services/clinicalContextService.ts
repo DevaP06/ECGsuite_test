@@ -5,7 +5,7 @@
 // HistoryQuestionnairePage.
 
 import type { TopPrediction } from '../types/ecg';
-import type { QuestionnaireDefinition, QuestionnaireResponse } from '../types/clinicalContext';
+import type { ClinicalContext, QuestionnaireDefinition, QuestionnaireResponse } from '../types/clinicalContext';
 import type { OntologyInputPayload } from '../types/ontologyInput';
 import { generateQuestionnaire } from '../utils/questionnaireEngine';
 
@@ -58,6 +58,17 @@ export function getSubmittedAt(analysisId: string): string | null {
     if (!raw) return null;
     const parsed = JSON.parse(raw) as { submittedAt?: string };
     return parsed.submittedAt ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export function getSubmittedClinicalContext(analysisId: string): ClinicalContext | null {
+  try {
+    const raw = localStorage.getItem(`${SUBMITTED_KEY_PREFIX}${analysisId}`);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { clinicalContext?: ClinicalContext };
+    return parsed.clinicalContext ?? null;
   } catch {
     return null;
   }

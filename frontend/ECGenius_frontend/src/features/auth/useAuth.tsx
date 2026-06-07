@@ -10,6 +10,15 @@ export interface User {
   role?: string;
   onboardingStep?: OnboardingStep;
   profile?: Record<string, unknown>;
+  // Additional fields the backend already returns from /api/auth/me
+  fullName?: string;
+  phone?: string;
+  profilePicture?: string;
+  authProvider?: 'local' | 'google';
+  isVerified?: boolean;
+  status?: 'active' | 'inactive' | 'suspended';
+  lastLogin?: string | null;
+  createdAt?: string;
 }
 
 export interface Session {

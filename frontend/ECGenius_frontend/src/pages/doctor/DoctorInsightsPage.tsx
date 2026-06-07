@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Activity, Loader2, RefreshCw, AlertTriangle, ListChecks, ShieldAlert, ClipboardList, ArrowRight, Info,
+  Stethoscope, UploadCloud,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -198,6 +199,72 @@ export default function DoctorInsightsPage() {
                   </ul>
                 ) : (
                   <EmptyCard message="No emergency-flagged analyses among your uploads." />
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+              {/* Recent diagnoses */}
+              <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 space-y-3">
+                <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide flex items-center gap-2">
+                  <Stethoscope className="w-4 h-4 text-slate-400" />
+                  Recent Diagnoses
+                </h3>
+                {summary!.recentDiagnoses.length > 0 ? (
+                  <ul className="space-y-2">
+                    {summary!.recentDiagnoses.map((d) => (
+                      <li key={d.analysisId}>
+                        <Link
+                          to={`/diagnosisdetail/${d.analysisId}`}
+                          className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg border border-gray-100 hover:bg-gray-50 transition"
+                        >
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-slate-800 truncate">
+                              {d.patientName} · {d.rhythm ?? 'Unknown rhythm'}
+                            </p>
+                            <p className="text-xs text-slate-500">
+                              {d.confidence !== undefined ? `Confidence ${d.confidence}%` : 'Confidence not provided'} · {new Date(d.createdAt).toLocaleString()}
+                            </p>
+                          </div>
+                          <ArrowRight className="w-4 h-4 text-slate-400 shrink-0" />
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <EmptyCard message="No completed diagnoses yet." />
+                )}
+              </div>
+
+              {/* Recent ECG uploads */}
+              <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 space-y-3">
+                <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide flex items-center gap-2">
+                  <UploadCloud className="w-4 h-4 text-slate-400" />
+                  Recent ECG Uploads
+                </h3>
+                {summary!.recentUploads.length > 0 ? (
+                  <ul className="space-y-2">
+                    {summary!.recentUploads.map((u) => (
+                      <li key={u.analysisId}>
+                        <Link
+                          to={`/diagnosisdetail/${u.analysisId}`}
+                          className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg border border-gray-100 hover:bg-gray-50 transition"
+                        >
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-slate-800 truncate">{u.patientName}</p>
+                            <p className="text-xs text-slate-500 truncate">
+                              {u.fileName ?? 'Unnamed file'} · {new Date(u.createdAt).toLocaleString()}
+                            </p>
+                          </div>
+                          <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-50 text-slate-600 border border-slate-200 capitalize shrink-0">
+                            {u.status}
+                          </span>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <EmptyCard message="No ECG uploads recorded yet." />
                 )}
               </div>
             </div>

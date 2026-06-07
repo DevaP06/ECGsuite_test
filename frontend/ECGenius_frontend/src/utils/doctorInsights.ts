@@ -12,10 +12,13 @@ export interface DoctorInsightsSummary {
   topAbnormalities: { label: string; count: number }[];
   pendingReviewsCount: number;
   emergencyAlerts: { analysisId: string; patientName: string; rhythm?: string; createdAt: string }[];
+  recentUploads: { analysisId: string; patientName: string; fileName?: string; status: string; createdAt: string }[];
+  recentDiagnoses: { analysisId: string; patientName: string; rhythm?: string; confidence?: number; createdAt: string }[];
 }
 
 const TREND_DAYS = 14;
 const TOP_ABNORMALITIES_LIMIT = 8;
+const RECENT_LIMIT = 6;
 
 function dayKey(iso: string): string {
   return iso.slice(0, 10); // 'YYYY-MM-DD'
@@ -67,6 +70,33 @@ function buildEmergencyAlerts(analyses: ECGAnalysis[]): DoctorInsightsSummary['e
     }));
 }
 
+function buildRecentUploads(analyses: ECGAnalysis[]): DoctorInsightsSummary['recentUploads'] {
+  return [...analyses]
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, RECENT_LIMIT)
+    .map((analysis) => ({
+      analysisId: analysis._id,
+      patientName: analysis.patientInfo?.name ?? 'Unknown patient',
+      fileName: analysis.originalName ?? analysis.fileName,
+      status: analysis.status,
+      createdAt: analysis.createdAt,
+    }));
+}
+
+function buildRecentDiagnoses(analyses: ECGAnalysis[]): DoctorInsightsSummary['recentDiagnoses'] {
+  return analyses
+    .filter((analysis) => analysis.status === 'completed' && analysis.analysisResult)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, RECENT_LIMIT)
+    .map((analysis) => ({
+      analysisId: analysis._id,
+      patientName: analysis.patientInfo?.name ?? 'Unknown patient',
+      rhythm: analysis.analysisResult?.rhythm,
+      confidence: analysis.analysisResult?.confidence,
+      createdAt: analysis.createdAt,
+    }));
+}
+
 export function buildDoctorInsights(
   analyses: ECGAnalysis[],
   requests: ReviewQueueItem[],
@@ -77,5 +107,7 @@ export function buildDoctorInsights(
     topAbnormalities: buildTopAbnormalities(analyses),
     pendingReviewsCount: requests.filter((r) => r.status === 'pending').length,
     emergencyAlerts: buildEmergencyAlerts(analyses),
+    recentUploads: buildRecentUploads(analyses),
+    recentDiagnoses: buildRecentDiagnoses(analyses),
   };
 }
