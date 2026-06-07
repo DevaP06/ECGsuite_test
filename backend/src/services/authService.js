@@ -13,8 +13,19 @@ function toUserResponse(user) {
     id: user._id,
     username: user.username,
     email: user.email,
-    role: user.role
+    role: user.role,
+    onboardingStep: user.onboardingStep,
+    profile: user.profile
   };
+}
+
+// Accounts created before onboarding tracking existed have no onboardingStep
+// in the DB (Mongoose defaults don't backfill existing documents). Treat them
+// as already onboarded — they were already using the system under the old flow.
+export function backfillLegacyOnboarding(user) {
+  if (user.onboardingStep == null) {
+    user.onboardingStep = 'complete';
+  }
 }
 
 export async function registerUserService(body) {
@@ -59,6 +70,7 @@ export async function loginUserService(body) {
     throw createError('Incorrect password', 401);
   }
 
+  backfillLegacyOnboarding(user);
   user.lastLogin = new Date();
   await user.save({ validateModifiedOnly: true });
 

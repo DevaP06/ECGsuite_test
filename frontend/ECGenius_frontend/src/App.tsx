@@ -24,7 +24,8 @@ import PatientDetailPage from './pages/patients/PatientDetailPage';
 import PatientRegistrationPage from './pages/patients/PatientRegistrationPage';
 import ECGUpload from './pages/ECGUpload';
 import DiagnosisDetail from './pages/DiagnosisDetail';
-import RoleSelectPage from './pages/RoleSelectPage';
+import RoleSelectionPage from './pages/onboarding/RoleSelectionPage';
+import ProfileCompletionPage from './pages/onboarding/ProfileCompletionPage';
 import HistoryQuestionnairePage from './pages/questionnaire/HistoryQuestionnairePage';
 import ClinicalDashboard from './pages/clinical/ClinicalDashboard';
 import FailedAnalysisPage from './pages/analysis/FailedAnalysisPage';
@@ -63,13 +64,14 @@ import SystemHealthPage from './pages/admin/SystemHealthPage';
 import ModelsPage from './pages/admin/ModelsPage';
 
 import { AuthProvider } from './features/auth/useAuth';
-import { getDashboardRoute } from './features/auth/roleUtils';
+import { getPostAuthRoute } from './features/auth/roleUtils';
 import AuthGuard from './components/common/AuthGuard';
 import RoleGuard from './components/common/RoleGuard';
+import OnboardingGuard from './components/common/OnboardingGuard';
 import { Toaster } from 'react-hot-toast';
 
 function DashboardRedirect() {
-  return <Navigate to={getDashboardRoute()} replace />;
+  return <Navigate to={getPostAuthRoute()} replace />;
 }
 
 const router = createBrowserRouter(
@@ -90,8 +92,15 @@ const router = createBrowserRouter(
       <Route path="careers" element={<Careers />} />
       <Route path="*" element={<NotFound />} />
 
-      {/* ── Auth ──────────────────────────────────────────────────────── */}
-      <Route path="select-role" element={<AuthGuard><RoleSelectPage /></AuthGuard>} />
+      {/* ── Onboarding (first-time setup: role selection → profile) ──────── */}
+      <Route
+        path="onboarding/role"
+        element={<OnboardingGuard step="role"><RoleSelectionPage /></OnboardingGuard>}
+      />
+      <Route
+        path="onboarding/profile"
+        element={<OnboardingGuard step="profile"><ProfileCompletionPage /></OnboardingGuard>}
+      />
 
       {/* Legacy /dashboard → redirect to role dashboard */}
       <Route path="dashboard" element={<AuthGuard><DashboardRedirect /></AuthGuard>} />

@@ -1,9 +1,11 @@
-// TEMPORARY UNTIL BACKEND ROLE MANAGEMENT IS AVAILABLE
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Stethoscope, Heart, User, CheckCircle } from 'lucide-react';
-import { setLocalRole, getDashboardRoute } from '../features/auth/roleUtils';
-import type { UserRole } from '../types/rbac';
+import { Stethoscope, Heart, User, CheckCircle, Loader2 } from 'lucide-react';
+import OnboardingShell from '../../components/onboarding/OnboardingShell';
+import { onboardingService } from '../../services/onboardingService';
+import { useAuth } from '../../features/auth/useAuth';
+import { extractErrorMessage } from '../../utils/errorUtils';
+import type { UserRole } from '../../types/rbac';
 
 interface RoleOption {
   role: UserRole;
@@ -41,40 +43,50 @@ const roleOptions: RoleOption[] = [
   },
 ];
 
-export default function RoleSelectPage() {
-  const [selected, setSelected] = useState<UserRole | null>(null);
-  const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
+// Admin accounts are provisioned out-of-band (not via self-service signup).
+// Extension point: flip this to a permission check once an admin-invite system exists.
+const SHOW_ADMIN_CARD = false;
 
-  const handleConfirm = () => {
-    if (!selected) return;
-    setLoading(true);
-    setLocalRole(selected);
-    navigate(getDashboardRoute());
+export default function RoleSelectionPage() {
+  const navigate = useNavigate();
+  const { updateUser } = useAuth();
+
+  const [selected, setSelected] = useState<UserRole | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const visibleOptions = SHOW_ADMIN_CARD
+    ? roleOptions
+    : roleOptions.filter((opt) => opt.role !== 'ADMIN');
+
+  const handleConfirm = async () => {
+    if (!selected || submitting) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      const user = await onboardingService.selectRole(selected);
+      updateUser(user);
+      navigate('/onboarding/profile');
+    } catch (err: unknown) {
+      setError(extractErrorMessage(err, 'Could not save your role. Please try again.'));
+      setSubmitting(false);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center px-4 py-12">
-      {/* Header */}
-      <div className="mb-10 text-center max-w-lg">
-        <div className="inline-flex items-center gap-2 bg-blue-950/60 border border-blue-800/40 rounded-full px-4 py-1.5 text-xs text-blue-300 font-medium mb-6">
-          <span className="w-1.5 h-1.5 rounded-full bg-blue-400 inline-block" />
-          Temporary — backend role management coming soon
-        </div>
-        <h1 className="text-3xl font-bold mb-3">Who are you?</h1>
-        <p className="text-gray-400 text-sm leading-relaxed">
-          Select your role to access your personalised ECGenius dashboard. This selection
-          determines what you can see and do on the platform.
-        </p>
-      </div>
-
+    <OnboardingShell
+      step={1}
+      title="Who are you?"
+      subtitle="Select your role to set up your personalised ECGenius workspace. This determines what you can see and do on the platform."
+    >
       {/* Role cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5 w-full max-w-3xl">
-        {roleOptions.map((opt) => {
+        {visibleOptions.map((opt) => {
           const isSelected = selected === opt.role;
           return (
             <button
               key={opt.role}
+              type="button"
               onClick={() => setSelected(opt.role)}
               className={`relative group text-left rounded-2xl border p-6 transition-all duration-200 focus:outline-none ${
                 isSelected
@@ -88,9 +100,7 @@ export default function RoleSelectPage() {
                 </span>
               )}
 
-              <div
-                className={`inline-flex p-3 rounded-xl bg-gradient-to-br ${opt.accent} mb-4 text-white`}
-              >
+              <div className={`inline-flex p-3 rounded-xl bg-gradient-to-br ${opt.accent} mb-4 text-white`}>
                 {opt.icon}
               </div>
 
@@ -101,19 +111,25 @@ export default function RoleSelectPage() {
         })}
       </div>
 
+      {error && (
+        <p className="mt-6 text-sm text-red-400 text-center max-w-md">{error}</p>
+      )}
+
       {/* Confirm button */}
-      <div className="mt-10 w-full max-w-xs">
+      <div className="mt-8 w-full max-w-xs">
         <button
+          type="button"
           onClick={handleConfirm}
-          disabled={!selected || loading}
-          className="w-full py-3 rounded-xl font-semibold bg-gradient-to-r from-blue-500 via-blue-400 to-cyan-400 hover:opacity-90 transition disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm"
+          disabled={!selected || submitting}
+          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-semibold bg-gradient-to-r from-blue-500 via-blue-400 to-cyan-400 hover:opacity-90 transition disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm"
         >
-          {loading ? 'Redirecting…' : 'Continue to Dashboard'}
+          {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
+          {submitting ? 'Saving…' : 'Continue'}
         </button>
         {!selected && (
           <p className="text-center text-xs text-gray-600 mt-2">Select a role to continue</p>
         )}
       </div>
-    </div>
+    </OnboardingShell>
   );
 }

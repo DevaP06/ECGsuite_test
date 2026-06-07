@@ -1,7 +1,7 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../features/auth/useAuth';
-import { getRole, getDashboardRoute } from '../../features/auth/roleUtils';
+import { getRole, getDashboardRoute, hasCompletedOnboarding, getOnboardingRoute } from '../../features/auth/roleUtils';
 import type { UserRole } from '../../types/rbac';
 
 interface RoleGuardProps {
@@ -16,10 +16,14 @@ const RoleGuard: React.FC<RoleGuardProps> = ({ children, allowedRoles }) => {
     return <Navigate to="/login" replace />;
   }
 
+  if (!hasCompletedOnboarding()) {
+    return <Navigate to={getOnboardingRoute()} replace />;
+  }
+
   const role = getRole();
 
   if (!role) {
-    return <Navigate to="/select-role" replace />;
+    return <Navigate to="/onboarding/role" replace />;
   }
 
   if (!allowedRoles.includes(role)) {

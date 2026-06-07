@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import signupImage from "../assets/signuppage.png";
 import { useGoogleAuth } from "../hooks/useGoogleAuth";
 import { useAuth } from "../features/auth/useAuth";
-import { getDashboardRoute } from "../features/auth/roleUtils";
+import { getPostAuthRoute } from "../features/auth/roleUtils";
 import { extractErrorMessage } from "../utils/errorUtils";
 
 const LoginPage = () => {
@@ -35,7 +35,8 @@ const LoginPage = () => {
 
     try {
       await signin(formData.emailOrUsername, formData.password);
-      navigate(getDashboardRoute());
+      // Resumes onboarding if incomplete; otherwise lands on the role dashboard directly.
+      navigate(getPostAuthRoute());
     } catch (err: unknown) {
       setError(extractErrorMessage(err, 'Login failed'));
     } finally {

@@ -41,8 +41,10 @@ const SEGMENT_LABELS: Record<string, string> = {
   questionnaire: 'Clinical History',
   'clinical-dashboard': 'Clinical Dashboard',
 
-  // Auth
-  'select-role': 'Select Role',
+  // Onboarding
+  onboarding: 'Onboarding',
+  role: 'Select Role',
+  profile: 'Complete Profile',
 };
 
 export default function Breadcrumb() {

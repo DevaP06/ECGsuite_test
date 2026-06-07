@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import AxiosInstance from "../AxiosInstance";
 import { useGoogleAuth } from "../hooks/useGoogleAuth";
+import { useAuth } from "../features/auth/useAuth";
+import { getPostAuthRoute } from "../features/auth/roleUtils";
 import signupImage from "../assets/signuppage.png";
 import { extractErrorMessage } from "../utils/errorUtils";
 
@@ -15,6 +16,7 @@ const RegisterPage = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { register } = useAuth();
   const { renderGoogleButton } = useGoogleAuth();
 
   useEffect(() => {
@@ -42,14 +44,15 @@ const RegisterPage = () => {
     }
 
     try {
-      await AxiosInstance.post("/api/auth/register", {
+      // Backend already returns { token, user } on register — this establishes
+      // the session immediately (auto-login), so the account is usable right away.
+      await register({
         username: formData.username,
         email: formData.email,
         password: formData.password
       });
-      
-      // Redirect to login page after successful registration
-      navigate("/login");
+
+      navigate(getPostAuthRoute());
     } catch (err: unknown) {
       console.error('Registration error:', err);
       setError(extractErrorMessage(err, 'Registration failed'));
