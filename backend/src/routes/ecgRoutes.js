@@ -406,6 +406,37 @@ router.post('/analysis/:id/request-review', readLimiter, async (req, res) => {
   }
 });
 
+// Get the specialist review for an analysis (analysis owner or a clinical role)
+router.get('/analysis/:id/review', readLimiter, async (req, res) => {
+  try {
+    const rawId = String(req.params.id);
+    if (!rawId.match(/^[a-f\d]{24}$/i)) {
+      return sendResponse(res, 400, false, 'Invalid analysis ID');
+    }
+
+    const analysis = await ECGAnalysis.findById(rawId).select('userId');
+    if (!analysis) {
+      return sendResponse(res, 404, false, 'ECG analysis not found');
+    }
+
+    const userId = req.user._id || req.user.id;
+    const CLINICAL_ROLES = ['PHC_DOCTOR', 'CARDIOLOGIST', 'ADMIN'];
+    if (String(analysis.userId) !== String(userId) && !CLINICAL_ROLES.includes(req.user.role)) {
+      return sendResponse(res, 403, false, 'You do not have access to this analysis');
+    }
+
+    const review = await SpecialistReview.findOne({ analysisId: rawId }).sort({ createdAt: -1 });
+    if (!review) {
+      return sendResponse(res, 404, false, 'No specialist review found for this analysis');
+    }
+
+    return sendResponse(res, 200, true, 'Specialist review fetched successfully', { review });
+  } catch (error) {
+    console.error('Error fetching specialist review:', error);
+    return sendResponse(res, 500, false, 'Failed to fetch specialist review');
+  }
+});
+
 // Submit / update specialist review (CARDIOLOGIST only)
 router.post('/analysis/:id/specialist-review', mlLimiter, async (req, res) => {
   try {
