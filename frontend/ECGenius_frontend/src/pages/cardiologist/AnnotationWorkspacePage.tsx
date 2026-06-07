@@ -6,15 +6,30 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import AppShell from '../../layouts/AppShell';
-import WaveformAnnotationPanel from '../../components/annotation/WaveformAnnotationPanel';
+import WaveformAnnotationPanel, { ECG_LEADS } from '../../components/annotation/WaveformAnnotationPanel';
 import FeedbackPanel from '../../components/analytics/FeedbackPanel';
 import { ecgService } from '../../services/ecgService';
 import { annotationService } from '../../services/annotationService';
 import { reviewService } from '../../services/reviewService';
 import { extractErrorMessage } from '../../utils/errorUtils';
 import type { ECGAnalysis } from '../../types/ecg';
-import type { AnnotationRecord, WaveformMark, CreateAnnotationPayload } from '../../types/annotation';
+import type { AnnotationRecord, WaveformMark, LeadAnnotation, CreateAnnotationPayload } from '../../types/annotation';
 import type { SpecialistReview } from '../../types/review';
+
+function groupMarksByLead(marks: WaveformMark[]): LeadAnnotation[] {
+  const byLead = new Map<string, WaveformMark[]>();
+  marks.forEach((mark) => {
+    const lead = mark.lead ?? 'unspecified';
+    const existing = byLead.get(lead);
+    if (existing) existing.push(mark);
+    else byLead.set(lead, [mark]);
+  });
+  return Array.from(byLead.entries()).map(([lead, leadMarks]) => ({
+    lead,
+    marks: leadMarks,
+    samplingRate: undefined,
+  }));
+}
 
 // ─── Form state ────────────────────────────────────────────────────────────────
 interface AnnotationForm {
@@ -48,8 +63,6 @@ const QUALITY_OPTIONS: { value: AnnotationForm['overallQuality']; label: string 
   { value: 'poor',        label: 'Poor — significant interference' },
   { value: 'unreadable',  label: 'Unreadable — cannot assess' },
 ];
-
-const ECG_LEADS = ['I', 'II', 'III', 'aVR', 'aVL', 'aVF', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6'];
 
 function buildNotesText(form: AnnotationForm): string {
   const parts: string[] = [];
@@ -196,7 +209,7 @@ export default function AnnotationWorkspacePage() {
         overallQuality: form.overallQuality || undefined,
         notes: buildNotesText(form) || undefined,
         leadAnnotations: marks.length > 0
-          ? [{ lead: 'mixed', marks, samplingRate: undefined }]
+          ? groupMarksByLead(marks)
           : undefined,
       };
       const result = await annotationService.createAnnotation(analysisId, payload);

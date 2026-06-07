@@ -51,3 +51,14 @@ export async function submitClinicalContext(payload: OntologyInputPayload): Prom
 export function hasClinicalContext(analysisId: string): boolean {
   return localStorage.getItem(`${SUBMITTED_KEY_PREFIX}${analysisId}`) !== null;
 }
+
+export function getSubmittedAt(analysisId: string): string | null {
+  try {
+    const raw = localStorage.getItem(`${SUBMITTED_KEY_PREFIX}${analysisId}`);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { submittedAt?: string };
+    return parsed.submittedAt ?? null;
+  } catch {
+    return null;
+  }
+}

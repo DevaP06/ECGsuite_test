@@ -44,6 +44,8 @@ export interface ExplanationData {
   leadImportance?: Record<string, number>;
   waveformAnnotations?: WaveformAnnotation;
   rawSignalData?: number[];
+  /** Backend-generated clinical reasoning narrative, when the diagnostic engine provides one */
+  reasoning?: string;
 }
 
 export interface AnalysisResult {

@@ -1,14 +1,19 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Loader2, AlertTriangle, ArrowLeft, ClipboardList, RefreshCw, CheckCircle2, Clock } from 'lucide-react';
+import { Loader2, AlertTriangle, ArrowLeft, ClipboardList, RefreshCw, CheckCircle2, Clock, History } from 'lucide-react';
 import AppShell from '../../layouts/AppShell';
 import { ecgService } from '../../services/ecgService';
 import { loadDraft } from '../../services/questionnaireService';
 import { hasClinicalContext } from '../../services/clinicalContextService';
+import { buildOntologyInput } from '../../services/ontologyFusionService';
+import { buildFusionResult } from '../../utils/ontologyFusion';
 import { answersArrayToMap } from '../../types/questionnaire';
 import { extractErrorMessage } from '../../utils/errorUtils';
 import { getDashboardRoute } from '../../features/auth/roleUtils';
 import EvidenceFusionPanel from '../../components/clinical/EvidenceFusionPanel';
+import EvidenceFusionSummary from '../../components/clinical/EvidenceFusionSummary';
+import EvidenceTimeline from '../../components/clinical/EvidenceTimeline';
+import ConfidenceBreakdown from '../../components/clinical/ConfidenceBreakdown';
 import RiskFactorPanel from '../../components/clinical/RiskFactorPanel';
 import ClinicalActionsPanel from '../../components/clinical/ClinicalActionsPanel';
 import RequestReviewButton from '../../components/review/RequestReviewButton';
@@ -97,6 +102,10 @@ export default function ClinicalDashboard() {
   const rhythm = analysisResult?.rhythm;
   const confidence = analysisResult?.confidence;
 
+  const fusionResult = (ontologyItems?.length ?? 0) > 0
+    ? buildFusionResult(buildOntologyInput(analysis))
+    : null;
+
   return (
     <AppShell title="Clinical Dashboard">
       <div className="max-w-5xl mx-auto space-y-5 pb-10">
@@ -112,6 +121,14 @@ export default function ClinicalDashboard() {
             Back to Diagnosis
           </button>
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => navigate(`/audit/${analysisId}`)}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-200 text-sm font-semibold text-slate-600 hover:bg-gray-50 transition"
+            >
+              <History className="w-4 h-4" />
+              View Audit Trail
+            </button>
             <RequestReviewButton analysisId={analysisId ?? ''} />
             <button
               type="button"
@@ -190,6 +207,15 @@ export default function ClinicalDashboard() {
           )}
         </div>
 
+        {/* Evidence Fusion Summary */}
+        <EvidenceFusionSummary result={fusionResult} analysisId={analysisId ?? ''} />
+
+        {/* Evidence timeline + Confidence breakdown */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          <EvidenceTimeline result={fusionResult} />
+          <ConfidenceBreakdown scores={fusionResult?.scores} />
+        </div>
+
         {/* Evidence + Risk factors */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           <EvidenceFusionPanel ontologyItems={ontologyItems} />
@@ -199,7 +225,9 @@ export default function ClinicalDashboard() {
         {/* Actions + Review */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           <ClinicalActionsPanel ontologyItems={ontologyItems} />
-          <ReviewStatusTracker analysisId={analysisId ?? ''} />
+          <div id="review-status">
+            <ReviewStatusTracker analysisId={analysisId ?? ''} />
+          </div>
         </div>
 
       </div>

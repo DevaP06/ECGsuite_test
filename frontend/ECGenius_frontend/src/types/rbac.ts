@@ -26,7 +26,7 @@ export const ROLE_NAV_ITEMS: Record<UserRole, NavItem[]> = {
     { label: 'Dashboard',          path: '/doctor/dashboard',       icon: 'Home'          },
     { label: 'Patients',           path: '/patients',               icon: 'Users'         },
     { label: 'Upload ECG',         path: '/ecgupload',              icon: 'Upload'        },
-    { label: 'AI Insights',        path: '/doctor/insights',        icon: 'Activity',     isPlaceholder: true },
+    { label: 'AI Insights',        path: '/doctor/insights',        icon: 'Activity'      },
     { label: 'Clinical Dashboard', path: '/doctor/clinical',        icon: 'FlaskConical', isPlaceholder: true },
     { label: 'Request Review',     path: '/doctor/review-request',  icon: 'ClipboardList',isPlaceholder: true },
   ],

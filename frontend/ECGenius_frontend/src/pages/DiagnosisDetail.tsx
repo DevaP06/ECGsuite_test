@@ -6,11 +6,15 @@ import DiagnosisOverview from "../components/diagnosis/DiagnosisOverview";
 import ExplainabilityChart from "../components/diagnosis/ExplainabilityChart";
 import RecommendationsPanel from "../components/diagnosis/RecommendationsPanel";
 import OntologyPanel from "../components/diagnosis/OntologyPanel";
+import DifferentialDiagnosisPanel from "../components/diagnosis/DifferentialDiagnosisPanel";
+import ClinicalReasoningPanel from "../components/diagnosis/ClinicalReasoningPanel";
 import MetricsGrid from "../components/ecg/MetricsGrid";
 import ECGHeatmap from "../components/ecg/ECGHeatmap";
 import ECGWaveformViewer from "../components/ecg/ECGWaveformViewer";
 import PDFExportButton from "../components/common/PDFExportButton";
 import { ecgService } from "../services/ecgService";
+import { buildOntologyInput } from "../services/ontologyFusionService";
+import { buildFusionResult } from "../utils/ontologyFusion";
 import { isDoctor, getDashboardRoute } from "../features/auth/roleUtils";
 import { extractErrorMessage } from "../utils/errorUtils";
 import type { ECGAnalysis } from "../types/ecg";
@@ -104,6 +108,10 @@ export default function DiagnosisDetail() {
   const heatmapUrl = analysis.analysisResult?.explanation?.heatmapUrl ?? null;
   const waveformAnnotations = analysis.analysisResult?.explanation?.waveformAnnotations ?? null;
   const rawSignalData = analysis.analysisResult?.explanation?.rawSignalData ?? null;
+  const reasoning = analysis.analysisResult?.explanation?.reasoning ?? null;
+
+  const ontologyItems = analysis.analysisResult?.ontologyEnrichment ?? [];
+  const fusionResult = ontologyItems.length > 0 ? buildFusionResult(buildOntologyInput(analysis)) : null;
 
   return (
     <AppShell title="Diagnosis Detail">
@@ -229,10 +237,12 @@ export default function DiagnosisDetail() {
             />
             {/* Ontology panel (Task 12) */}
             <OntologyPanel items={analysis.analysisResult?.ontologyEnrichment} />
+            <DifferentialDiagnosisPanel diagnoses={fusionResult?.diagnoses} />
           </div>
 
           <div className="space-y-6">
             <RecommendationsPanel recommendedTests={recommendedTests} />
+            <ClinicalReasoningPanel reasoning={reasoning} />
           </div>
         </div>
 

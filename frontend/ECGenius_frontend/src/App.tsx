@@ -30,6 +30,7 @@ import HistoryQuestionnairePage from './pages/questionnaire/HistoryQuestionnaire
 import ClinicalQuestionnairePage from './pages/ClinicalQuestionnairePage';
 import ClinicalDashboard from './pages/clinical/ClinicalDashboard';
 import FailedAnalysisPage from './pages/analysis/FailedAnalysisPage';
+import AuditTrailPage from './pages/AuditTrailPage';
 
 // Role dashboards
 import DoctorDashboard from './pages/doctor/DoctorDashboard';
@@ -238,6 +239,14 @@ const router = createBrowserRouter(
       <Route
         path="analysis-failed/:analysisId"
         element={<AuthGuard><FailedAnalysisPage /></AuthGuard>}
+      />
+      <Route
+        path="audit/:analysisId"
+        element={
+          <RoleGuard allowedRoles={['PHC_DOCTOR', 'CARDIOLOGIST', 'ADMIN']}>
+            <AuditTrailPage />
+          </RoleGuard>
+        }
       />
 
       {/* ── Patient management (Doctor + Cardiologist) ───────────────── */}
