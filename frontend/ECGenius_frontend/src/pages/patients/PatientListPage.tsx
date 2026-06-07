@@ -96,7 +96,7 @@ export default function PatientListPage() {
         page,
         pageSize: PAGE_SIZE,
       });
-      setPatients(res.data);
+      setPatients(Array.isArray(res.data) ? res.data : []);
       setTotal(res.total);
     } catch (err: unknown) {
       setError(extractErrorMessage(err, 'Failed to load patients.'));

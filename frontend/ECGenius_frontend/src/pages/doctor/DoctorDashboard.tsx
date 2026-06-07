@@ -74,7 +74,7 @@ function PendingReviewRequests() {
     (async () => {
       try {
         const data = await reviewService.getMyRequests();
-        if (!cancelled) setRequests(data);
+        if (!cancelled) setRequests(Array.isArray(data) ? data : []);
       } catch (e: unknown) {
         if (!cancelled) setErr(extractErrorMessage(e, 'Could not load review requests'));
       } finally {
@@ -151,7 +151,7 @@ function RecentPatients() {
         const res = await patientService.getPatients({
           sort: 'createdAt', dir: 'desc', pageSize: 5,
         });
-        if (!cancelled) setPatients(res.data);
+        if (!cancelled) setPatients(Array.isArray(res.data) ? res.data : []);
       } catch (err: unknown) {
         if (!cancelled) setErrorMsg(extractErrorMessage(err, 'Could not load patients'));
       } finally {

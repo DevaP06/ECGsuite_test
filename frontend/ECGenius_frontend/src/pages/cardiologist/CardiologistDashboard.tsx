@@ -71,7 +71,7 @@ function ReviewQueuePreview() {
     (async () => {
       try {
         const data = await reviewService.getQueue();
-        if (!cancelled) setItems(data);
+        if (!cancelled) setItems(Array.isArray(data) ? data : []);
       } catch {
         // non-fatal — shows empty state
       } finally {

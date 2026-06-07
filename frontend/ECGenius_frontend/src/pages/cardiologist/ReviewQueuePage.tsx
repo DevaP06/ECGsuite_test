@@ -104,7 +104,7 @@ export default function ReviewQueuePage() {
     setFetchError(null);
     try {
       const data = await reviewService.getQueue();
-      setItems(data);
+      setItems(Array.isArray(data) ? data : []);
     } catch (err: unknown) {
       setFetchError(extractErrorMessage(err, 'Failed to load review queue.'));
     } finally {
