@@ -18,10 +18,11 @@ const __dirname = path.dirname(__filename);
 
 const VALID_STATUSES = ['uploaded', 'processing', 'pending', 'completed', 'failed', 'archived'];
 
-const tempUploadDir = path.resolve(__dirname, '../../temp_uploads/ecg');
-const processedUploadDir = path.resolve(__dirname, '../../uploads/ecg/processed');
-const failedUploadDir = path.resolve(__dirname, '../../uploads/ecg/failed');
+import os from 'os';
 
+const tempUploadDir = path.join(os.tmpdir(), 'ecg-temp');
+const processedUploadDir = path.join(os.tmpdir(), 'ecg-processed');
+const failedUploadDir = path.join(os.tmpdir(), 'ecg-failed');
 fs.mkdirSync(tempUploadDir, { recursive: true });
 fs.mkdirSync(processedUploadDir, { recursive: true });
 fs.mkdirSync(failedUploadDir, { recursive: true });
