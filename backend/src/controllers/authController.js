@@ -43,7 +43,7 @@ export const updateProfile = asyncHandler(async (req, res) => {
   const updates = {};
   if (fullName !== undefined) updates.fullName = String(fullName).trim();
   if (phone !== undefined) updates.phone = String(phone).trim();
-  if (profilePicture !== undefined) updates.profilePicture = profilePicture;
+  if (profilePicture !== undefined) updates.profilePicture = String(profilePicture);
 
   const user = await User.findByIdAndUpdate(req.user._id, updates, { new: true, runValidators: true }).select('-password -googleId');
   logAction({ req, userId: req.user._id, entityType: 'USER', entityId: req.user._id, action: 'UPDATE', newValue: updates });

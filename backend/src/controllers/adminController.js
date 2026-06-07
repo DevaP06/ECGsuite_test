@@ -17,19 +17,21 @@ export const listUsers = asyncHandler(async (req, res) => {
 
   const filter = {};
   if (req.query.role) {
-    if (!VALID_ROLES.includes(String(req.query.role))) {
+    const role = String(req.query.role);
+    if (!VALID_ROLES.includes(role)) {
       return sendResponse(res, 400, false, `Invalid role. Must be one of: ${VALID_ROLES.join(', ')}`);
     }
-    filter.role = req.query.role;
+    filter.role = role;
   }
   if (req.query.status) {
-    if (!VALID_STATUSES.includes(String(req.query.status))) {
+    const status = String(req.query.status);
+    if (!VALID_STATUSES.includes(status)) {
       return sendResponse(res, 400, false, `Invalid status. Must be one of: ${VALID_STATUSES.join(', ')}`);
     }
-    filter.status = req.query.status;
+    filter.status = status;
   }
   if (req.query.search) {
-    const s = String(req.query.search).trim();
+    const s = String(req.query.search).trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     filter.$or = [
       { username: { $regex: s, $options: 'i' } },
       { email: { $regex: s, $options: 'i' } },
@@ -119,16 +121,18 @@ export const getAuditLogs = asyncHandler(async (req, res) => {
 
   const filter = {};
   if (req.query.action) {
-    if (!VALID_ACTIONS.includes(String(req.query.action))) {
+    const action = String(req.query.action);
+    if (!VALID_ACTIONS.includes(action)) {
       return sendResponse(res, 400, false, `Invalid action. Must be one of: ${VALID_ACTIONS.join(', ')}`);
     }
-    filter.action = req.query.action;
+    filter.action = action;
   }
   if (req.query.entityType) {
-    if (!VALID_ENTITY_TYPES.includes(String(req.query.entityType))) {
+    const entityType = String(req.query.entityType);
+    if (!VALID_ENTITY_TYPES.includes(entityType)) {
       return sendResponse(res, 400, false, `Invalid entityType. Must be one of: ${VALID_ENTITY_TYPES.join(', ')}`);
     }
-    filter.entityType = req.query.entityType;
+    filter.entityType = entityType;
   }
   if (req.query.userId) {
     const uid = String(req.query.userId);
@@ -139,8 +143,20 @@ export const getAuditLogs = asyncHandler(async (req, res) => {
   }
   if (req.query.from || req.query.to) {
     filter.timestamp = {};
-    if (req.query.from) filter.timestamp.$gte = new Date(req.query.from);
-    if (req.query.to) filter.timestamp.$lte = new Date(req.query.to);
+    if (req.query.from) {
+      const from = new Date(String(req.query.from));
+      if (Number.isNaN(from.getTime())) {
+        return sendResponse(res, 400, false, 'Invalid "from" date');
+      }
+      filter.timestamp.$gte = from;
+    }
+    if (req.query.to) {
+      const to = new Date(String(req.query.to));
+      if (Number.isNaN(to.getTime())) {
+        return sendResponse(res, 400, false, 'Invalid "to" date');
+      }
+      filter.timestamp.$lte = to;
+    }
   }
 
   const [logs, total] = await Promise.all([
@@ -191,10 +207,11 @@ export const listAllAnalyses = asyncHandler(async (req, res) => {
 
   const filter = {};
   if (req.query.status) {
-    if (!VALID_ANALYSIS_STATUSES.includes(String(req.query.status))) {
+    const status = String(req.query.status);
+    if (!VALID_ANALYSIS_STATUSES.includes(status)) {
       return sendResponse(res, 400, false, `Invalid status. Must be one of: ${VALID_ANALYSIS_STATUSES.join(', ')}`);
     }
-    filter.status = req.query.status;
+    filter.status = status;
   }
   if (req.query.userId) {
     const uid = String(req.query.userId);
