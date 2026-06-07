@@ -11,6 +11,21 @@ const specialistReviewSchema = new mongoose.Schema({
     ref: 'User',
     default: null
   },
+  requestedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null
+  },
+  priority: {
+    type: String,
+    enum: ['normal', 'urgent', 'critical'],
+    default: 'normal'
+  },
+  requestNotes: {
+    type: String,
+    trim: true,
+    maxlength: 1000
+  },
   reviewStatus: {
     type: String,
     enum: ['pending', 'in_review', 'completed'],
@@ -37,5 +52,6 @@ const specialistReviewSchema = new mongoose.Schema({
 
 specialistReviewSchema.index({ analysisId: 1 });
 specialistReviewSchema.index({ cardiologistId: 1, createdAt: -1 });
+specialistReviewSchema.index({ requestedBy: 1, createdAt: -1 });
 
 export default mongoose.model('SpecialistReview', specialistReviewSchema);
