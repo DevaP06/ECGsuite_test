@@ -17,6 +17,9 @@ const protect = async (req, res, next) => {
       if (!req.user) {
         return sendResponse(res, 401, false, 'User no longer exists');
       }
+      if (req.user.status === 'suspended') {
+        return sendResponse(res, 403, false, 'Your account has been suspended');
+      }
       return next();
     } catch (err) {
       return sendResponse(res, 401, false, 'Not authorized, token failed');
@@ -27,3 +30,10 @@ const protect = async (req, res, next) => {
 };
 
 export default protect;
+
+export const requireRole = (...roles) => (req, res, next) => {
+  if (!req.user || !roles.includes(req.user.role)) {
+    return sendResponse(res, 403, false, 'Access denied: insufficient permissions');
+  }
+  return next();
+};

@@ -132,6 +132,7 @@ const toAnalysisResult = (prediction, processingTime) => {
       : [],
     labelProbabilities,
     signalMetrics: payload.signal_metrics ?? payload.signalMetrics ?? null,
+    isEmergency: payload.is_emergency ?? payload.isEmergency ?? false,
     ontologyEnrichment: Array.isArray(payload.ontology_enrichment ?? payload.ontologyEnrichment)
       ? (payload.ontology_enrichment ?? payload.ontologyEnrichment)
       : [],
@@ -287,125 +288,298 @@ router.get('/my-analyses', readLimiter, async (req, res) => {
   }
 });
 
-// Get specific ECG analysis
-router.get('/analysis/:id', async (req, res) => {
+// Get specific ECG analysis (owner, cardiologist, or admin)
+router.get('/analysis/:id', readLimiter, async (req, res) => {
   try {
-    const { id } = req.params;
-    const userId = req.user.id;
-
-    const analysis = await ECGAnalysis.findOne({ _id: id, userId });
-    
-    if (!analysis) {
-      return res.status(404).json({ error: 'ECG analysis not found' });
+    const rawId = String(req.params.id);
+    if (!rawId.match(/^[a-f\d]{24}$/i)) {
+      return sendResponse(res, 400, false, 'Invalid analysis ID');
     }
 
-    res.json({
-      success: true,
-      analysis
-    });
+    const { role } = req.user;
+    const userId = req.user._id || req.user.id;
 
+    const filter = role === 'CARDIOLOGIST' || role === 'ADMIN'
+      ? { _id: rawId }
+      : { _id: rawId, userId };
+
+    const analysis = await ECGAnalysis.findOne(filter).select('-filePath');
+    if (!analysis) {
+      return sendResponse(res, 404, false, 'ECG analysis not found');
+    }
+
+    const review = await SpecialistReview.findOne({ analysisId: rawId }).sort({ createdAt: -1 });
+
+    logAction({ req, userId, entityType: 'ECG_ANALYSIS', entityId: analysis._id, action: 'VIEW' });
+    return sendResponse(res, 200, true, 'Analysis fetched successfully', { analysis, review: review || null });
   } catch (error) {
     console.error('Error fetching ECG analysis:', error);
-    res.status(500).json({ 
-      error: 'Failed to fetch ECG analysis',
-      message: error.message 
-    });
+    return sendResponse(res, 500, false, 'Failed to fetch ECG analysis');
   }
 });
 
-// Delete ECG analysis
-router.delete('/analysis/:id', async (req, res) => {
+// Delete ECG analysis (owner only) — cascades to SpecialistReview
+router.delete('/analysis/:id', readLimiter, async (req, res) => {
   try {
-    const { id } = req.params;
-    const userId = req.user.id;
-
-    const analysis = await ECGAnalysis.findOneAndDelete({ _id: id, userId });
-
-    if (!analysis) {
-      return res.status(404).json({ error: 'ECG analysis not found' });
+    const rawId = String(req.params.id);
+    if (!rawId.match(/^[a-f\d]{24}$/i)) {
+      return sendResponse(res, 400, false, 'Invalid analysis ID');
     }
+
+    const userId = req.user._id || req.user.id;
+    const analysis = await ECGAnalysis.findOneAndDelete({ _id: rawId, userId });
+    if (!analysis) {
+      return sendResponse(res, 404, false, 'ECG analysis not found');
+    }
+
+    await SpecialistReview.deleteMany({ analysisId: rawId });
 
     logAction({ req, userId, entityType: 'ECG_ANALYSIS', entityId: analysis._id, action: 'DELETE', oldValue: { fileName: analysis.fileName, status: analysis.status } });
-
-    res.json({
-      success: true,
-      message: 'ECG analysis deleted successfully'
-    });
-
+    return sendResponse(res, 200, true, 'ECG analysis deleted successfully', null);
   } catch (error) {
     console.error('Error deleting ECG analysis:', error);
-    res.status(500).json({ 
-      error: 'Failed to delete ECG analysis',
-      message: error.message 
-    });
+    return sendResponse(res, 500, false, 'Failed to delete ECG analysis');
   }
 });
 
-// Update ECG analysis notes
-router.patch('/analysis/:id/notes', async (req, res) => {
+// Update ECG analysis notes (owner only)
+router.patch('/analysis/:id/notes', readLimiter, async (req, res) => {
   try {
-    const { id } = req.params;
-    const { notes } = req.body;
-    const userId = req.user.id;
-
-    const analysis = await ECGAnalysis.findOneAndUpdate(
-      { _id: id, userId },
-      { notes, updatedAt: new Date() },
-      { new: true }
-    );
-    
-    if (!analysis) {
-      return res.status(404).json({ error: 'ECG analysis not found' });
+    const rawId = String(req.params.id);
+    if (!rawId.match(/^[a-f\d]{24}$/i)) {
+      return sendResponse(res, 400, false, 'Invalid analysis ID');
     }
 
-    res.json({
-      success: true,
-      message: 'Notes updated successfully',
-      analysis
-    });
+    if (req.body.notes === undefined || req.body.notes === null) {
+      return sendResponse(res, 400, false, 'notes is required');
+    }
+    const notes = String(req.body.notes);
+    const userId = req.user._id || req.user.id;
 
+    const analysis = await ECGAnalysis.findOneAndUpdate(
+      { _id: rawId, userId },
+      { notes },
+      { new: true }
+    ).select('-filePath');
+
+    if (!analysis) {
+      return sendResponse(res, 404, false, 'ECG analysis not found');
+    }
+
+    return sendResponse(res, 200, true, 'Notes updated successfully', { analysis });
   } catch (error) {
     console.error('Error updating ECG analysis notes:', error);
-    res.status(500).json({ 
-      error: 'Failed to update notes',
-      message: error.message 
-    });
+    return sendResponse(res, 500, false, 'Failed to update notes');
   }
 });
 
-// Submit specialist review (CARDIOLOGIST only)
+// Request specialist review (PATIENT or PHC_DOCTOR — creates a pending review ticket)
+router.post('/analysis/:id/request-review', readLimiter, async (req, res) => {
+  try {
+    const rawId = String(req.params.id);
+    if (!rawId.match(/^[a-f\d]{24}$/i)) {
+      return sendResponse(res, 400, false, 'Invalid analysis ID');
+    }
+
+    const userId = req.user._id || req.user.id;
+    const analysis = await ECGAnalysis.findOne({ _id: rawId, userId });
+    if (!analysis) {
+      return sendResponse(res, 404, false, 'ECG analysis not found');
+    }
+
+    const existing = await SpecialistReview.findOne({ analysisId: rawId, reviewStatus: { $in: ['pending', 'in_review'] } });
+    if (existing) {
+      return sendResponse(res, 409, false, 'A review request is already pending for this analysis');
+    }
+
+    const review = await SpecialistReview.create({
+      analysisId: rawId,
+      cardiologistId: null,
+      reviewStatus: 'pending'
+    });
+
+    logAction({ req, userId, entityType: 'SPECIALIST_REVIEW', entityId: review._id, action: 'UPDATE', newValue: { analysisId: rawId, reviewStatus: 'pending' } });
+    return sendResponse(res, 201, true, 'Review requested successfully', { review });
+  } catch (error) {
+    console.error('Error requesting specialist review:', error);
+    return sendResponse(res, 500, false, 'Failed to request specialist review');
+  }
+});
+
+// Submit / update specialist review (CARDIOLOGIST only)
 router.post('/analysis/:id/specialist-review', mlLimiter, async (req, res) => {
   try {
     if (req.user.role !== 'CARDIOLOGIST') {
       return sendResponse(res, 403, false, 'Only cardiologists can submit specialist reviews');
     }
 
-    const { id } = req.params;
-    const { expertDiagnosis, overrideReason, reviewNotes, reviewStatus } = req.body;
+    const rawId = String(req.params.id);
+    if (!rawId.match(/^[a-f\d]{24}$/i)) {
+      return sendResponse(res, 400, false, 'Invalid analysis ID');
+    }
+
+    const VALID_REVIEW_STATUSES = ['pending', 'in_review', 'completed'];
+    let reviewStatus = 'completed';
+    if (req.body.reviewStatus !== undefined) {
+      reviewStatus = String(req.body.reviewStatus);
+      if (!VALID_REVIEW_STATUSES.includes(reviewStatus)) {
+        return sendResponse(res, 400, false, `Invalid reviewStatus. Must be one of: ${VALID_REVIEW_STATUSES.join(', ')}`);
+      }
+    }
+    const expertDiagnosis = req.body.expertDiagnosis !== undefined ? String(req.body.expertDiagnosis) : undefined;
+    const overrideReason = req.body.overrideReason !== undefined ? String(req.body.overrideReason) : undefined;
+    const reviewNotes = req.body.reviewNotes !== undefined ? String(req.body.reviewNotes) : undefined;
     const cardiologistId = req.user._id || req.user.id;
 
-    const analysis = await ECGAnalysis.findById(id);
+    const analysis = await ECGAnalysis.findById(rawId);
     if (!analysis) {
       return sendResponse(res, 404, false, 'ECG analysis not found');
     }
 
-    const review = new SpecialistReview({
-      analysisId: id,
-      cardiologistId,
-      reviewStatus: reviewStatus || 'completed',
-      expertDiagnosis,
-      overrideReason,
-      reviewNotes,
-      reviewDate: new Date()
-    });
+    // Upsert: if a pending review ticket exists, claim it; otherwise create a new one
+    let review = await SpecialistReview.findOne({ analysisId: rawId, reviewStatus: 'pending' });
+    if (review) {
+      review.cardiologistId = cardiologistId;
+      review.reviewStatus = reviewStatus;
+      review.expertDiagnosis = expertDiagnosis;
+      review.overrideReason = overrideReason;
+      review.reviewNotes = reviewNotes;
+      review.reviewDate = new Date();
+      await review.save();
+    } else {
+      review = await SpecialistReview.create({
+        analysisId: rawId,
+        cardiologistId,
+        reviewStatus,
+        expertDiagnosis,
+        overrideReason,
+        reviewNotes,
+        reviewDate: new Date()
+      });
+    }
 
-    await review.save();
-    logAction({ req, userId: cardiologistId, entityType: 'SPECIALIST_REVIEW', entityId: review._id, action: 'REVIEW', newValue: { analysisId: id, reviewStatus: review.reviewStatus } });
-
+    logAction({ req, userId: cardiologistId, entityType: 'SPECIALIST_REVIEW', entityId: review._id, action: 'REVIEW', newValue: { analysisId: rawId, reviewStatus: review.reviewStatus } });
     return sendResponse(res, 201, true, 'Specialist review submitted', { review });
   } catch (error) {
     console.error('Error submitting specialist review:', error);
     return sendResponse(res, 500, false, 'Failed to submit specialist review');
+  }
+});
+
+// Update an existing review (CARDIOLOGIST only — e.g. move pending → in_review → completed)
+router.patch('/reviews/:reviewId', mlLimiter, async (req, res) => {
+  try {
+    if (req.user.role !== 'CARDIOLOGIST') {
+      return sendResponse(res, 403, false, 'Only cardiologists can update specialist reviews');
+    }
+
+    const rawId = String(req.params.reviewId);
+    if (!rawId.match(/^[a-f\d]{24}$/i)) {
+      return sendResponse(res, 400, false, 'Invalid review ID');
+    }
+
+    const cardiologistId = req.user._id || req.user.id;
+
+    const VALID_REVIEW_STATUSES = ['pending', 'in_review', 'completed'];
+    let reviewStatus;
+    if (req.body.reviewStatus !== undefined) {
+      reviewStatus = String(req.body.reviewStatus);
+      if (!VALID_REVIEW_STATUSES.includes(reviewStatus)) {
+        return sendResponse(res, 400, false, `Invalid reviewStatus. Must be one of: ${VALID_REVIEW_STATUSES.join(', ')}`);
+      }
+    }
+    const expertDiagnosis = req.body.expertDiagnosis !== undefined ? String(req.body.expertDiagnosis) : undefined;
+    const overrideReason = req.body.overrideReason !== undefined ? String(req.body.overrideReason) : undefined;
+    const reviewNotes = req.body.reviewNotes !== undefined ? String(req.body.reviewNotes) : undefined;
+
+    const existing = await SpecialistReview.findById(rawId);
+    if (!existing) {
+      return sendResponse(res, 404, false, 'Specialist review not found');
+    }
+
+    // Pending reviews are unowned — any cardiologist can claim them.
+    // In-review/completed reviews are locked to the cardiologist who claimed them.
+    if (existing.reviewStatus !== 'pending' && String(existing.cardiologistId) !== String(cardiologistId)) {
+      return sendResponse(res, 403, false, 'This review is already being handled by another cardiologist');
+    }
+
+    const updates = { cardiologistId };
+    if (reviewStatus) updates.reviewStatus = reviewStatus;
+    if (expertDiagnosis !== undefined) updates.expertDiagnosis = expertDiagnosis;
+    if (overrideReason !== undefined) updates.overrideReason = overrideReason;
+    if (reviewNotes !== undefined) updates.reviewNotes = reviewNotes;
+    if (reviewStatus === 'completed') updates.reviewDate = new Date();
+
+    const review = await SpecialistReview.findByIdAndUpdate(rawId, updates, { new: true, runValidators: true });
+
+    logAction({ req, userId: cardiologistId, entityType: 'SPECIALIST_REVIEW', entityId: review._id, action: 'REVIEW', newValue: updates });
+    return sendResponse(res, 200, true, 'Review updated successfully', { review });
+  } catch (error) {
+    console.error('Error updating specialist review:', error);
+    return sendResponse(res, 500, false, 'Failed to update specialist review');
+  }
+});
+
+// Pending review queue (CARDIOLOGIST only)
+router.get('/pending-reviews', readLimiter, async (req, res) => {
+  try {
+    if (req.user.role !== 'CARDIOLOGIST') {
+      return sendResponse(res, 403, false, 'Only cardiologists can access the review queue');
+    }
+
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 10));
+    const skip = (page - 1) * limit;
+
+    const filter = { reviewStatus: { $in: ['pending', 'in_review'] } };
+
+    const [reviews, total] = await Promise.all([
+      SpecialistReview.find(filter)
+        .sort({ createdAt: 1 })
+        .skip(skip)
+        .limit(limit)
+        .populate({ path: 'analysisId', select: '-filePath' }),
+      SpecialistReview.countDocuments(filter)
+    ]);
+
+    return sendResponse(res, 200, true, 'Pending reviews fetched', {
+      reviews,
+      pagination: { total, page, limit, pages: Math.ceil(total / limit) }
+    });
+  } catch (error) {
+    console.error('Error fetching pending reviews:', error);
+    return sendResponse(res, 500, false, 'Failed to fetch pending reviews');
+  }
+});
+
+// Cardiologist's own review history
+router.get('/my-reviews', readLimiter, async (req, res) => {
+  try {
+    if (req.user.role !== 'CARDIOLOGIST') {
+      return sendResponse(res, 403, false, 'Only cardiologists can access review history');
+    }
+
+    const cardiologistId = req.user._id || req.user.id;
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 10));
+    const skip = (page - 1) * limit;
+
+    const [reviews, total] = await Promise.all([
+      SpecialistReview.find({ cardiologistId })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate({ path: 'analysisId', select: '-filePath' }),
+      SpecialistReview.countDocuments({ cardiologistId })
+    ]);
+
+    return sendResponse(res, 200, true, 'Review history fetched', {
+      reviews,
+      pagination: { total, page, limit, pages: Math.ceil(total / limit) }
+    });
+  } catch (error) {
+    console.error('Error fetching review history:', error);
+    return sendResponse(res, 500, false, 'Failed to fetch review history');
   }
 });
 

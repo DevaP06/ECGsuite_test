@@ -9,7 +9,7 @@ const specialistReviewSchema = new mongoose.Schema({
   cardiologistId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true
+    default: null
   },
   reviewStatus: {
     type: String,
