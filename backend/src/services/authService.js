@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import User from '../models/User.js';
 import { generateToken } from '../utils/generateToken.js';
 
@@ -23,6 +24,7 @@ export async function registerUserService(body) {
     throw createError('All fields are required', 400);
   }
 
+  console.log('Mongo readyState:', mongoose.connection.readyState);
   const existingUser = await User.findOne({ $or: [{ email }, { username }] });
   if (existingUser) {
     throw createError('Email or username already exists', 409);

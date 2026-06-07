@@ -2,6 +2,7 @@ import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import connectDB, { waitForDbReady } from './src/db/index.js';
 
 // Load environment variables
 dotenv.config();
@@ -22,28 +23,31 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// Connect to MongoDB
-const connectDB = async () => {
-  try {
-    if (mongoose.connection.readyState === 0) {
-      const MONGO_URI = process.env.MONGO_URI;
-      if (!MONGO_URI) {
-        console.log('MONGO_URI not found, running without database');
-        return;
-      }
-      await mongoose.connect(MONGO_URI);
-      // Log connected host when available
-      const host = mongoose.connection?.host || mongoose.connection?.client?.s?.hosts?.[0] || 'unknown';
-      console.log(`MongoDB connected ✅: ${host}`);
-    }
-  } catch (error) {
-    console.error('MongoDB connection error:', error);
-    // Don't crash the app if MongoDB fails
-  }
-};
-
 // Initialize DB connection (don't await to prevent blocking)
 connectDB().catch(console.error);
+
+const ensureDatabaseReady = async (req, res, next) => {
+  if (!process.env.MONGO_URI) {
+    return res.status(503).json({
+      error: 'Database unavailable',
+      message: 'MONGO_URI is not configured'
+    });
+  }
+
+  if (mongoose.connection.readyState === 1) {
+    return next();
+  }
+
+  const ready = await waitForDbReady(8000);
+  if (!ready) {
+    return res.status(503).json({
+      error: 'Database unavailable',
+      message: 'MongoDB is not ready yet'
+    });
+  }
+
+  return next();
+};
 
 // Import auth controller functions
 import authRoutes from './src/routes/authRoutes.js';
@@ -78,6 +82,7 @@ app.get('/api/health', (req, res) => {
 });
 
 // Authentication routes with /api prefix
+app.use('/api', ensureDatabaseReady);
 app.use('/api/auth', authRoutes);
 
 // Waitlist routes
