@@ -27,6 +27,7 @@ import DiagnosisDetail from './pages/DiagnosisDetail';
 import RoleSelectionPage from './pages/onboarding/RoleSelectionPage';
 import ProfileCompletionPage from './pages/onboarding/ProfileCompletionPage';
 import HistoryQuestionnairePage from './pages/questionnaire/HistoryQuestionnairePage';
+import ClinicalQuestionnairePage from './pages/ClinicalQuestionnairePage';
 import ClinicalDashboard from './pages/clinical/ClinicalDashboard';
 import FailedAnalysisPage from './pages/analysis/FailedAnalysisPage';
 
@@ -219,6 +220,14 @@ const router = createBrowserRouter(
         element={
           <RoleGuard allowedRoles={['PHC_DOCTOR', 'CARDIOLOGIST']}>
             <HistoryQuestionnairePage />
+          </RoleGuard>
+        }
+      />
+      <Route
+        path="clinical-context/:analysisId"
+        element={
+          <RoleGuard allowedRoles={['PHC_DOCTOR', 'CARDIOLOGIST']}>
+            <ClinicalQuestionnairePage />
           </RoleGuard>
         }
       />

@@ -39,6 +39,7 @@ const SEGMENT_LABELS: Record<string, string> = {
 
   // Questionnaire workflow
   questionnaire: 'Clinical History',
+  'clinical-context': 'Clinical Context',
   'clinical-dashboard': 'Clinical Dashboard',
 
   // Onboarding

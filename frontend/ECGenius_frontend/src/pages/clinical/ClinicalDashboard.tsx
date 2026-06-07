@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Loader2, AlertTriangle, ArrowLeft, ClipboardList, RefreshCw } from 'lucide-react';
+import { Loader2, AlertTriangle, ArrowLeft, ClipboardList, RefreshCw, CheckCircle2, Clock } from 'lucide-react';
 import AppShell from '../../layouts/AppShell';
 import { ecgService } from '../../services/ecgService';
 import { loadDraft } from '../../services/questionnaireService';
+import { hasClinicalContext } from '../../services/clinicalContextService';
 import { answersArrayToMap } from '../../types/questionnaire';
 import { extractErrorMessage } from '../../utils/errorUtils';
 import { getDashboardRoute } from '../../features/auth/roleUtils';
@@ -145,6 +146,17 @@ export default function ClinicalDashboard() {
                   ? new Date(processedAt).toLocaleString()
                   : new Date(createdAt).toLocaleString()}
               </p>
+              {analysisId && (
+                hasClinicalContext(analysisId) ? (
+                  <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full border bg-emerald-50 text-emerald-700 border-emerald-200">
+                    <CheckCircle2 className="w-3.5 h-3.5" /> Clinical Context Completed
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full border bg-amber-50 text-amber-700 border-amber-200">
+                    <Clock className="w-3.5 h-3.5" /> Pending Clinical Context
+                  </span>
+                )
+              )}
             </div>
           </div>
         </div>

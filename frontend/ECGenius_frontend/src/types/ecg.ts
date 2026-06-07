@@ -13,6 +13,11 @@ export interface SignalMetrics {
   rrInterval?: number | null;
 }
 
+export interface TopPrediction {
+  rhythm: string;
+  confidence: number;
+}
+
 export interface OntologyItem {
   displayName: string;
   confidenceTier: string;
@@ -56,6 +61,7 @@ export interface AnalysisResult {
   signalMetrics?: SignalMetrics;
   predictedLabels?: string[];
   labelProbabilities?: Record<string, number>;
+  topPredictions?: TopPrediction[];
   ontologyEnrichment?: OntologyItem[];
   explanation?: ExplanationData;
   isEmergency?: boolean;

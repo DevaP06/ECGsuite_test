@@ -1,6 +1,6 @@
 import AxiosInstance from "../AxiosInstance";
 import type { AxiosProgressEvent } from "axios";
-import type { ECGAnalysis, AnalysisResult, OntologyItem, ExplanationData, SignalMetrics } from "../types/ecg";
+import type { ECGAnalysis, AnalysisResult, OntologyItem, ExplanationData, SignalMetrics, TopPrediction } from "../types/ecg";
 
 // Normalization function to convert API response into a consistent frontend shape
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -43,6 +43,14 @@ function normalizeAnalysis(data: any): ECGAnalysis {
       }
     });
 
+    // 3b. Build top predictions — use backend value if present, else derive from labelProbabilities
+    const topPredictions: TopPrediction[] = Array.isArray(analysisResult.topPredictions)
+      ? analysisResult.topPredictions
+      : Object.entries(labelProbabilities)
+          .sort(([, a], [, b]) => b - a)
+          .slice(0, 3)
+          .map(([rhythm, prob]) => ({ rhythm, confidence: Math.round(prob * 100) }));
+
     // 4. Build ontologyEnrichment array (no fabrication)
     const ontologyEnrichment: OntologyItem[] = analysisResult.ontologyEnrichment || [];
 
@@ -62,6 +70,7 @@ function normalizeAnalysis(data: any): ECGAnalysis {
       signalMetrics,
       predictedLabels,
       labelProbabilities,
+      topPredictions,
       ontologyEnrichment,
       explanation,
       isEmergency,
