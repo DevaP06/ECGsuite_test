@@ -319,7 +319,7 @@ router.get('/analysis/:id', readLimiter, async (req, res) => {
 });
 
 // Delete ECG analysis (owner only) — cascades to SpecialistReview
-router.delete('/analysis/:id', async (req, res) => {
+router.delete('/analysis/:id', readLimiter, async (req, res) => {
   try {
     const rawId = String(req.params.id);
     if (!rawId.match(/^[a-f\d]{24}$/i)) {
@@ -343,14 +343,17 @@ router.delete('/analysis/:id', async (req, res) => {
 });
 
 // Update ECG analysis notes (owner only)
-router.patch('/analysis/:id/notes', async (req, res) => {
+router.patch('/analysis/:id/notes', readLimiter, async (req, res) => {
   try {
     const rawId = String(req.params.id);
     if (!rawId.match(/^[a-f\d]{24}$/i)) {
       return sendResponse(res, 400, false, 'Invalid analysis ID');
     }
 
-    const { notes } = req.body;
+    if (req.body.notes === undefined || req.body.notes === null) {
+      return sendResponse(res, 400, false, 'notes is required');
+    }
+    const notes = String(req.body.notes);
     const userId = req.user._id || req.user.id;
 
     const analysis = await ECGAnalysis.findOneAndUpdate(
@@ -371,7 +374,7 @@ router.patch('/analysis/:id/notes', async (req, res) => {
 });
 
 // Request specialist review (PATIENT or PHC_DOCTOR — creates a pending review ticket)
-router.post('/analysis/:id/request-review', async (req, res) => {
+router.post('/analysis/:id/request-review', readLimiter, async (req, res) => {
   try {
     const rawId = String(req.params.id);
     if (!rawId.match(/^[a-f\d]{24}$/i)) {
@@ -415,7 +418,17 @@ router.post('/analysis/:id/specialist-review', mlLimiter, async (req, res) => {
       return sendResponse(res, 400, false, 'Invalid analysis ID');
     }
 
-    const { expertDiagnosis, overrideReason, reviewNotes, reviewStatus } = req.body;
+    const VALID_REVIEW_STATUSES = ['pending', 'in_review', 'completed'];
+    let reviewStatus = 'completed';
+    if (req.body.reviewStatus !== undefined) {
+      reviewStatus = String(req.body.reviewStatus);
+      if (!VALID_REVIEW_STATUSES.includes(reviewStatus)) {
+        return sendResponse(res, 400, false, `Invalid reviewStatus. Must be one of: ${VALID_REVIEW_STATUSES.join(', ')}`);
+      }
+    }
+    const expertDiagnosis = req.body.expertDiagnosis !== undefined ? String(req.body.expertDiagnosis) : undefined;
+    const overrideReason = req.body.overrideReason !== undefined ? String(req.body.overrideReason) : undefined;
+    const reviewNotes = req.body.reviewNotes !== undefined ? String(req.body.reviewNotes) : undefined;
     const cardiologistId = req.user._id || req.user.id;
 
     const analysis = await ECGAnalysis.findById(rawId);
@@ -427,7 +440,7 @@ router.post('/analysis/:id/specialist-review', mlLimiter, async (req, res) => {
     let review = await SpecialistReview.findOne({ analysisId: rawId, reviewStatus: 'pending' });
     if (review) {
       review.cardiologistId = cardiologistId;
-      review.reviewStatus = reviewStatus || 'completed';
+      review.reviewStatus = reviewStatus;
       review.expertDiagnosis = expertDiagnosis;
       review.overrideReason = overrideReason;
       review.reviewNotes = reviewNotes;
@@ -437,7 +450,7 @@ router.post('/analysis/:id/specialist-review', mlLimiter, async (req, res) => {
       review = await SpecialistReview.create({
         analysisId: rawId,
         cardiologistId,
-        reviewStatus: reviewStatus || 'completed',
+        reviewStatus,
         expertDiagnosis,
         overrideReason,
         reviewNotes,
@@ -465,13 +478,19 @@ router.patch('/reviews/:reviewId', mlLimiter, async (req, res) => {
       return sendResponse(res, 400, false, 'Invalid review ID');
     }
 
-    const { reviewStatus, expertDiagnosis, overrideReason, reviewNotes } = req.body;
     const cardiologistId = req.user._id || req.user.id;
 
     const VALID_REVIEW_STATUSES = ['pending', 'in_review', 'completed'];
-    if (reviewStatus && !VALID_REVIEW_STATUSES.includes(reviewStatus)) {
-      return sendResponse(res, 400, false, `Invalid reviewStatus. Must be one of: ${VALID_REVIEW_STATUSES.join(', ')}`);
+    let reviewStatus;
+    if (req.body.reviewStatus !== undefined) {
+      reviewStatus = String(req.body.reviewStatus);
+      if (!VALID_REVIEW_STATUSES.includes(reviewStatus)) {
+        return sendResponse(res, 400, false, `Invalid reviewStatus. Must be one of: ${VALID_REVIEW_STATUSES.join(', ')}`);
+      }
     }
+    const expertDiagnosis = req.body.expertDiagnosis !== undefined ? String(req.body.expertDiagnosis) : undefined;
+    const overrideReason = req.body.overrideReason !== undefined ? String(req.body.overrideReason) : undefined;
+    const reviewNotes = req.body.reviewNotes !== undefined ? String(req.body.reviewNotes) : undefined;
 
     const existing = await SpecialistReview.findById(rawId);
     if (!existing) {
