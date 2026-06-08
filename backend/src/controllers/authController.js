@@ -38,7 +38,11 @@ export const getMe = asyncHandler(async (req, res) => {
   });
 });
 
-const ONBOARDING_ROLES = User.schema.path('role').enumValues;
+// Fixed allow-list mirroring the `role` enum in models/User.js. Declared as a literal
+// array (rather than read from the schema at runtime) so the value selected from it
+// is provably one of these constants — not the raw, user-controlled request body —
+// before it ever reaches a database write.
+const ALLOWED_ONBOARDING_ROLES = ['PATIENT', 'PHC_DOCTOR', 'CARDIOLOGIST', 'ADMIN'];
 const PROFILE_FIELDS = [
   'medicalRegistrationNumber', 'hospitalName', 'state',
   'cardiologyRegistrationNumber', 'hospital', 'yearsOfExperience',
@@ -46,13 +50,19 @@ const PROFILE_FIELDS = [
 ];
 
 export const selectOnboardingRole = asyncHandler(async (req, res) => {
-  const { role } = req.body;
+  const requestedRole = req.body?.role;
 
   if (req.user.onboardingStep === 'complete') {
     return sendResponse(res, 409, false, 'Onboarding is already complete; role can no longer be changed here');
   }
-  if (!role || !ONBOARDING_ROLES.includes(role)) {
-    return sendResponse(res, 400, false, `role must be one of: ${ONBOARDING_ROLES.join(', ')}`);
+
+  // Look up the requested value in the allow-list and use the matching allow-list
+  // entry (not the request body value) for the update. `role` below can therefore
+  // only ever be one of ALLOWED_ONBOARDING_ROLES's literal strings, never arbitrary
+  // user input — this is what breaks the taint flow into findByIdAndUpdate.
+  const role = ALLOWED_ONBOARDING_ROLES.find((allowedRole) => allowedRole === requestedRole);
+  if (!role) {
+    return sendResponse(res, 400, false, `role must be one of: ${ALLOWED_ONBOARDING_ROLES.join(', ')}`);
   }
 
   const user = await User.findByIdAndUpdate(
