@@ -1,7 +1,15 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import AxiosInstance from "../../AxiosInstance";
+import { profileService } from "../../services/profileService";
+import { setSessionUserSnapshot } from "./roleUtils";
 
 export type OnboardingStep = "role" | "profile" | "complete";
+
+// 'initializing'   — verifying any persisted token against the backend; render a
+//                    branded loading screen, never a guard redirect or error page.
+// 'authenticated'   — a verified session backed by a freshly-fetched DB user record.
+// 'unauthenticated' — no valid session; safe to redirect to /login.
+export type AuthStatus = "initializing" | "authenticated" | "unauthenticated";
 
 export interface User {
   id: string;
@@ -32,57 +40,97 @@ export interface RegisterPayload {
   password: string;
 }
 
+// Only the bearer token is persisted — it's an opaque credential, not user data.
+// Role/profile/onboarding/user details always come fresh from the database
+// (via /api/auth/me on bootstrap and via backend responses thereafter).
+const TOKEN_KEY = "ecg:token";
+
 const AuthCtx = createContext<{
   session: Session | null;
+  status: AuthStatus;
   signin: (emailOrUsername: string, password: string) => Promise<void>;
   register: (payload: RegisterPayload) => Promise<void>;
+  establishSession: (token: string, user: User) => void;
   updateUser: (user: User) => void;
   signout: () => void;
 } | null>(null);
 
-function persistSession(next: Session) {
-  localStorage.setItem("ecg:session", JSON.stringify(next));
-  localStorage.setItem("token", next.token);
-  localStorage.setItem("user", JSON.stringify(next.user));
+function setAuthHeader(token: string | null) {
+  if (token) {
+    AxiosInstance.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+  } else {
+    delete AxiosInstance.defaults.headers.common['Authorization'];
+  }
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [session, setSession] = useState<Session | null>(() => {
-    const raw = localStorage.getItem("ecg:session");
-    if (raw) {
+  const [session, setSession] = useState<Session | null>(null);
+  const [status, setStatus] = useState<AuthStatus>("initializing");
+
+  // Central auth bootstrap (runs once on mount): verify any persisted token
+  // against the backend and hydrate the full user/role/onboarding record from
+  // the database — the only source of truth. Guards key off `status` and stay
+  // on a loading screen until this resolves, so nothing ever renders from a
+  // half-known session.
+  useEffect(() => {
+    let cancelled = false;
+
+    async function bootstrap() {
+      const token = localStorage.getItem(TOKEN_KEY);
+      if (!token) {
+        if (!cancelled) setStatus("unauthenticated");
+        return;
+      }
+
+      // Set the header synchronously so the very first /api/auth/me request
+      // (and anything fired alongside it) carries the token — no deferred
+      // useEffect, no per-request localStorage re-reads.
+      setAuthHeader(token);
       try {
-        const parsed = JSON.parse(raw);
-        if (parsed && parsed.token && parsed.user) {
-          return parsed;
-        }
-      } catch (e) {
-        console.error("Failed to parse ecg:session from localStorage during initialization:", e);
+        const user = await profileService.getMe();
+        if (cancelled) return;
+        setSessionUserSnapshot(user);
+        setSession({ token, user });
+        setStatus("authenticated");
+      } catch {
+        if (cancelled) return;
+        localStorage.removeItem(TOKEN_KEY);
+        setAuthHeader(null);
+        setSessionUserSnapshot(null);
+        setSession(null);
+        setStatus("unauthenticated");
       }
     }
-    return null;
-  });
 
-  useEffect(() => {
-    if (session?.token) {
-      AxiosInstance.defaults.headers.common['Authorization'] = `Bearer ${session.token}`;
-    } else {
-      delete AxiosInstance.defaults.headers.common['Authorization'];
-    }
-  }, [session]);
+    bootstrap();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
-  const value = useMemo(
-    () => ({
+  const value = useMemo(() => {
+    // Establishes a verified session from a backend auth response (login,
+    // register, Google sign-in). Persists only the token, sets the request
+    // header and the roleUtils snapshot synchronously (before any navigation
+    // can fire follow-up requests), and flips status in one go.
+    const establishSession = (token: string, user: User) => {
+      localStorage.setItem(TOKEN_KEY, token);
+      setAuthHeader(token);
+      setSessionUserSnapshot(user);
+      setSession({ token, user });
+      setStatus("authenticated");
+    };
+
+    return {
       session,
+      status,
       signin: async (emailOrUsername: string, password: string) => {
-        const payload = { emailOrUsername, password };
-        const res = await AxiosInstance.post("/api/auth/login", payload);
+        const res = await AxiosInstance.post("/api/auth/login", { emailOrUsername, password });
         const responseData = res.data?.data || res.data;
         const user: User = responseData?.user;
         const token: string = responseData?.token;
         if (!user || !token) throw new Error("Login failed: no user or token returned");
-        const next: Session = { token, user };
-        persistSession(next);
-        setSession(next);
+        establishSession(token, user);
       },
       register: async (payload: RegisterPayload) => {
         const res = await AxiosInstance.post("/api/auth/register", payload);
@@ -91,28 +139,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const token: string = responseData?.token;
         if (!user || !token) throw new Error("Registration failed: no user or token returned");
         // Backend already returns a session on register — establish it immediately (auto-login).
-        const next: Session = { token, user };
-        persistSession(next);
-        setSession(next);
+        establishSession(token, user);
       },
+      establishSession,
       updateUser: (user: User) => {
         setSession((current) => {
           if (!current) return current;
-          const next: Session = { ...current, user };
-          persistSession(next);
-          return next;
+          setSessionUserSnapshot(user);
+          return { ...current, user };
         });
       },
       signout: () => {
-        localStorage.removeItem("ecg:session");
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
-        localStorage.removeItem("ecg:role"); // clears any stale role cache from older sessions
+        localStorage.removeItem(TOKEN_KEY);
+        setAuthHeader(null);
+        setSessionUserSnapshot(null);
         setSession(null);
+        setStatus("unauthenticated");
       },
-    }),
-    [session]
-  );
+    };
+  }, [session, status]);
 
   return <AuthCtx.Provider value={value}>{children}</AuthCtx.Provider>;
 }

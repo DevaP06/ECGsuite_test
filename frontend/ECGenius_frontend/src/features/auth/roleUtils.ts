@@ -3,15 +3,25 @@ import { ROLE_DASHBOARD_ROUTES } from '../../types/rbac';
 
 export type OnboardingStep = 'role' | 'profile' | 'complete';
 
-function readSessionUser(): { role?: string; onboardingStep?: string } | null {
-  try {
-    const raw = localStorage.getItem('ecg:session');
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    return parsed?.user ?? null;
-  } catch {
-    return null;
-  }
+interface SessionUserSnapshot {
+  role?: string;
+  onboardingStep?: string;
+}
+
+// In-memory snapshot of the current session's user. AuthProvider writes to it
+// synchronously — from backend response payloads only (login/register/bootstrap
+// /api/auth/me/onboarding/profile updates), never from localStorage — at the
+// exact moment its own session state changes. That keeps these zero-argument
+// helpers (consumed across 20+ components) perfectly in sync with the database
+// without a render-cycle delay or a second, divergence-prone source of truth.
+let sessionUserSnapshot: SessionUserSnapshot | null = null;
+
+export function setSessionUserSnapshot(user: SessionUserSnapshot | null): void {
+  sessionUserSnapshot = user;
+}
+
+function readSessionUser(): SessionUserSnapshot | null {
+  return sessionUserSnapshot;
 }
 
 export function isValidRole(value: string): value is UserRole {
