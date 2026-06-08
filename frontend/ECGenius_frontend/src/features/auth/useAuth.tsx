@@ -1,11 +1,24 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import AxiosInstance from "../../AxiosInstance";
 
+export type OnboardingStep = "role" | "profile" | "complete";
+
 export interface User {
   id: string;
   username: string;
   email: string;
   role?: string;
+  onboardingStep?: OnboardingStep;
+  profile?: Record<string, unknown>;
+  // Additional fields the backend already returns from /api/auth/me
+  fullName?: string;
+  phone?: string;
+  profilePicture?: string;
+  authProvider?: 'local' | 'google';
+  isVerified?: boolean;
+  status?: 'active' | 'inactive' | 'suspended';
+  lastLogin?: string | null;
+  createdAt?: string;
 }
 
 export interface Session {
@@ -13,11 +26,25 @@ export interface Session {
   user: User;
 }
 
+export interface RegisterPayload {
+  username: string;
+  email: string;
+  password: string;
+}
+
 const AuthCtx = createContext<{
   session: Session | null;
   signin: (emailOrUsername: string, password: string) => Promise<void>;
+  register: (payload: RegisterPayload) => Promise<void>;
+  updateUser: (user: User) => void;
   signout: () => void;
 } | null>(null);
+
+function persistSession(next: Session) {
+  localStorage.setItem("ecg:session", JSON.stringify(next));
+  localStorage.setItem("token", next.token);
+  localStorage.setItem("user", JSON.stringify(next.user));
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(() => {
@@ -54,16 +81,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const token: string = responseData?.token;
         if (!user || !token) throw new Error("Login failed: no user or token returned");
         const next: Session = { token, user };
-        localStorage.setItem("ecg:session", JSON.stringify(next));
-        localStorage.setItem("token", token);
-        localStorage.setItem("user", JSON.stringify(user));
+        persistSession(next);
         setSession(next);
+      },
+      register: async (payload: RegisterPayload) => {
+        const res = await AxiosInstance.post("/api/auth/register", payload);
+        const responseData = res.data?.data || res.data;
+        const user: User = responseData?.user;
+        const token: string = responseData?.token;
+        if (!user || !token) throw new Error("Registration failed: no user or token returned");
+        // Backend already returns a session on register — establish it immediately (auto-login).
+        const next: Session = { token, user };
+        persistSession(next);
+        setSession(next);
+      },
+      updateUser: (user: User) => {
+        setSession((current) => {
+          if (!current) return current;
+          const next: Session = { ...current, user };
+          persistSession(next);
+          return next;
+        });
       },
       signout: () => {
         localStorage.removeItem("ecg:session");
         localStorage.removeItem("token");
         localStorage.removeItem("user");
-        localStorage.removeItem("ecg:role"); // TEMPORARY: clear locally-stored role selection
+        localStorage.removeItem("ecg:role"); // clears any stale role cache from older sessions
         setSession(null);
       },
     }),
@@ -78,4 +122,3 @@ export function useAuth() {
   if (!ctx) throw new Error("useAuth must be inside AuthProvider");
   return ctx;
 }
-

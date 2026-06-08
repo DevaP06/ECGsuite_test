@@ -32,10 +32,79 @@ export const logoutUser = asyncHandler(async (req, res) => {
 });
 
 export const getMe = asyncHandler(async (req, res) => {
-  const { _id, username, email, role, fullName, phone, profilePicture, authProvider, isVerified, status, lastLogin, createdAt } = req.user;
+  const { _id, username, email, role, fullName, phone, profilePicture, authProvider, isVerified, status, lastLogin, createdAt, onboardingStep, profile } = req.user;
   return sendResponse(res, 200, true, 'User fetched successfully', {
-    user: { id: _id, username, email, role, fullName, phone, profilePicture, authProvider, isVerified, status, lastLogin, createdAt }
+    user: { id: _id, username, email, role, fullName, phone, profilePicture, authProvider, isVerified, status, lastLogin, createdAt, onboardingStep, profile }
   });
+});
+
+// Fixed allow-list mirroring the `role` enum in models/User.js. Declared as a literal
+// array (rather than read from the schema at runtime) so the value selected from it
+// is provably one of these constants — not the raw, user-controlled request body —
+// before it ever reaches a database write.
+const ALLOWED_ONBOARDING_ROLES = ['PATIENT', 'PHC_DOCTOR', 'CARDIOLOGIST', 'ADMIN'];
+const PROFILE_FIELDS = [
+  'medicalRegistrationNumber', 'hospitalName', 'state',
+  'cardiologyRegistrationNumber', 'hospital', 'yearsOfExperience',
+  'age', 'gender', 'organization',
+];
+
+export const selectOnboardingRole = asyncHandler(async (req, res) => {
+  const requestedRole = req.body?.role;
+
+  if (req.user.onboardingStep === 'complete') {
+    return sendResponse(res, 409, false, 'Onboarding is already complete; role can no longer be changed here');
+  }
+
+  // Look up the requested value in the allow-list and use the matching allow-list
+  // entry (not the request body value) for the update. `role` below can therefore
+  // only ever be one of ALLOWED_ONBOARDING_ROLES's literal strings, never arbitrary
+  // user input — this is what breaks the taint flow into findByIdAndUpdate.
+  const role = ALLOWED_ONBOARDING_ROLES.find((allowedRole) => allowedRole === requestedRole);
+  if (!role) {
+    return sendResponse(res, 400, false, `role must be one of: ${ALLOWED_ONBOARDING_ROLES.join(', ')}`);
+  }
+
+  const user = await User.findByIdAndUpdate(
+    req.user._id,
+    { role, onboardingStep: 'profile' },
+    { new: true, runValidators: true }
+  ).select('-password -googleId');
+
+  logAction({ req, userId: req.user._id, entityType: 'USER', entityId: req.user._id, action: 'UPDATE', newValue: { role, onboardingStep: 'profile' } });
+  return sendResponse(res, 200, true, 'Role saved', { user });
+});
+
+export const completeOnboardingProfile = asyncHandler(async (req, res) => {
+  if (req.user.onboardingStep === 'complete') {
+    return sendResponse(res, 409, false, 'Onboarding is already complete');
+  }
+  if (req.user.onboardingStep !== 'profile') {
+    return sendResponse(res, 400, false, 'Select a role before completing your profile');
+  }
+
+  const { fullName, phone, profile = {} } = req.body;
+  const updates = { onboardingStep: 'complete' };
+
+  if (fullName !== undefined) updates.fullName = String(fullName).trim();
+  if (phone !== undefined) updates.phone = String(phone).trim();
+
+  const cleanProfile = {};
+  for (const key of PROFILE_FIELDS) {
+    if (profile[key] !== undefined && profile[key] !== '') {
+      cleanProfile[key] = profile[key];
+    }
+  }
+  updates.profile = cleanProfile;
+
+  const user = await User.findByIdAndUpdate(
+    req.user._id,
+    updates,
+    { new: true, runValidators: true }
+  ).select('-password -googleId');
+
+  logAction({ req, userId: req.user._id, entityType: 'USER', entityId: req.user._id, action: 'UPDATE', newValue: { onboardingStep: 'complete' } });
+  return sendResponse(res, 200, true, 'Profile completed', { user });
 });
 
 export const updateProfile = asyncHandler(async (req, res) => {

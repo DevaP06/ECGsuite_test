@@ -1,6 +1,7 @@
 import User from '../models/User.js';
 import { getGoogleClient } from '../config/googleClient.js';
 import { generateToken } from '../utils/generateToken.js';
+import { backfillLegacyOnboarding } from './authService.js';
 
 function createError(message, statusCode = 500) {
   const error = new Error(message);
@@ -15,7 +16,9 @@ function toUserResponse(user) {
     email: user.email,
     role: user.role,
     profilePicture: user.profilePicture,
-    authProvider: user.authProvider
+    authProvider: user.authProvider,
+    onboardingStep: user.onboardingStep,
+    profile: user.profile
   };
 }
 
@@ -105,6 +108,7 @@ export async function verifyGoogleUser(credential) {
     await user.save();
   }
 
+  backfillLegacyOnboarding(user);
   user.lastLogin = new Date();
   await user.save({ validateModifiedOnly: true });
 

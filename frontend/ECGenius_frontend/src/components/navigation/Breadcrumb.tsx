@@ -39,10 +39,13 @@ const SEGMENT_LABELS: Record<string, string> = {
 
   // Questionnaire workflow
   questionnaire: 'Clinical History',
+  'clinical-context': 'Clinical Context',
   'clinical-dashboard': 'Clinical Dashboard',
 
-  // Auth
-  'select-role': 'Select Role',
+  // Onboarding
+  onboarding: 'Onboarding',
+  role: 'Select Role',
+  profile: 'Complete Profile',
 };
 
 export default function Breadcrumb() {

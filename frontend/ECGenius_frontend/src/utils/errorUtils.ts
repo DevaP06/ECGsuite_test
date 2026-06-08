@@ -32,6 +32,14 @@ export function extractErrorMessage(err: unknown, fallback = 'An unexpected erro
   return fallback;
 }
 
+/** Extract the HTTP status code from an Axios-style error, if present. */
+export function getHttpStatus(err: unknown): number | undefined {
+  if (!err || typeof err !== 'object') return undefined;
+  const e = err as Record<string, unknown>;
+  const status = (e.response as Record<string, unknown> | undefined)?.status;
+  return typeof status === 'number' ? status : undefined;
+}
+
 /** Extract a safe string from an unknown value. */
 function safeString(val: unknown, fallback: string): string {
   if (typeof val === 'string') return val || fallback;

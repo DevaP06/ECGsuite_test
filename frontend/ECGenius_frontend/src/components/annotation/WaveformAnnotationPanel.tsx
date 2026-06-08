@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
-  Activity, Plus, Trash2, Info,
+  Activity, Plus, Trash2, Info, Eye, EyeOff,
 } from 'lucide-react';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -20,10 +20,13 @@ interface SignalPoint {
 
 interface MarkForm {
   label: AnnotationLabel;
+  lead: string;
   startSample: string;
   endSample: string;
   comment: string;
 }
+
+export const ECG_LEADS = ['I', 'II', 'III', 'aVR', 'aVL', 'aVF', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6'];
 
 const LABEL_OPTIONS: { value: AnnotationLabel; label: string; color: string }[] = [
   { value: 'p_wave',        label: 'P Wave',        color: 'text-blue-600'   },
@@ -49,7 +52,7 @@ const LABEL_COLOR: Record<AnnotationLabel, string> = {
   other:         'bg-slate-50 text-slate-600 border-slate-200',
 };
 
-const BLANK_FORM: MarkForm = { label: 'p_wave', startSample: '', endSample: '', comment: '' };
+const BLANK_FORM: MarkForm = { label: 'p_wave', lead: 'II', startSample: '', endSample: '', comment: '' };
 
 function buildSignalPoints(rawSignalData: number[]): SignalPoint[] {
   const MAX_POINTS = 600;
@@ -98,6 +101,7 @@ export default function WaveformAnnotationPanel({ explanation, onMarksUpdate }: 
   const [marks, setMarks]     = useState<WaveformMark[]>([]);
   const [form, setForm]       = useState<MarkForm>(BLANK_FORM);
   const [showForm, setShowForm] = useState(false);
+  const [visibleLeads, setVisibleLeads] = useState<Set<string> | null>(null);
 
   const updateMarks = (next: WaveformMark[]) => {
     setMarks(next);
@@ -110,6 +114,7 @@ export default function WaveformAnnotationPanel({ explanation, onMarksUpdate }: 
     if (isNaN(start) || isNaN(end) || end < start) return;
     const newMark: WaveformMark = {
       label: form.label,
+      lead: form.lead,
       startSample: start,
       endSample: end,
       comment: form.comment || undefined,
@@ -122,6 +127,27 @@ export default function WaveformAnnotationPanel({ explanation, onMarksUpdate }: 
   const removeMark = (idx: number) => {
     updateMarks(marks.filter((_, i) => i !== idx));
   };
+
+  const markedLeads = useMemo(
+    () => Array.from(new Set(marks.map((m) => m.lead ?? 'unspecified'))),
+    [marks],
+  );
+
+  const isLeadVisible = (lead: string) => visibleLeads === null || visibleLeads.has(lead);
+
+  const toggleLeadVisibility = (lead: string) => {
+    setVisibleLeads((current) => {
+      const base = current ?? new Set(markedLeads);
+      const next = new Set(base);
+      if (next.has(lead)) next.delete(lead);
+      else next.add(lead);
+      return next;
+    });
+  };
+
+  const visibleMarks = marks
+    .map((mark, idx) => ({ mark, idx }))
+    .filter(({ mark }) => isLeadVisible(mark.lead ?? 'unspecified'));
 
   const signalPoints = explanation?.rawSignalData
     ? buildSignalPoints(explanation.rawSignalData)
@@ -194,34 +220,67 @@ export default function WaveformAnnotationPanel({ explanation, onMarksUpdate }: 
 
       {/* Cardiologist marks list */}
       {marks.length > 0 && (
-        <div className="space-y-1.5">
-          <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
-            Your Marks
-          </p>
-          {marks.map((mark, idx) => {
-            const opt = LABEL_OPTIONS.find((o) => o.value === mark.label);
-            return (
-              <div
-                key={idx}
-                className="flex items-center gap-2 bg-white border border-gray-100 rounded-lg px-3 py-2"
-              >
-                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${LABEL_COLOR[mark.label]}`}>
-                  {opt?.label ?? mark.label}
-                </span>
-                <span className="text-xs text-slate-500 flex-1">
-                  {mark.startSample} → {mark.endSample}
-                  {mark.comment && ` · ${mark.comment}`}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => removeMark(idx)}
-                  className="p-1 rounded hover:bg-red-50 transition"
-                >
-                  <Trash2 className="w-3.5 h-3.5 text-red-400" />
-                </button>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
+              Your Marks
+            </p>
+            {markedLeads.length > 1 && (
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-xs text-slate-400">Show leads:</span>
+                {markedLeads.map((lead) => {
+                  const visible = isLeadVisible(lead);
+                  return (
+                    <button
+                      key={lead}
+                      type="button"
+                      onClick={() => toggleLeadVisibility(lead)}
+                      className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full border transition ${
+                        visible
+                          ? 'bg-blue-50 text-blue-700 border-blue-200'
+                          : 'bg-gray-50 text-gray-400 border-gray-200'
+                      }`}
+                    >
+                      {visible ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+                      {lead}
+                    </button>
+                  );
+                })}
               </div>
-            );
-          })}
+            )}
+          </div>
+
+          {visibleMarks.length === 0 ? (
+            <p className="text-xs text-slate-400 italic px-1">No marks visible for the selected leads.</p>
+          ) : (
+            visibleMarks.map(({ mark, idx }) => {
+              const opt = LABEL_OPTIONS.find((o) => o.value === mark.label);
+              return (
+                <div
+                  key={idx}
+                  className="flex items-center gap-2 bg-white border border-gray-100 rounded-lg px-3 py-2"
+                >
+                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full border bg-slate-50 text-slate-600 border-slate-200">
+                    {mark.lead ?? 'Unspecified'}
+                  </span>
+                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${LABEL_COLOR[mark.label]}`}>
+                    {opt?.label ?? mark.label}
+                  </span>
+                  <span className="text-xs text-slate-500 flex-1">
+                    {mark.startSample} → {mark.endSample}
+                    {mark.comment && ` · ${mark.comment}`}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => removeMark(idx)}
+                    className="p-1 rounded hover:bg-red-50 transition"
+                  >
+                    <Trash2 className="w-3.5 h-3.5 text-red-400" />
+                  </button>
+                </div>
+              );
+            })
+          )}
         </div>
       )}
 
@@ -230,7 +289,7 @@ export default function WaveformAnnotationPanel({ explanation, onMarksUpdate }: 
         <div className="border border-blue-200 rounded-lg p-4 bg-blue-50 space-y-3">
           <p className="text-xs font-semibold text-blue-700">Add Waveform Mark</p>
           <div className="grid grid-cols-2 gap-2">
-            <div className="col-span-2">
+            <div>
               <label className="text-xs font-semibold text-slate-600">Mark Type</label>
               <select
                 value={form.label}
@@ -239,6 +298,18 @@ export default function WaveformAnnotationPanel({ explanation, onMarksUpdate }: 
               >
                 {LABEL_OPTIONS.map((o) => (
                   <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-slate-600">Lead</label>
+              <select
+                value={form.lead}
+                onChange={(e) => setForm((f) => ({ ...f, lead: e.target.value }))}
+                className="w-full mt-1 border border-slate-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {ECG_LEADS.map((lead) => (
+                  <option key={lead} value={lead}>{lead}</option>
                 ))}
               </select>
             </div>

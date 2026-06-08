@@ -47,7 +47,10 @@ export const reviewService = {
     try {
       const res = await AxiosInstance.get<unknown>('/api/review/queue');
       const body = res.data as Record<string, unknown>;
-      return ((body.reviews ?? body.data ?? body) as ReviewQueueItem[]) ?? [];
+      // Backend wraps as { success, message, data: { reviews, pagination } } — double-nested.
+      const payload = body.data as Record<string, unknown> | undefined;
+      const list = payload?.reviews ?? body.reviews;
+      return Array.isArray(list) ? (list as ReviewQueueItem[]) : [];
     } catch (err: unknown) {
       if (is404(err)) return [];
       throw err;
@@ -72,7 +75,10 @@ export const reviewService = {
     try {
       const res = await AxiosInstance.get<unknown>('/api/review/my-requests');
       const body = res.data as Record<string, unknown>;
-      return ((body.requests ?? body.data ?? body) as ReviewQueueItem[]) ?? [];
+      // Backend wraps as { success, message, data: { requests, pagination } } — double-nested.
+      const payload = body.data as Record<string, unknown> | undefined;
+      const list = payload?.requests ?? body.requests;
+      return Array.isArray(list) ? (list as ReviewQueueItem[]) : [];
     } catch (err: unknown) {
       if (is404(err)) return [];
       throw err;

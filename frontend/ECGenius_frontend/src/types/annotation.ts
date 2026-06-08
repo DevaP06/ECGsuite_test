@@ -17,6 +17,8 @@ export interface WaveformMark {
   endSample: number;
   confidence?: number;
   comment?: string;
+  /** ECG lead this mark belongs to, e.g. "II", "V1" — used to group marks into LeadAnnotation[] */
+  lead?: string;
 }
 
 export interface LeadAnnotation {

@@ -13,6 +13,11 @@ export interface SignalMetrics {
   rrInterval?: number | null;
 }
 
+export interface TopPrediction {
+  rhythm: string;
+  confidence: number;
+}
+
 export interface OntologyItem {
   displayName: string;
   confidenceTier: string;
@@ -39,6 +44,8 @@ export interface ExplanationData {
   leadImportance?: Record<string, number>;
   waveformAnnotations?: WaveformAnnotation;
   rawSignalData?: number[];
+  /** Backend-generated clinical reasoning narrative, when the diagnostic engine provides one */
+  reasoning?: string;
 }
 
 export interface AnalysisResult {
@@ -56,6 +63,7 @@ export interface AnalysisResult {
   signalMetrics?: SignalMetrics;
   predictedLabels?: string[];
   labelProbabilities?: Record<string, number>;
+  topPredictions?: TopPrediction[];
   ontologyEnrichment?: OntologyItem[];
   explanation?: ExplanationData;
   isEmergency?: boolean;

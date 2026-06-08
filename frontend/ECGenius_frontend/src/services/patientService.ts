@@ -26,15 +26,20 @@ export const patientService = {
     if (query.page)     params.set('page',      String(query.page));
     if (query.pageSize) params.set('pageSize',  String(query.pageSize));
 
-    const res = await AxiosInstance.get<PatientListResponse>(
+    const res = await AxiosInstance.get<unknown>(
       `/api/patients?${params.toString()}`
     );
-    // Normalise envelope variants: { data, total } or { patients, total }
+    // Backend wraps the payload as { success, message, data: { data, total, page, pageSize } }
+    // — i.e. double-nested. Unwrap one extra level when `data` is itself an object (not the array).
     const body = res.data as unknown as Record<string, unknown>;
-    const data = (body.data ?? body.patients ?? []) as PatientListItem[];
-    const total = (typeof body.total === 'number' ? body.total : data.length);
-    const page = (typeof body.page === 'number' ? body.page : (query.page ?? 1));
-    const pageSize = (typeof body.pageSize === 'number' ? body.pageSize : (query.pageSize ?? 10));
+    const payload = (body.data && typeof body.data === 'object' && !Array.isArray(body.data))
+      ? body.data as Record<string, unknown>
+      : body;
+    const rawList = payload.data ?? payload.patients ?? body.patients;
+    const data = Array.isArray(rawList) ? (rawList as PatientListItem[]) : [];
+    const total = (typeof payload.total === 'number' ? payload.total : data.length);
+    const page = (typeof payload.page === 'number' ? payload.page : (query.page ?? 1));
+    const pageSize = (typeof payload.pageSize === 'number' ? payload.pageSize : (query.pageSize ?? 10));
     return { data, total, page, pageSize };
   },
 

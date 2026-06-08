@@ -71,6 +71,27 @@ const userSchema = new mongoose.Schema(
     lastLogin:{
         type:Date,
         default:null
+    },
+
+    profile:{
+        type: new mongoose.Schema({
+            medicalRegistrationNumber: String,
+            hospitalName: String,
+            state: String,
+            cardiologyRegistrationNumber: String,
+            hospital: String,
+            yearsOfExperience: Number,
+            age: Number,
+            gender: String,
+            organization: String,
+        }, { _id: false }),
+        default: undefined
+    },
+
+    onboardingStep:{
+        type:String,
+        enum:["role","profile","complete"],
+        default:"role"
     }
 
 },

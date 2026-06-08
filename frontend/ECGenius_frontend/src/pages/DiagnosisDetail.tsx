@@ -1,16 +1,20 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { Loader2, ArrowLeft, RefreshCw, AlertTriangle, ClipboardList } from "lucide-react";
+import { Loader2, ArrowLeft, RefreshCw, AlertTriangle, ClipboardList, HelpCircle } from "lucide-react";
 import AppShell from "../layouts/AppShell";
 import DiagnosisOverview from "../components/diagnosis/DiagnosisOverview";
 import ExplainabilityChart from "../components/diagnosis/ExplainabilityChart";
 import RecommendationsPanel from "../components/diagnosis/RecommendationsPanel";
 import OntologyPanel from "../components/diagnosis/OntologyPanel";
+import DifferentialDiagnosisPanel from "../components/diagnosis/DifferentialDiagnosisPanel";
+import ClinicalReasoningPanel from "../components/diagnosis/ClinicalReasoningPanel";
 import MetricsGrid from "../components/ecg/MetricsGrid";
 import ECGHeatmap from "../components/ecg/ECGHeatmap";
 import ECGWaveformViewer from "../components/ecg/ECGWaveformViewer";
 import PDFExportButton from "../components/common/PDFExportButton";
 import { ecgService } from "../services/ecgService";
+import { buildOntologyInput } from "../services/ontologyFusionService";
+import { buildFusionResult } from "../utils/ontologyFusion";
 import { isDoctor, getDashboardRoute } from "../features/auth/roleUtils";
 import { extractErrorMessage } from "../utils/errorUtils";
 import type { ECGAnalysis } from "../types/ecg";
@@ -104,6 +108,10 @@ export default function DiagnosisDetail() {
   const heatmapUrl = analysis.analysisResult?.explanation?.heatmapUrl ?? null;
   const waveformAnnotations = analysis.analysisResult?.explanation?.waveformAnnotations ?? null;
   const rawSignalData = analysis.analysisResult?.explanation?.rawSignalData ?? null;
+  const reasoning = analysis.analysisResult?.explanation?.reasoning ?? null;
+
+  const ontologyItems = analysis.analysisResult?.ontologyEnrichment ?? [];
+  const fusionResult = ontologyItems.length > 0 ? buildFusionResult(buildOntologyInput(analysis)) : null;
 
   return (
     <AppShell title="Diagnosis Detail">
@@ -136,6 +144,16 @@ export default function DiagnosisDetail() {
               >
                 <ClipboardList className="w-4 h-4" />
                 Clinical History
+              </button>
+            )}
+            {doctorView && id && (analysis.analysisResult?.topPredictions?.length ?? 0) >= 1 && (
+              <button
+                type="button"
+                onClick={() => navigate(`/clinical-context/${id}`)}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-blue-500 text-blue-400 hover:bg-blue-500/10 text-sm font-semibold transition"
+              >
+                <HelpCircle className="w-4 h-4" />
+                Need More Detailed Diagnosis?
               </button>
             )}
             {id && (
@@ -219,10 +237,12 @@ export default function DiagnosisDetail() {
             />
             {/* Ontology panel (Task 12) */}
             <OntologyPanel items={analysis.analysisResult?.ontologyEnrichment} />
+            <DifferentialDiagnosisPanel diagnoses={fusionResult?.diagnoses} />
           </div>
 
           <div className="space-y-6">
             <RecommendationsPanel recommendedTests={recommendedTests} />
+            <ClinicalReasoningPanel reasoning={reasoning} />
           </div>
         </div>
 

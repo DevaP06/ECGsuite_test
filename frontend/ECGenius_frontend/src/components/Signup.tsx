@@ -3,14 +3,18 @@ import { Link, useNavigate } from "react-router-dom";
 import signupImage from "../assets/signuppage.png";
 import { useGoogleAuth } from "../hooks/useGoogleAuth";
 import { useAuth } from "../features/auth/useAuth";
-import { getDashboardRoute } from "../features/auth/roleUtils";
+import { getPostAuthRoute } from "../features/auth/roleUtils";
 import { extractErrorMessage } from "../utils/errorUtils";
+import FormFeedback from "./auth/FormFeedback";
+import ValidationMessage from "./auth/ValidationMessage";
+import FieldStatus, { type FieldValidity } from "./auth/FieldStatus";
 
 const LoginPage = () => {
   const [formData, setFormData] = useState({
     emailOrUsername: "",
     password: ""
   });
+  const [touched, setTouched] = useState({ emailOrUsername: false, password: false });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -28,14 +32,33 @@ const LoginPage = () => {
     });
   };
 
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    setTouched((prev) => ({ ...prev, [e.target.name]: true }));
+  };
+
+  const emailOrUsernameValid = formData.emailOrUsername.trim().length > 0;
+  const passwordValid = formData.password.length > 0;
+
+  const statusFor = (touchedField: boolean, hasValue: boolean, valid: boolean): FieldValidity => {
+    if (!touchedField || !hasValue) return 'idle';
+    return valid ? 'valid' : 'invalid';
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setTouched({ emailOrUsername: true, password: true });
     setError("");
 
+    if (!emailOrUsernameValid || !passwordValid) {
+      setError("Enter your email or username and password to continue.");
+      return;
+    }
+
+    setLoading(true);
     try {
       await signin(formData.emailOrUsername, formData.password);
-      navigate(getDashboardRoute());
+      // Resumes onboarding if incomplete; otherwise lands on the role dashboard directly.
+      navigate(getPostAuthRoute());
     } catch (err: unknown) {
       setError(extractErrorMessage(err, 'Login failed'));
     } finally {
@@ -50,11 +73,7 @@ const LoginPage = () => {
         <div className="max-w-md w-full mx-auto">
           <h1 className="text-2xl font-bold mb-6 text-center">Login to ECGenius</h1>
 
-          {error && (
-            <div className="mb-4 p-3 bg-red-900/50 border border-red-500 rounded-md text-red-200 text-sm">
-              {error}
-            </div>
-          )}
+          <FormFeedback tone="error" message={error} />
 
           <div id="google-signin-button" className="mb-4 w-full flex justify-center min-h-[44px]"></div>
 
@@ -67,28 +86,42 @@ const LoginPage = () => {
           <form onSubmit={handleSubmit}>
             <div className="mb-4">
               <label className="block mb-1 text-sm">Your email or username</label>
-              <input
-                type="text"
-                name="emailOrUsername"
-                value={formData.emailOrUsername}
-                onChange={handleChange}
-                placeholder="name@company.com or username"
-                className="w-full bg-black border border-gray-700 rounded-md px-4 py-2 text-sm focus:outline-none focus:border-blue-500"
-                required
-              />
+              <div className="relative">
+                <input
+                  type="text"
+                  name="emailOrUsername"
+                  value={formData.emailOrUsername}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  placeholder="name@company.com or username"
+                  className="w-full bg-black border border-gray-700 rounded-md px-4 py-2 pr-10 text-sm focus:outline-none focus:border-blue-500"
+                  required
+                />
+                <FieldStatus state={statusFor(touched.emailOrUsername, formData.emailOrUsername.length > 0, emailOrUsernameValid)} />
+              </div>
+              {touched.emailOrUsername && !emailOrUsernameValid && (
+                <ValidationMessage tone="error" message="Enter your email or username." />
+              )}
             </div>
 
             <div className="mb-4">
               <label className="block mb-1 text-sm">Your password</label>
-              <input
-                type="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                placeholder="********"
-                className="w-full bg-black border border-gray-700 rounded-md px-4 py-2 text-sm focus:outline-none focus:border-blue-500"
-                required
-              />
+              <div className="relative">
+                <input
+                  type="password"
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  placeholder="********"
+                  className="w-full bg-black border border-gray-700 rounded-md px-4 py-2 pr-10 text-sm focus:outline-none focus:border-blue-500"
+                  required
+                />
+                <FieldStatus state={statusFor(touched.password, formData.password.length > 0, passwordValid)} />
+              </div>
+              {touched.password && !passwordValid && (
+                <ValidationMessage tone="error" message="Enter your password." />
+              )}
               <div className="text-right mt-1">
                 <a href="#" className="text-blue-400 text-sm hover:underline">
                   Forgot Password?

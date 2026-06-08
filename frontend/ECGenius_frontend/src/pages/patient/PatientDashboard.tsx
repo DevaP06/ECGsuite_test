@@ -213,9 +213,6 @@ export default function PatientDashboard() {
             <p className="text-xs text-slate-400 mt-0.5 leading-relaxed">
               Rolling summary of your heart health indicators and risk trends over time.
             </p>
-            <span className="text-xs font-medium text-blue-500 bg-blue-50 rounded-full px-2.5 py-0.5 mt-2 inline-block">
-              Coming soon
-            </span>
           </div>
         </Link>
 
@@ -231,9 +228,6 @@ export default function PatientDashboard() {
             <p className="text-xs text-slate-400 mt-0.5 leading-relaxed">
               Complete timeline of your ECG uploads, diagnoses, and review outcomes.
             </p>
-            <span className="text-xs font-medium text-blue-500 bg-blue-50 rounded-full px-2.5 py-0.5 mt-2 inline-block">
-              Coming soon
-            </span>
           </div>
         </Link>
       </div>

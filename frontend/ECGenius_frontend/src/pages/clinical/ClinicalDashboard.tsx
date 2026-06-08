@@ -1,18 +1,32 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Loader2, AlertTriangle, ArrowLeft, ClipboardList, RefreshCw } from 'lucide-react';
+import {
+  Loader2, AlertTriangle, ArrowLeft, ClipboardList, RefreshCw, CheckCircle2, Clock, History,
+  Eye, LayoutDashboard, IdCard, CalendarClock,
+} from 'lucide-react';
 import AppShell from '../../layouts/AppShell';
 import { ecgService } from '../../services/ecgService';
 import { loadDraft } from '../../services/questionnaireService';
+import { hasClinicalContext, getSubmittedClinicalContext, getSubmittedAt } from '../../services/clinicalContextService';
+import { buildOntologyInput } from '../../services/ontologyFusionService';
+import { buildFusionResult } from '../../utils/ontologyFusion';
 import { answersArrayToMap } from '../../types/questionnaire';
 import { extractErrorMessage } from '../../utils/errorUtils';
 import { getDashboardRoute } from '../../features/auth/roleUtils';
 import EvidenceFusionPanel from '../../components/clinical/EvidenceFusionPanel';
+import EvidenceFusionSummary from '../../components/clinical/EvidenceFusionSummary';
+import EvidenceTimeline from '../../components/clinical/EvidenceTimeline';
+import ConfidenceBreakdown from '../../components/clinical/ConfidenceBreakdown';
+import ClinicalContextSummary from '../../components/clinical/ClinicalContextSummary';
 import RiskFactorPanel from '../../components/clinical/RiskFactorPanel';
 import ClinicalActionsPanel from '../../components/clinical/ClinicalActionsPanel';
 import RequestReviewButton from '../../components/review/RequestReviewButton';
 import ReviewStatusTracker from '../../components/review/ReviewStatusTracker';
+import DifferentialDiagnosisPanel from '../../components/diagnosis/DifferentialDiagnosisPanel';
+import ClinicalReasoningPanel from '../../components/diagnosis/ClinicalReasoningPanel';
+import PDFExportButton from '../../components/common/PDFExportButton';
 import type { ECGAnalysis } from '../../types/ecg';
+import type { ClinicalContext } from '../../types/clinicalContext';
 import type { AnswersMap } from '../../types/questionnaire';
 
 export default function ClinicalDashboard() {
@@ -22,6 +36,8 @@ export default function ClinicalDashboard() {
 
   const [analysis, setAnalysis] = useState<ECGAnalysis | null>(null);
   const [answers, setAnswers] = useState<AnswersMap>({});
+  const [clinicalContext, setClinicalContext] = useState<ClinicalContext | null>(null);
+  const [contextSubmittedAt, setContextSubmittedAt] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -41,6 +57,9 @@ export default function ClinicalDashboard() {
         if (draft?.answers?.length) {
           setAnswers(answersArrayToMap(draft.answers));
         }
+
+        setClinicalContext(getSubmittedClinicalContext(analysisId));
+        setContextSubmittedAt(getSubmittedAt(analysisId));
       } catch (err: unknown) {
         if (cancelled) return;
         setError(extractErrorMessage(err, 'Failed to load clinical dashboard.'));
@@ -90,11 +109,20 @@ export default function ClinicalDashboard() {
     );
   }
 
-  const { patientInfo, analysisResult, createdAt, processedAt, _id } = analysis;
+  const { patientInfo, analysisResult, createdAt, _id } = analysis;
   const ontologyItems = analysisResult?.ontologyEnrichment;
   const findings = analysisResult?.abnormalities ?? [];
   const rhythm = analysisResult?.rhythm;
   const confidence = analysisResult?.confidence;
+  const heartRate = analysisResult?.heartRate;
+  const qrsDuration = analysisResult?.qrsDuration;
+  const qtInterval = analysisResult?.qtInterval;
+  const qtcInterval = analysisResult?.signalMetrics?.qtcInterval;
+  const reasoning = analysisResult?.explanation?.reasoning ?? null;
+
+  const fusionResult = ((ontologyItems?.length ?? 0) > 0 || clinicalContext)
+    ? buildFusionResult(buildOntologyInput(analysis, clinicalContext))
+    : null;
 
   return (
     <AppShell title="Clinical Dashboard">
@@ -111,7 +139,14 @@ export default function ClinicalDashboard() {
             Back to Diagnosis
           </button>
           <div className="flex items-center gap-2">
-            <RequestReviewButton analysisId={analysisId ?? ''} />
+            <button
+              type="button"
+              onClick={() => navigate(`/audit/${analysisId}`)}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-200 text-sm font-semibold text-slate-600 hover:bg-gray-50 transition"
+            >
+              <History className="w-4 h-4" />
+              View Audit Trail
+            </button>
             <button
               type="button"
               onClick={() => navigate(`/questionnaire/${analysisId}`)}
@@ -136,15 +171,26 @@ export default function ClinicalDashboard() {
                 <span>Gender: <span className="font-semibold text-slate-700 capitalize">{patientInfo.gender}</span></span>
               </div>
             </div>
-            <div className="text-right shrink-0 space-y-1">
-              <span className="inline-block text-xs font-mono bg-gray-100 text-slate-500 rounded px-2 py-1">
-                {_id.slice(-8)}
-              </span>
-              <p className="text-xs text-slate-400">
-                {processedAt
-                  ? new Date(processedAt).toLocaleString()
-                  : new Date(createdAt).toLocaleString()}
-              </p>
+            <div className="text-right shrink-0 space-y-1.5">
+              <div className="flex items-center justify-end gap-1.5 text-xs text-slate-500">
+                <IdCard className="w-3.5 h-3.5 text-slate-400" />
+                <span>Patient ID: <span className="font-mono text-slate-600">{_id.slice(-8)}</span></span>
+              </div>
+              <div className="flex items-center justify-end gap-1.5 text-xs text-slate-500">
+                <CalendarClock className="w-3.5 h-3.5 text-slate-400" />
+                <span>Upload Date: <span className="text-slate-600">{new Date(createdAt).toLocaleString()}</span></span>
+              </div>
+              {analysisId && (
+                hasClinicalContext(analysisId) ? (
+                  <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full border bg-emerald-50 text-emerald-700 border-emerald-200">
+                    <CheckCircle2 className="w-3.5 h-3.5" /> Clinical Context Completed
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full border bg-amber-50 text-amber-700 border-amber-200">
+                    <Clock className="w-3.5 h-3.5" /> Pending Clinical Context
+                  </span>
+                )
+              )}
             </div>
           </div>
         </div>
@@ -164,6 +210,26 @@ export default function ClinicalDashboard() {
               </span>
             )}
           </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
+            <div className="rounded-lg border border-gray-100 px-3 py-2.5 text-center">
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Heart Rate</p>
+              <p className="text-sm font-bold text-slate-700 mt-0.5">{heartRate != null ? `${heartRate} bpm` : 'Not provided'}</p>
+            </div>
+            <div className="rounded-lg border border-gray-100 px-3 py-2.5 text-center">
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">QRS Duration</p>
+              <p className="text-sm font-bold text-slate-700 mt-0.5">{qrsDuration != null ? `${qrsDuration} ms` : 'Not provided'}</p>
+            </div>
+            <div className="rounded-lg border border-gray-100 px-3 py-2.5 text-center">
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">QT Interval</p>
+              <p className="text-sm font-bold text-slate-700 mt-0.5">{qtInterval != null ? `${qtInterval} ms` : 'Not provided'}</p>
+            </div>
+            <div className="rounded-lg border border-gray-100 px-3 py-2.5 text-center">
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">QTc Interval</p>
+              <p className="text-sm font-bold text-slate-700 mt-0.5">{qtcInterval != null ? `${qtcInterval} ms` : 'Not provided'}</p>
+            </div>
+          </div>
+
           {findings.length > 0 ? (
             <ul className="space-y-1.5">
               {findings.map((f, i) => (
@@ -178,16 +244,62 @@ export default function ClinicalDashboard() {
           )}
         </div>
 
+        {/* Clinical Context Summary */}
+        <ClinicalContextSummary context={clinicalContext} submittedAt={contextSubmittedAt} />
+
+        {/* Evidence Fusion Summary */}
+        <EvidenceFusionSummary result={fusionResult} analysisId={analysisId ?? ''} />
+
+        {/* Evidence timeline + Confidence breakdown */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          <EvidenceTimeline result={fusionResult} />
+          <ConfidenceBreakdown scores={fusionResult?.scores} />
+        </div>
+
+        {/* Differential diagnosis */}
+        <DifferentialDiagnosisPanel diagnoses={fusionResult?.diagnoses} />
+
         {/* Evidence + Risk factors */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           <EvidenceFusionPanel ontologyItems={ontologyItems} />
           <RiskFactorPanel answers={answers} />
         </div>
 
+        {/* Clinical reasoning */}
+        <ClinicalReasoningPanel reasoning={reasoning} />
+
         {/* Actions + Review */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           <ClinicalActionsPanel ontologyItems={ontologyItems} />
-          <ReviewStatusTracker analysisId={analysisId ?? ''} />
+          <div id="review-status">
+            <ReviewStatusTracker analysisId={analysisId ?? ''} />
+          </div>
+        </div>
+
+        {/* Clinical Actions */}
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm px-6 py-5 space-y-3">
+          <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide">Clinical Actions</h3>
+          <div className="flex flex-wrap items-center gap-2.5">
+            <RequestReviewButton analysisId={analysisId ?? ''} />
+            {analysisId && (
+              <PDFExportButton analysisId={analysisId} patientName={patientInfo.name} />
+            )}
+            <button
+              type="button"
+              onClick={() => navigate(`/diagnosisdetail/${analysisId}`)}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-200 text-sm font-semibold text-slate-600 hover:bg-gray-50 transition"
+            >
+              <Eye className="w-4 h-4" />
+              View Diagnosis
+            </button>
+            <Link
+              to={dashboardPath}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-200 text-sm font-semibold text-slate-600 hover:bg-gray-50 transition"
+            >
+              <LayoutDashboard className="w-4 h-4" />
+              Back to Dashboard
+            </Link>
+          </div>
         </div>
 
       </div>

@@ -44,11 +44,12 @@ function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
 type Period = 'day' | 'week' | 'month' | 'all';
 
 // ─── Stat card ─────────────────────────────────────────────────────────────────
-function StatCard({ label, value, accent }: { label: string; value: string; accent?: string }) {
+function StatCard({ label, value, accent, subLabel }: { label: string; value: string; accent?: string; subLabel?: string }) {
   return (
     <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
       <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{label}</p>
       <p className={`text-2xl font-bold mt-1 ${accent ?? 'text-slate-800'}`}>{value}</p>
+      {subLabel && <p className="text-xs text-slate-400 mt-1">{subLabel}</p>}
     </div>
   );
 }
@@ -154,7 +155,7 @@ export default function AnalyticsDashboardPage() {
         ) : (
           <>
             {/* Summary stat cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               <StatCard
                 label="Total Reviews"
                 value={hasMetrics ? String(metrics!.accuracy.totalReviewed) : '—'}
@@ -174,6 +175,12 @@ export default function AnalyticsDashboardPage() {
                 label="Avg Review Time"
                 value={hasMetrics ? `${metrics!.avgReviewMinutes}m` : '—'}
                 accent="text-blue-700"
+              />
+              <StatCard
+                label="Urgent Cases"
+                value={hasMetrics ? String(metrics!.sla.tier1Critical.total) : '—'}
+                subLabel={hasMetrics ? `${metrics!.sla.tier1Critical.met} met / ${metrics!.sla.tier1Critical.target} target` : undefined}
+                accent="text-red-700"
               />
             </div>
 
