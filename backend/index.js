@@ -23,9 +23,6 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// Initialize DB connection (don't await to prevent blocking)
-connectDB().catch(console.error);
-
 const ensureDatabaseReady = async (req, res, next) => {
   if (!process.env.MONGO_URI) {
     return res.status(503).json({
@@ -96,10 +93,22 @@ app.use('/api/patients', readLimiter, protect, patientRoutes);
 app.use('/api/questionnaire', readLimiter, protect, questionnaireRoutes);
 app.use('/api/review', readLimiter, protect, reviewRoutes);
 
-// Error handling middleware
+// Error handling middleware. Service-layer errors are thrown via createError(),
+// which sets `error.statusCode` (400 validation, 401 bad credentials, 409
+// conflicts, etc.) — this previously always replied 500 "Internal server error",
+// so a simple "wrong password" looked identical to a server crash to the user
+// and to the frontend's extractErrorMessage. 4xx messages are user-facing by
+// design (they never carry internals), so pass them through; only 5xx details
+// are masked outside development.
 app.use((error, req, res, next) => {
+  const statusCode = typeof error.statusCode === 'number' ? error.statusCode : 500;
   console.error('Unhandled error:', error);
-  res.status(500).json({ 
+
+  if (statusCode < 500) {
+    return res.status(statusCode).json({ error: error.message, message: error.message });
+  }
+
+  res.status(statusCode).json({
     error: 'Internal server error',
     message: process.env.NODE_ENV === 'development' ? error.message : 'Something went wrong'
   });
@@ -131,9 +140,17 @@ app.use((req, res) => {
 // Start server only when running as a standalone server (not on Vercel serverless)
 const PORT = process.env.PORT || 3000;
 if (!process.env.VERCEL) {
+  // Wait for the initial MongoDB connection attempt to settle before accepting
+  // traffic — otherwise the first wave of requests (login, dashboard fetches)
+  // can race ensureDatabaseReady's 8s timeout and come back as a hard 503.
+  await connectDB();
   app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
   });
+} else {
+  // Serverless: module evaluation can't block on a connection, so kick it off
+  // here and let ensureDatabaseReady gate individual requests until it's ready.
+  connectDB().catch(console.error);
 }
 
 // For Vercel serverless function compatibility

@@ -2,6 +2,7 @@ import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../features/auth/useAuth';
 import { getRole, getDashboardRoute, hasCompletedOnboarding, getOnboardingRoute } from '../../features/auth/roleUtils';
+import AuthLoadingScreen from './AuthLoadingScreen';
 import type { UserRole } from '../../types/rbac';
 
 interface RoleGuardProps {
@@ -10,9 +11,16 @@ interface RoleGuardProps {
 }
 
 const RoleGuard: React.FC<RoleGuardProps> = ({ children, allowedRoles }) => {
-  const { session } = useAuth();
+  const { status } = useAuth();
 
-  if (!session) {
+  // Hold here until the bootstrap has resolved a real DB-backed role/onboarding
+  // state — deciding early is exactly what sent first-time users into "Unexpected
+  // Error" / bounced them between routes before their session was known.
+  if (status === 'initializing') {
+    return <AuthLoadingScreen />;
+  }
+
+  if (status === 'unauthenticated') {
     return <Navigate to="/login" replace />;
   }
 

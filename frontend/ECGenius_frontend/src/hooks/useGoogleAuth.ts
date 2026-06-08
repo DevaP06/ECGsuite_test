@@ -1,5 +1,8 @@
 import { useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import AxiosInstance from '../AxiosInstance';
+import { useAuth } from '../features/auth/useAuth';
+import { getPostAuthRoute } from '../features/auth/roleUtils';
 
 declare global {
   interface Window {
@@ -9,6 +12,9 @@ declare global {
 }
 
 export const useGoogleAuth = () => {
+  const { establishSession } = useAuth();
+  const navigate = useNavigate();
+
   const loadGoogleScript = useCallback((onLoad: () => void) => {
     if (window.google) {
       onLoad();
@@ -50,17 +56,15 @@ export const useGoogleAuth = () => {
             const resp = result.data;
             const payload = resp.data || {};
 
-            // Store token and user so frontend can authenticate subsequent requests
-            if (payload.token && payload.user) {
-              const sessionData = {
-                token: payload.token,
-                user: payload.user
-              };
-              localStorage.setItem('ecg:session', JSON.stringify(sessionData));
-              localStorage.setItem('token', payload.token);
-              localStorage.setItem('user', JSON.stringify(payload.user));
-              AxiosInstance.defaults.headers.common['Authorization'] = `Bearer ${payload.token}`;
+            if (!payload.token || !payload.user) {
+              throw new Error('Google sign-in did not return a session');
             }
+
+            // Establish the session through AuthProvider — same path as
+            // email/password login — so the token header, the in-memory role
+            // snapshot, and React state update together, synchronously, before
+            // we navigate. No direct localStorage writes, no full page reload.
+            establishSession(payload.token, payload.user);
 
             // Show success message
             const message = resp.message;
@@ -73,11 +77,12 @@ export const useGoogleAuth = () => {
             messageDiv.textContent = message;
             document.body.appendChild(messageDiv);
 
-            // Remove message after 3 seconds and redirect
+            // Remove message after a short delay and route within the SPA —
+            // resumes onboarding if incomplete, otherwise goes to the role dashboard.
             setTimeout(() => {
               messageDiv.remove();
-              window.location.href = '/';
-            }, 3000);
+              navigate(getPostAuthRoute());
+            }, 1200);
 
           } catch (err: unknown) {
             const error = err as {
@@ -116,7 +121,7 @@ export const useGoogleAuth = () => {
         }
       });
     }
-  }, []);
+  }, [establishSession, navigate]);
 
   const renderGoogleButton = useCallback((elementId: string, buttonText: 'signin_with' | 'signup_with' = 'signin_with') => {
     const checkAndRender = () => {

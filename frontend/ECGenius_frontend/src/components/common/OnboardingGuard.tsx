@@ -2,6 +2,7 @@ import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../features/auth/useAuth';
 import { getDashboardRoute, getOnboardingStep } from '../../features/auth/roleUtils';
+import AuthLoadingScreen from './AuthLoadingScreen';
 import type { OnboardingStep } from '../../features/auth/roleUtils';
 
 interface OnboardingGuardProps {
@@ -10,9 +11,16 @@ interface OnboardingGuardProps {
 }
 
 const OnboardingGuard: React.FC<OnboardingGuardProps> = ({ children, step }) => {
-  const { session } = useAuth();
+  const { status } = useAuth();
 
-  if (!session) {
+  // This is the exact screen that used to flash "Unexpected Error" / "Retry" on
+  // a fresh sign-up: the guard read onboarding step before the bootstrap had
+  // fetched it from the database. Hold on the branded loader until it's known.
+  if (status === 'initializing') {
+    return <AuthLoadingScreen />;
+  }
+
+  if (status === 'unauthenticated') {
     return <Navigate to="/login" replace />;
   }
 
