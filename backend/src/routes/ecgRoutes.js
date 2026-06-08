@@ -7,6 +7,8 @@ import { fileURLToPath } from 'url';
 import mongoose from 'mongoose';
 import ECGAnalysis from '../models/ECGAnalysis.js';
 import SpecialistReview from '../models/SpecialistReview.js';
+import Annotation from '../models/Annotation.js';
+import Validation from '../models/Validation.js';
 import { predictECG } from '../services/mlService.js';
 import { sendResponse } from '../utils/responseHandler.js';
 import { logAction } from '../services/auditService.js';
@@ -434,6 +436,171 @@ router.get('/analysis/:id/review', readLimiter, async (req, res) => {
   } catch (error) {
     console.error('Error fetching specialist review:', error);
     return sendResponse(res, 500, false, 'Failed to fetch specialist review');
+  }
+});
+// Create or update the cardiologist's annotation for an analysis (CARDIOLOGIST only)
+router.post('/analysis/:id/annotation', mlLimiter, async (req, res) => {
+  try {
+    if (req.user.role !== 'CARDIOLOGIST') {
+      return sendResponse(res, 403, false, 'Only cardiologists can submit annotations');
+    }
+
+    const rawId = String(req.params.id);
+    if (!rawId.match(/^[a-f\d]{24}$/i)) {
+      return sendResponse(res, 400, false, 'Invalid analysis ID');
+    }
+
+    const analysis = await ECGAnalysis.findById(rawId).select('_id');
+    if (!analysis) {
+      return sendResponse(res, 404, false, 'ECG analysis not found');
+    }
+
+    const cardiologistId = req.user._id || req.user.id;
+    const { leadAnnotations, validatedRhythm, rhythmIsCorrect, overallQuality, notes } = req.body;
+
+    let annotation = await Annotation.findOne({ analysisId: rawId });
+    if (annotation) {
+      annotation.cardiologistId = cardiologistId;
+      if (leadAnnotations !== undefined) annotation.leadAnnotations = leadAnnotations;
+      if (validatedRhythm !== undefined) annotation.validatedRhythm = validatedRhythm;
+      if (rhythmIsCorrect !== undefined) annotation.rhythmIsCorrect = rhythmIsCorrect;
+      if (overallQuality !== undefined) annotation.overallQuality = overallQuality;
+      if (notes !== undefined) annotation.notes = notes;
+      await annotation.save();
+    } else {
+      annotation = await Annotation.create({
+        analysisId: rawId,
+        cardiologistId,
+        leadAnnotations,
+        validatedRhythm,
+        rhythmIsCorrect,
+        overallQuality,
+        notes
+      });
+    }
+
+    logAction({ req, userId: cardiologistId, entityType: 'ANNOTATION', entityId: annotation._id, action: 'REVIEW', newValue: { analysisId: rawId } });
+    return sendResponse(res, 201, true, 'Annotation saved successfully', { annotation });
+  } catch (error) {
+    console.error('Error saving annotation:', error);
+    return sendResponse(res, 500, false, 'Failed to save annotation');
+  }
+});
+
+// Get the cardiologist's annotation for an analysis (analysis owner or a clinical role)
+router.get('/analysis/:id/annotation', readLimiter, async (req, res) => {
+  try {
+    const rawId = String(req.params.id);
+    if (!rawId.match(/^[a-f\d]{24}$/i)) {
+      return sendResponse(res, 400, false, 'Invalid analysis ID');
+    }
+
+    const analysis = await ECGAnalysis.findById(rawId).select('userId');
+    if (!analysis) {
+      return sendResponse(res, 404, false, 'ECG analysis not found');
+    }
+
+    const userId = req.user._id || req.user.id;
+    const CLINICAL_ROLES = ['PHC_DOCTOR', 'CARDIOLOGIST', 'ADMIN'];
+    if (String(analysis.userId) !== String(userId) && !CLINICAL_ROLES.includes(req.user.role)) {
+      return sendResponse(res, 403, false, 'You do not have access to this analysis');
+    }
+
+    const annotation = await Annotation.findOne({ analysisId: rawId });
+    if (!annotation) {
+      return sendResponse(res, 404, false, 'No annotation found for this analysis');
+    }
+
+    return sendResponse(res, 200, true, 'Annotation fetched successfully', { annotation });
+  } catch (error) {
+    console.error('Error fetching annotation:', error);
+    return sendResponse(res, 500, false, 'Failed to fetch annotation');
+  }
+});
+
+// Create or update the cardiologist's AI-result validation for an analysis (CARDIOLOGIST only)
+router.post('/analysis/:id/validation', mlLimiter, async (req, res) => {
+  try {
+    if (req.user.role !== 'CARDIOLOGIST') {
+      return sendResponse(res, 403, false, 'Only cardiologists can submit validations');
+    }
+
+    const rawId = String(req.params.id);
+    if (!rawId.match(/^[a-f\d]{24}$/i)) {
+      return sendResponse(res, 400, false, 'Invalid analysis ID');
+    }
+
+    if (typeof req.body.aiRhythmCorrect !== 'boolean' || typeof req.body.aiAbnormalitiesCorrect !== 'boolean') {
+      return sendResponse(res, 400, false, 'aiRhythmCorrect and aiAbnormalitiesCorrect are required boolean fields');
+    }
+
+    const analysis = await ECGAnalysis.findById(rawId).select('_id');
+    if (!analysis) {
+      return sendResponse(res, 404, false, 'ECG analysis not found');
+    }
+
+    const cardiologistId = req.user._id || req.user.id;
+    const { aiRhythmCorrect, aiAbnormalitiesCorrect, correctedRhythm, correctedAbnormalities, confidenceRating, notes } = req.body;
+
+    let validation = await Validation.findOne({ analysisId: rawId });
+    if (validation) {
+      validation.cardiologistId = cardiologistId;
+      validation.aiRhythmCorrect = aiRhythmCorrect;
+      validation.aiAbnormalitiesCorrect = aiAbnormalitiesCorrect;
+      if (correctedRhythm !== undefined) validation.correctedRhythm = correctedRhythm;
+      if (correctedAbnormalities !== undefined) validation.correctedAbnormalities = correctedAbnormalities;
+      if (confidenceRating !== undefined) validation.confidenceRating = confidenceRating;
+      if (notes !== undefined) validation.notes = notes;
+      await validation.save();
+    } else {
+      validation = await Validation.create({
+        analysisId: rawId,
+        cardiologistId,
+        aiRhythmCorrect,
+        aiAbnormalitiesCorrect,
+        correctedRhythm,
+        correctedAbnormalities,
+        confidenceRating,
+        notes
+      });
+    }
+
+    logAction({ req, userId: cardiologistId, entityType: 'VALIDATION', entityId: validation._id, action: 'REVIEW', newValue: { analysisId: rawId, aiRhythmCorrect, aiAbnormalitiesCorrect } });
+    return sendResponse(res, 201, true, 'Validation saved successfully', { validation });
+  } catch (error) {
+    console.error('Error saving validation:', error);
+    return sendResponse(res, 500, false, 'Failed to save validation');
+  }
+});
+
+// Get the cardiologist's AI-result validation for an analysis (analysis owner or a clinical role)
+router.get('/analysis/:id/validation', readLimiter, async (req, res) => {
+  try {
+    const rawId = String(req.params.id);
+    if (!rawId.match(/^[a-f\d]{24}$/i)) {
+      return sendResponse(res, 400, false, 'Invalid analysis ID');
+    }
+
+    const analysis = await ECGAnalysis.findById(rawId).select('userId');
+    if (!analysis) {
+      return sendResponse(res, 404, false, 'ECG analysis not found');
+    }
+
+    const userId = req.user._id || req.user.id;
+    const CLINICAL_ROLES = ['PHC_DOCTOR', 'CARDIOLOGIST', 'ADMIN'];
+    if (String(analysis.userId) !== String(userId) && !CLINICAL_ROLES.includes(req.user.role)) {
+      return sendResponse(res, 403, false, 'You do not have access to this analysis');
+    }
+
+    const validation = await Validation.findOne({ analysisId: rawId });
+    if (!validation) {
+      return sendResponse(res, 404, false, 'No validation found for this analysis');
+    }
+
+    return sendResponse(res, 200, true, 'Validation fetched successfully', { validation });
+  } catch (error) {
+    console.error('Error fetching validation:', error);
+    return sendResponse(res, 500, false, 'Failed to fetch validation');
   }
 });
 // Submit / update specialist review (CARDIOLOGIST only)
