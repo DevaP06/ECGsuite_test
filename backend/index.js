@@ -1,6 +1,7 @@
 import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
+import helmet from 'helmet';
 import dotenv from 'dotenv';
 import connectDB, { waitForDbReady } from './src/db/index.js';
 
@@ -10,7 +11,20 @@ dotenv.config();
 const app = express();
 app.set('trust proxy', 1);
 
-// Middleware
+// Security headers (NF-2) — helmet before CORS so headers apply to all responses.
+// crossOriginEmbedderPolicy is disabled to keep PDF downloads and external asset
+// requests working across browsers without additional CORP headers on each response.
+app.use(helmet({
+  crossOriginEmbedderPolicy: false,
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc:     ["'self'"],
+      frameAncestors: ["'none'"],
+      objectSrc:      ["'none'"],
+    },
+  },
+}));
+
 app.use(cors({
   origin: [
     'http://localhost:5173',

@@ -1,6 +1,6 @@
 import express from 'express';
-import { listUsers, updateUserStatus, updateUserRole, getAuditLogs, getStats, listAllAnalyses, getReports, getHealth } from '../controllers/adminController.js';
-import { readLimiter } from '../middleware/rateLimiter.js';
+import { listUsers, updateUserStatus, updateUserRole, getAuditLogs, getStats, listAllAnalyses, getReports, getHealth, listModels, createModel, activateModel } from '../controllers/adminController.js';
+import { readLimiter, mlLimiter } from '../middleware/rateLimiter.js';
 
 const router = express.Router();
 
@@ -14,5 +14,10 @@ router.get('/stats', readLimiter, getStats);
 router.get('/reports', readLimiter, getReports);
 router.get('/health', readLimiter, getHealth);
 router.get('/analyses', readLimiter, listAllAnalyses);
+
+// Model version management (Admin FR-4)
+router.get('/models',                readLimiter, listModels);
+router.post('/models',               mlLimiter,   createModel);
+router.patch('/models/:id/activate', mlLimiter,   activateModel);
 
 export default router;
