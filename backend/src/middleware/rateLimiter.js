@@ -4,6 +4,7 @@ const make = (windowMs, max, message) =>
   rateLimit({
     windowMs,
     max,
+    skip: () => process.env.NODE_ENV === 'test',
     standardHeaders: true,
     legacyHeaders: false,
     message: { success: false, message }
