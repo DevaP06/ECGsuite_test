@@ -1,10 +1,4 @@
-// TEMPORARY UNTIL BACKEND QUESTION ENGINE IS AVAILABLE
-// Primary source:  GET  /api/questionnaire/:analysisId
-// Fallback source: DEFAULT_QUESTIONNAIRE_SECTIONS (local asset)
-// Submit:          POST /api/questionnaire/:analysisId
-
 import AxiosInstance from '../AxiosInstance';
-import { DEFAULT_QUESTIONNAIRE_SECTIONS } from '../assets/questionnaireDefault';
 import {
   isQuestionVisible,
   isValueEmpty,
@@ -20,15 +14,10 @@ const DRAFT_KEY_PREFIX = 'ecg:questionnaire:draft:';
 
 // ─── Fetch questionnaire schema ───────────────────────────────────────────────
 export async function fetchQuestionnaire(analysisId: string): Promise<QuestionnaireResponse> {
-  try {
-    const res = await AxiosInstance.get<QuestionnaireResponse>(
-      `/api/questionnaire/${analysisId}`
-    );
-    return res.data;
-  } catch {
-    // TEMPORARY: endpoint not yet implemented — serve local fallback
-    return { analysisId, sections: DEFAULT_QUESTIONNAIRE_SECTIONS };
-  }
+  const res = await AxiosInstance.get<QuestionnaireResponse>(
+    `/api/questionnaire/${analysisId}`
+  );
+  return res.data;
 }
 
 // ─── Submit completed questionnaire ──────────────────────────────────────────

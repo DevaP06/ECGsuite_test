@@ -2,7 +2,7 @@ import os
 import sys
 
 sys.path.append(
-    r"D:\ECGsuite\backend\ml\models\v2"
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "models", "v2")
 )
 
 from LightECGNet_v2_inference import LightECGNetInference

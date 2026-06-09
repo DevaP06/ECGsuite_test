@@ -1,0 +1,28 @@
+services:
+
+  digitizer:
+    build:
+      context: ../unetdigitization/Electrocardiogram-Digitization
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+  ml-api:
+    build:
+      context: ./backend/ml
+    ports:
+      - "8001:8001"
+    environment:
+      - DIGITIZER_URL=http://digitizer:8000/extract-signal
+      - ONTOLOGY_URL=http://ontology:8002/diagnose
+    depends_on:
+      - digitizer
+      - ontology
+    restart: unless-stopped
+
+  ontology:
+    build:
+      context: ../ECGenius-Ontology-layer
+    ports:
+      - "8002:8002"
+    restart: unless-stopped

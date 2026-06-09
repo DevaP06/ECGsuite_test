@@ -26,11 +26,11 @@ export default function ECGUpload() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const selectedFile = e.target.files[0];
-      const allowedExtensions = ['.png', '.jpg', '.jpeg', '.mat'];
+      const allowedExtensions = ['.png', '.jpg', '.jpeg'];
       const fileExtension = selectedFile.name.substring(selectedFile.name.lastIndexOf('.')).toLowerCase();
 
       if (!allowedExtensions.includes(fileExtension)) {
-        toast.error("Unsupported file type! Only .png, .jpg, .jpeg, and .mat files are supported.");
+        toast.error("Unsupported file type! Only .png, .jpg, and .jpeg files are supported.");
         e.target.value = "";
         setFile(null);
         return;
@@ -182,14 +182,14 @@ export default function ECGUpload() {
             <label className="block text-sm font-semibold text-slate-700 mb-1">Upload ECG File *</label>
             <input
               type="file"
-              accept=".png,.jpg,.jpeg,.mat"
+              accept=".png,.jpg,.jpeg"
               onChange={handleFileChange}
               disabled={isUploading}
               required
               className="w-full border border-slate-300 px-3 py-2 rounded file:mr-4 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
             />
             <p className="text-xs text-slate-400 mt-1">
-              Supported formats: .png, .jpg, .jpeg, .mat (Max size: 20MB)
+              Supported formats: .png, .jpg, .jpeg (Max size: 20MB)
             </p>
           </div>
 

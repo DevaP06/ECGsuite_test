@@ -4,12 +4,11 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import os from "os";
 
-// Trusted upload directories — constructed from this file's own location, never from user input
-const TEMP_ECG_DIR = path.resolve(__dirname, "../../../temp_uploads/ecg");
-const PROCESSED_ECG_DIR = path.resolve(__dirname, "../../../uploads/ecg/processed");
+// Trusted upload directories — must match the directories used in ecgRoutes.js
+const TEMP_ECG_DIR = path.join(os.tmpdir(), "ecg-temp");
+const PROCESSED_ECG_DIR = path.join(os.tmpdir(), "ecg-processed");
 
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 1000;
@@ -40,7 +39,7 @@ export async function predictECG(filePath, age, gender) {
     if (gender !== undefined) form.append("gender", String(gender));
 
     try {
-      const response = await axios.post(`${flaskUrl}/analyze-ecg`, form, {
+      const response = await axios.post(`${flaskUrl}/predict`, form, {
         headers: {
           ...form.getHeaders(),
           ...(internalKey ? { "X-Internal-Key": internalKey } : {}),

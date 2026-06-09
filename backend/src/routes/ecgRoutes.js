@@ -36,11 +36,6 @@ const router = express.Router();
 const MIME_TO_EXT = {
   'image/jpeg': '.jpg',
   'image/png': '.png',
-  'image/tiff': '.tif',
-  'text/csv': '.csv',
-  'application/json': '.json',
-  'application/vnd.ms-excel': '.xls',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '.xlsx'
 };
 
 // Configure multer for ECG file uploads
@@ -59,18 +54,10 @@ const upload = multer({
   storage: storage,
   limits: { fileSize: 20 * 1024 * 1024 }, // 20MB limit for ECG files
   fileFilter: (req, file, cb) => {
-    // Accept ECG-related file types
-    const allowedTypes = [
-      'image/jpeg', 'image/png', 'image/tiff',
-      'text/csv', 'application/json',
-      'application/vnd.ms-excel',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    ];
-    
-    if (allowedTypes.includes(file.mimetype)) {
+    if (file.mimetype === 'image/jpeg' || file.mimetype === 'image/png') {
       cb(null, true);
     } else {
-      cb(new Error('Invalid file type. Only ECG images, CSV, JSON, and Excel files are allowed.'), false);
+      cb(new Error('Only JPEG and PNG images are allowed.'), false);
     }
   }
 });
@@ -97,50 +84,42 @@ const normalizeRhythm = (value) => {
 };
 
 const toAnalysisResult = (prediction, processingTime) => {
-  const payload = prediction?.prediction || prediction?.predictions || prediction || {};
-  const imageAnalysis = prediction?.image_analysis || {};
-  const topRhythms = payload.top_rhythms || {};
-  const bestRhythm = normalizeRhythm(payload.best_rhythm || payload.rhythm || payload.label);
-  const topRhythmScore = Object.values(topRhythms)?.[0];
-  const parsedConfidence = typeof topRhythmScore === 'string'
-    ? Number.parseFloat(topRhythmScore.replace('%', ''))
-    : Number(topRhythmScore || 0);
+  const topPredictions = Array.isArray(prediction?.top_predictions)
+    ? prediction.top_predictions
+    : [];
 
-  const abnormalities = Array.isArray(payload.abnormalities)
-    ? payload.abnormalities
-    : Array.isArray(payload.abnormality)
-      ? payload.abnormality
-      : [];
+  const best = topPredictions[0] ?? {};
+  const bestRhythm = normalizeRhythm(best.condition);
+  const confidence = Number.isFinite(best.probability) ? Math.round(best.probability * 100) : 0;
 
-  // labelProbabilities: accept object or Map-like from Flask
-  const rawProbs = payload.label_probabilities ?? payload.labelProbabilities ?? topRhythms ?? {};
+  const predictedLabels = topPredictions.map(p => p.condition).filter(Boolean);
   const labelProbabilities = Object.fromEntries(
-    Object.entries(rawProbs).map(([k, v]) => [
-      k,
-      typeof v === 'string' ? Number.parseFloat(v.replace('%', '')) : Number(v)
-    ])
+    topPredictions.map(p => [p.condition, p.probability])
   );
 
   return {
     rhythm: bestRhythm,
-    heartRate: imageAnalysis.heart_rate ?? payload.heartRate ?? payload.VentricularRate ?? payload.ventricularRate ?? null,
-    qrsDuration: payload.qrsDuration ?? payload.QRSDuration ?? null,
-    qtInterval: payload.qtInterval ?? payload.QTInterval ?? null,
-    abnormalities,
-    confidence: Number.isFinite(parsedConfidence) ? parsedConfidence : (payload.confidence ?? payload.score ?? 0),
-    aiModel: payload.aiModel || 'ecg_genius_v1',
-    modelVersion: payload.modelVersion || 'v1.0.0',
+    confidence,
+    aiModel: 'LightECGNet_v2',
+    modelVersion: 'v2',
     processingTime,
-    predictedLabels: Array.isArray(payload.predicted_labels ?? payload.predictedLabels)
-      ? (payload.predicted_labels ?? payload.predictedLabels)
-      : [],
+    predictedLabels,
     labelProbabilities,
-    signalMetrics: payload.signal_metrics ?? payload.signalMetrics ?? null,
-    isEmergency: payload.is_emergency ?? payload.isEmergency ?? false,
-    ontologyEnrichment: Array.isArray(payload.ontology_enrichment ?? payload.ontologyEnrichment)
-      ? (payload.ontology_enrichment ?? payload.ontologyEnrichment)
-      : [],
-    explanation: payload.explanation ?? null
+    topPredictions: topPredictions.map(p => ({
+      rhythm: p.condition,
+      fullName: p.full_name,
+      snomedCt: p.snomed_ct,
+      confidence: Math.round(p.probability * 100),
+    })),
+    ontologyEnrichment: prediction?.ontology ?? null,
+    // Not yet provided by /predict — add when signal processing returns these:
+    // heartRate: null,
+    // qrsDuration: null,
+    // qtInterval: null,
+    // abnormalities: [],
+    // signalMetrics: null,
+    // isEmergency: false,
+    // explanation: null,
   };
 };
 
