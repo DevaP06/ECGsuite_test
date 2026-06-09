@@ -94,8 +94,8 @@ app.use('/api/admin', readLimiter, protect, requireRole('ADMIN'), adminRoutes);
 app.use('/api/patients', readLimiter, protect, patientRoutes);
 app.use('/api/questionnaire', readLimiter, protect, questionnaireRoutes);
 app.use('/api/review', readLimiter, protect, reviewRoutes);
-app.use('/api/analytics', protect, analyticsRoutes);
-app.use('/api/ontology', protect, ontologyRoutes);
+app.use('/api/analytics', readLimiter, protect, analyticsRoutes);
+app.use('/api/ontology', readLimiter, protect, ontologyRoutes);
 
 // Error handling middleware. Service-layer errors are thrown via createError(),
 // which sets `error.statusCode` (400 validation, 401 bad credentials, 409
