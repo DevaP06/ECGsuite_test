@@ -1,0 +1,16 @@
+# Training artifacts
+inference/
+models/legacy/
+models/v2/LightECGNet_v2_training.ipynb
+models/v2/test.py
+models/v2/dataset/
+data/
+__pycache__/
+models/v2/__pycache__/
+
+# Test files
+test_end_to_end.py
+
+# Env
+.env
+*.pyc

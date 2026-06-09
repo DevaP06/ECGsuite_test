@@ -1,0 +1,28 @@
+{
+  "_comment": "Maps this model's acronym labels (classes.json / metadata.json) to the ontology service's label_id vocabulary (labels.csv). Labels with no reasonable ontology counterpart are intentionally omitted.",
+
+  "AFIB": "AF",
+  "AF": "Atrial_Flutter",
+
+  "LVH": "LVH",
+  "RBBB": "RBBB",
+  "SB": "Sinus_Bradycardia",
+  "SR": "NSR",
+  "ST": "Sinus_Tachycardia",
+  "VPB": "PVC",
+  "1AVB": "Heart_Block_1st",
+  "2AVB1": "Heart_Block_2nd_MobitzI",
+  "3AVB": "Heart_Block_3rd",
+  "QTIE": "Long_QT",
+  "STDD": "ST_Depression",
+  "STE": "ST_Elevation",
+  "SVT": "SVT",
+  "TWO": "TWI",
+
+  "LFBBB": "LBBB",
+  "TWC": "TWI",
+  "PRIE": "Heart_Block_1st",
+  "SA": "Irregular_RR",
+  "VPE": "Short_PR",
+  "WPW": "Short_PR"
+}
