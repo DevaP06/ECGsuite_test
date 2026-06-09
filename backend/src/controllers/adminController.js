@@ -5,6 +5,7 @@ import User from '../models/User.js';
 import ECGAnalysis from '../models/ECGAnalysis.js';
 import SpecialistReview from '../models/SpecialistReview.js';
 import AuditLog from '../models/AuditLog.js';
+import ModelVersion from '../models/ModelVersion.js';
 import { logAction } from '../services/auditService.js';
 
 const VALID_ROLES = ['PATIENT', 'PHC_DOCTOR', 'CARDIOLOGIST', 'ADMIN'];
@@ -439,4 +440,75 @@ export const getHealth = asyncHandler(async (req, res) => {
       eventsLastHour: recentAuditActivity
     }
   });
+});
+
+
+// ── Model Version Management (Admin FR-4) ────────────────────────────────────
+
+// GET /api/admin/models
+export const listModels = asyncHandler(async (req, res) => {
+  const models = await ModelVersion.find({})
+    .sort({ createdAt: -1 })
+    .populate('createdBy', 'username email')
+    .select('-__v')
+    .lean();
+
+  return sendResponse(res, 200, true, 'Model versions fetched', { models });
+});
+
+// POST /api/admin/models
+export const createModel = asyncHandler(async (req, res) => {
+  const name    = String(req.body.name    ?? '').trim();
+  const version = String(req.body.version ?? '').trim();
+
+  if (!name)    return sendResponse(res, 400, false, 'name is required');
+  if (!version) return sendResponse(res, 400, false, 'version is required');
+
+  if (req.body.accuracy !== undefined) {
+    const acc = Number(req.body.accuracy);
+    if (!Number.isFinite(acc) || acc < 0 || acc > 100) {
+      return sendResponse(res, 400, false, 'accuracy must be a number between 0 and 100');
+    }
+  }
+
+  const existing = await ModelVersion.findOne({ name, version }).lean();
+  if (existing) return sendResponse(res, 409, false, `Model "${name}" v${version} already exists`);
+
+  const userId = req.user._id || req.user.id;
+  const model = await ModelVersion.create({
+    name,
+    version,
+    description:  req.body.description ? String(req.body.description).trim()  : undefined,
+    framework:    req.body.framework    ? String(req.body.framework).trim()    : undefined,
+    accuracy:     req.body.accuracy     !== undefined ? Number(req.body.accuracy) : null,
+    metadata:     req.body.metadata     && typeof req.body.metadata === 'object' ? req.body.metadata : {},
+    active:       false,
+    createdBy:    userId,
+  });
+
+  logAction({ req, userId, entityType: 'MODEL_VERSION', entityId: model._id, action: 'UPDATE', newValue: { name, version } });
+
+  return sendResponse(res, 201, true, 'Model version created', { model });
+});
+
+// PATCH /api/admin/models/:id/activate
+export const activateModel = asyncHandler(async (req, res) => {
+  if (!req.params.id.match(/^[a-f\d]{24}$/i)) {
+    return sendResponse(res, 400, false, 'Invalid model ID');
+  }
+
+  const model = await ModelVersion.findById(req.params.id);
+  if (!model) return sendResponse(res, 404, false, 'Model version not found');
+  if (model.active) return sendResponse(res, 409, false, 'This model version is already active');
+
+  // Deactivate every currently-active version, then activate the requested one.
+  await ModelVersion.updateMany({ active: true }, { $set: { active: false } });
+  model.active     = true;
+  model.deployedAt = new Date();
+  await model.save();
+
+  const userId = req.user._id || req.user.id;
+  logAction({ req, userId, entityType: 'MODEL_VERSION', entityId: model._id, action: 'UPDATE', newValue: { active: true, deployedAt: model.deployedAt } });
+
+  return sendResponse(res, 200, true, 'Model version activated', { model });
 });
