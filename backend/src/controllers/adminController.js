@@ -3,6 +3,7 @@ import asyncHandler from '../middleware/asyncHandler.js';
 import { sendResponse } from '../utils/responseHandler.js';
 import User from '../models/User.js';
 import ECGAnalysis from '../models/ECGAnalysis.js';
+import SpecialistReview from '../models/SpecialistReview.js';
 import AuditLog from '../models/AuditLog.js';
 import { logAction } from '../services/auditService.js';
 
@@ -229,5 +230,213 @@ export const listAllAnalyses = asyncHandler(async (req, res) => {
   return sendResponse(res, 200, true, 'Analyses fetched', {
     analyses,
     pagination: { total, page, limit, pages: Math.ceil(total / limit) }
+  });
+});
+
+// GET /api/admin/reports?days=30  (ADMIN — FR-7 program utilisation reporting)
+export const getReports = asyncHandler(async (req, res) => {
+  const days = Math.min(90, Math.max(1, parseInt(req.query.days) || 30));
+  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+  const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+
+  const [
+    uploadTrend,
+    completionStats,
+    emergencyCount,
+    reviewStats,
+    registrationTrend,
+    rhythmDistribution,
+    totalPatients,
+    activeCardiologists
+  ] = await Promise.all([
+    // Daily upload + completion counts for the period
+    ECGAnalysis.aggregate([
+      { $match: { createdAt: { $gte: since } } },
+      { $group: {
+        _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+        uploads: { $sum: 1 },
+        completed: { $sum: { $cond: [{ $eq: ['$status', 'completed'] }, 1, 0] } },
+        failed: { $sum: { $cond: [{ $eq: ['$status', 'failed'] }, 1, 0] } }
+      }},
+      { $sort: { _id: 1 } }
+    ]),
+
+    // Overall completion/failure rates
+    ECGAnalysis.aggregate([
+      { $match: { createdAt: { $gte: since } } },
+      { $group: {
+        _id: null,
+        total: { $sum: 1 },
+        completed: { $sum: { $cond: [{ $eq: ['$status', 'completed'] }, 1, 0] } },
+        failed: { $sum: { $cond: [{ $eq: ['$status', 'failed'] }, 1, 0] } },
+        emergencies: { $sum: { $cond: ['$analysisResult.isEmergency', 1, 0] } },
+        avgProcessingMs: {
+          $avg: {
+            $cond: [
+              { $and: [{ $ne: ['$processedAt', null] }, { $ne: ['$createdAt', null] }] },
+              { $subtract: ['$processedAt', '$createdAt'] },
+              null
+            ]
+          }
+        }
+      }}
+    ]),
+
+    // Emergency analyses count in period
+    ECGAnalysis.countDocuments({ createdAt: { $gte: since }, 'analysisResult.isEmergency': true }),
+
+    // Specialist review summary
+    SpecialistReview.aggregate([
+      { $match: { createdAt: { $gte: since } } },
+      { $group: {
+        _id: null,
+        total: { $sum: 1 },
+        completed: { $sum: { $cond: [{ $eq: ['$reviewStatus', 'completed'] }, 1, 0] } },
+        pending: { $sum: { $cond: [{ $eq: ['$reviewStatus', 'pending'] }, 1, 0] } },
+        critical: { $sum: { $cond: [{ $eq: ['$priority', 'critical'] }, 1, 0] } }
+      }}
+    ]),
+
+    // New user registrations per day
+    User.aggregate([
+      { $match: { createdAt: { $gte: since } } },
+      { $group: {
+        _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+        count: { $sum: 1 }
+      }},
+      { $sort: { _id: 1 } }
+    ]),
+
+    // Top rhythm classifications from completed analyses
+    ECGAnalysis.aggregate([
+      { $match: { createdAt: { $gte: since }, status: 'completed', 'analysisResult.rhythm': { $ne: null } } },
+      { $group: { _id: '$analysisResult.rhythm', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 10 }
+    ]),
+
+    // Total registered patients
+    User.countDocuments({ role: 'PATIENT' }),
+
+    // Active cardiologists (at least 1 review completed)
+    SpecialistReview.distinct('cardiologistId', { reviewStatus: 'completed', reviewDate: { $gte: since } })
+  ]);
+
+  const cs = completionStats[0] ?? { total: 0, completed: 0, failed: 0, emergencies: 0, avgProcessingMs: null };
+  const rs = reviewStats[0] ?? { total: 0, completed: 0, pending: 0, critical: 0 };
+
+  return sendResponse(res, 200, true, 'Program report fetched successfully', {
+    period: { days, since: since.toISOString() },
+    analyses: {
+      total: cs.total,
+      completed: cs.completed,
+      failed: cs.failed,
+      successRate: cs.total > 0 ? Math.round((cs.completed / cs.total) * 100) : 0,
+      emergencies: emergencyCount,
+      emergencyRate: cs.completed > 0 ? Math.round((emergencyCount / cs.completed) * 100) : 0,
+      avgProcessingSeconds: cs.avgProcessingMs ? Math.round(cs.avgProcessingMs / 1000) : null,
+      dailyTrend: uploadTrend.map(d => ({ date: d._id, uploads: d.uploads, completed: d.completed, failed: d.failed }))
+    },
+    reviews: {
+      total: rs.total,
+      completed: rs.completed,
+      pending: rs.pending,
+      critical: rs.critical,
+      completionRate: rs.total > 0 ? Math.round((rs.completed / rs.total) * 100) : 0,
+      activeCardiologists: activeCardiologists.length
+    },
+    users: {
+      totalPatients,
+      registrationTrend: registrationTrend.map(d => ({ date: d._id, count: d.count }))
+    },
+    diagnostics: {
+      rhythmDistribution: rhythmDistribution.map(r => ({ rhythm: r._id, count: r.count }))
+    }
+  });
+});
+
+// GET /api/admin/health  (ADMIN — FR-3 system performance monitoring)
+export const getHealth = asyncHandler(async (req, res) => {
+  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+  const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+  const [
+    queueDepth,
+    last24hStats,
+    reviewQueueDepth,
+    recentAuditActivity
+  ] = await Promise.all([
+    // Processing queue: how many analyses are stuck in non-terminal states
+    ECGAnalysis.aggregate([
+      { $match: { status: { $in: ['uploaded', 'processing', 'pending'] } } },
+      { $group: { _id: '$status', count: { $sum: 1 } } }
+    ]),
+
+    // Last 24h throughput
+    ECGAnalysis.aggregate([
+      { $match: { createdAt: { $gte: oneDayAgo } } },
+      { $group: {
+        _id: null,
+        total: { $sum: 1 },
+        completed: { $sum: { $cond: [{ $eq: ['$status', 'completed'] }, 1, 0] } },
+        failed: { $sum: { $cond: [{ $eq: ['$status', 'failed'] }, 1, 0] } },
+        avgProcessingMs: {
+          $avg: {
+            $cond: [
+              { $and: [{ $ne: ['$processedAt', null] }, { $ne: ['$createdAt', null] }] },
+              { $subtract: ['$processedAt', '$createdAt'] },
+              null
+            ]
+          }
+        }
+      }}
+    ]),
+
+    // Specialist review queue pressure
+    SpecialistReview.aggregate([
+      { $match: { reviewStatus: { $in: ['pending', 'in_review'] } } },
+      { $group: { _id: '$priority', count: { $sum: 1 } } }
+    ]),
+
+    // Audit log events in the last hour (system activity pulse)
+    AuditLog.countDocuments({ timestamp: { $gte: oneHourAgo } })
+  ]);
+
+  const queueByStatus = Object.fromEntries(queueDepth.map(q => [q._id, q.count]));
+  const reviewByPriority = Object.fromEntries(reviewQueueDepth.map(r => [r._id, r.count]));
+  const last24h = last24hStats[0] ?? { total: 0, completed: 0, failed: 0, avgProcessingMs: null };
+
+  const totalQueueDepth = (queueByStatus.uploaded ?? 0) + (queueByStatus.processing ?? 0) + (queueByStatus.pending ?? 0);
+
+  return sendResponse(res, 200, true, 'System health fetched successfully', {
+    server: {
+      uptimeSeconds: Math.floor(process.uptime()),
+      nodeVersion: process.version,
+      memoryMb: Math.round(process.memoryUsage().heapUsed / 1024 / 1024)
+    },
+    analysisQueue: {
+      total: totalQueueDepth,
+      byStatus: {
+        uploaded: queueByStatus.uploaded ?? 0,
+        processing: queueByStatus.processing ?? 0,
+        pending: queueByStatus.pending ?? 0
+      }
+    },
+    throughput24h: {
+      total: last24h.total,
+      completed: last24h.completed,
+      failed: last24h.failed,
+      successRate: last24h.total > 0 ? Math.round((last24h.completed / last24h.total) * 100) : 0,
+      avgProcessingSeconds: last24h.avgProcessingMs ? Math.round(last24h.avgProcessingMs / 1000) : null
+    },
+    reviewQueue: {
+      critical: reviewByPriority.critical ?? 0,
+      urgent: reviewByPriority.urgent ?? 0,
+      normal: reviewByPriority.normal ?? 0,
+      total: (reviewByPriority.critical ?? 0) + (reviewByPriority.urgent ?? 0) + (reviewByPriority.normal ?? 0)
+    },
+    auditActivity: {
+      eventsLastHour: recentAuditActivity
+    }
   });
 });

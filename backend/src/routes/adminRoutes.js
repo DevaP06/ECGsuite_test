@@ -1,5 +1,5 @@
 import express from 'express';
-import { listUsers, updateUserStatus, updateUserRole, getAuditLogs, getStats, listAllAnalyses } from '../controllers/adminController.js';
+import { listUsers, updateUserStatus, updateUserRole, getAuditLogs, getStats, listAllAnalyses, getReports, getHealth } from '../controllers/adminController.js';
 import { readLimiter } from '../middleware/rateLimiter.js';
 
 const router = express.Router();
@@ -11,6 +11,8 @@ router.patch('/users/:id/status', readLimiter, updateUserStatus);
 router.patch('/users/:id/role', readLimiter, updateUserRole);
 router.get('/audit-logs', readLimiter, getAuditLogs);
 router.get('/stats', readLimiter, getStats);
+router.get('/reports', readLimiter, getReports);
+router.get('/health', readLimiter, getHealth);
 router.get('/analyses', readLimiter, listAllAnalyses);
 
 export default router;
