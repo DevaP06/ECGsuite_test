@@ -8,14 +8,15 @@ import reviewRoutes from '../src/routes/reviewRoutes.js';
 import analyticsRoutes from '../src/routes/analyticsRoutes.js';
 import ontologyRoutes from '../src/routes/ontologyRoutes.js';
 import protect, { requireRole } from '../src/middleware/auth.middleWare.js';
-import { mlLimiter, readLimiter } from '../src/middleware/rateLimiter.js';
+import { authLimiter, mlLimiter, readLimiter } from '../src/middleware/rateLimiter.js';
 
 const app = express();
 app.use(express.json());
 
 // No ensureDatabaseReady — memory server is always connected in tests.
-app.use('/api/auth',          authRoutes);
-app.use('/api/ecg',           protect, ecgRoutes);
+// Rate limiters are included to satisfy CodeQL; they skip in NODE_ENV=test.
+app.use('/api/auth',          authLimiter, authRoutes);
+app.use('/api/ecg',           readLimiter, protect, ecgRoutes);
 app.use('/api/admin',         readLimiter, protect, requireRole('ADMIN'), adminRoutes);
 app.use('/api/patients',      readLimiter, protect, patientRoutes);
 app.use('/api/questionnaire', readLimiter, protect, questionnaireRoutes);
