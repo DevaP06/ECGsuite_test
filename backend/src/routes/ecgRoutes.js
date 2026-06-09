@@ -5,6 +5,7 @@ import { promises as fsp } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import mongoose from 'mongoose';
+import PDFDocument from 'pdfkit';
 import ECGAnalysis from '../models/ECGAnalysis.js';
 import SpecialistReview from '../models/SpecialistReview.js';
 import Annotation from '../models/Annotation.js';
@@ -318,6 +319,217 @@ router.get('/analysis/:id', readLimiter, async (req, res) => {
   } catch (error) {
     console.error('Error fetching ECG analysis:', error);
     return sendResponse(res, 500, false, 'Failed to fetch ECG analysis');
+  }
+});
+
+// Export clinical PDF report for a completed analysis
+router.get('/analysis/:id/report', readLimiter, async (req, res) => {
+  try {
+    const rawId = String(req.params.id);
+    if (!rawId.match(/^[a-f\d]{24}$/i)) {
+      return sendResponse(res, 400, false, 'Invalid analysis ID');
+    }
+
+    const { role } = req.user;
+    const userId = req.user._id || req.user.id;
+
+    const filter = role === 'CARDIOLOGIST' || role === 'ADMIN'
+      ? { _id: rawId }
+      : { _id: rawId, userId };
+
+    const analysis = await ECGAnalysis.findOne(filter).select('-filePath').lean();
+    if (!analysis) {
+      return sendResponse(res, 404, false, 'ECG analysis not found');
+    }
+    if (analysis.status !== 'completed' || !analysis.analysisResult) {
+      return sendResponse(res, 422, false, 'Report is only available for completed analyses');
+    }
+
+    const review = await SpecialistReview.findOne({ analysisId: rawId })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const result = analysis.analysisResult;
+    const patient = analysis.patientInfo;
+    const generatedAt = new Date().toUTCString();
+    const reportId = `ECG-${String(analysis._id).slice(-8).toUpperCase()}`;
+
+    const RHYTHM_LABELS = {
+      normal: 'Normal Sinus Rhythm',
+      atrial_fibrillation: 'Atrial Fibrillation',
+      atrial_flutter: 'Atrial Flutter',
+      ventricular_tachycardia: 'Ventricular Tachycardia',
+      bradycardia: 'Bradycardia',
+      other: 'Other / Unclassified',
+    };
+
+    const URGENCY_LABELS = { critical: 'CRITICAL', high: 'HIGH', moderate: 'MODERATE', low: 'LOW' };
+
+    const doc = new PDFDocument({ size: 'A4', margin: 50, bufferPages: true });
+
+    const safePatientName = (patient?.name ?? 'Unknown').replace(/[^a-zA-Z0-9 _-]/g, '');
+    const filename = `ECGenius_Report_${safePatientName.replace(/\s+/g, '_')}_${String(analysis._id).slice(-6)}.pdf`;
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    doc.pipe(res);
+
+    // ── Header ────────────────────────────────────────────────────────────────
+    doc.fontSize(22).font('Helvetica-Bold').fillColor('#1e3a5f').text('ECGenius', 50, 45);
+    doc.fontSize(10).font('Helvetica').fillColor('#64748b')
+      .text('AI-Driven ECG Interpretation & Clinical Decision Support', 50, 72);
+    doc.moveTo(50, 90).lineTo(545, 90).strokeColor('#e2e8f0').lineWidth(1).stroke();
+
+    if (result.isEmergency) {
+      doc.rect(50, 98, 495, 28).fill('#fef2f2');
+      doc.fontSize(11).font('Helvetica-Bold').fillColor('#b91c1c')
+        .text('⚠  TIER-1 EMERGENCY — Immediate clinical action required', 60, 105);
+    }
+
+    const afterHeader = result.isEmergency ? 140 : 108;
+
+    // ── Report metadata ───────────────────────────────────────────────────────
+    doc.fontSize(9).font('Helvetica').fillColor('#64748b')
+      .text(`Report ID: ${reportId}`, 50, afterHeader)
+      .text(`Generated: ${generatedAt}`, 50, afterHeader + 13)
+      .text(`AI Model: ${result.aiModel ?? 'LightECGNet v2'}  v${result.modelVersion ?? '1.0.0'}`, 50, afterHeader + 26);
+
+    // ── Section: Patient Information ──────────────────────────────────────────
+    const secStart = afterHeader + 52;
+    doc.fontSize(12).font('Helvetica-Bold').fillColor('#1e3a5f').text('Patient Information', 50, secStart);
+    doc.moveTo(50, secStart + 16).lineTo(545, secStart + 16).strokeColor('#cbd5e1').lineWidth(0.5).stroke();
+
+    const pRows = [
+      ['Name', patient?.name ?? '—'],
+      ['Age', patient?.age != null ? `${patient.age} years` : '—'],
+      ['Gender', patient?.gender ? (patient.gender.charAt(0).toUpperCase() + patient.gender.slice(1)) : '—'],
+      ['File', analysis.originalName ?? '—'],
+      ['Analysed', analysis.processedAt ? new Date(analysis.processedAt).toUTCString() : '—'],
+    ];
+    let rowY = secStart + 24;
+    for (const [label, value] of pRows) {
+      doc.fontSize(9).font('Helvetica-Bold').fillColor('#374151').text(label, 50, rowY);
+      doc.fontSize(9).font('Helvetica').fillColor('#1f2937').text(String(value), 160, rowY);
+      rowY += 16;
+    }
+    if (analysis.notes) {
+      doc.fontSize(9).font('Helvetica-Bold').fillColor('#374151').text('Notes', 50, rowY);
+      doc.fontSize(9).font('Helvetica').fillColor('#1f2937').text(analysis.notes, 160, rowY, { width: 380 });
+      rowY += doc.heightOfString(analysis.notes, { width: 380 }) + 4;
+    }
+
+    // ── Section: Key Findings ─────────────────────────────────────────────────
+    rowY += 10;
+    doc.fontSize(12).font('Helvetica-Bold').fillColor('#1e3a5f').text('Key Findings', 50, rowY);
+    doc.moveTo(50, rowY + 16).lineTo(545, rowY + 16).strokeColor('#cbd5e1').lineWidth(0.5).stroke();
+    rowY += 24;
+
+    const rhythmLabel = RHYTHM_LABELS[result.rhythm] ?? result.rhythm ?? '—';
+    const confidence = result.confidence != null ? `${Math.round(result.confidence)}%` : '—';
+
+    const findingRows = [
+      ['Rhythm', rhythmLabel],
+      ['Confidence', confidence],
+      ['Heart Rate', result.heartRate != null ? `${result.heartRate} bpm` : '—'],
+      ['QRS Duration', result.qrsDuration != null ? `${result.qrsDuration} ms` : '—'],
+      ['QT Interval', result.qtInterval != null ? `${result.qtInterval} ms` : '—'],
+    ];
+    for (const [label, value] of findingRows) {
+      doc.fontSize(9).font('Helvetica-Bold').fillColor('#374151').text(label, 50, rowY);
+      doc.fontSize(9).font('Helvetica').fillColor('#1f2937').text(String(value), 160, rowY);
+      rowY += 16;
+    }
+
+    // Abnormalities
+    rowY += 4;
+    doc.fontSize(9).font('Helvetica-Bold').fillColor('#374151').text('Abnormalities', 50, rowY);
+    if (result.abnormalities?.length) {
+      doc.fontSize(9).font('Helvetica').fillColor('#1f2937')
+        .text(result.abnormalities.join(', '), 160, rowY, { width: 380 });
+      rowY += doc.heightOfString(result.abnormalities.join(', '), { width: 380 }) + 4;
+    } else {
+      doc.fontSize(9).font('Helvetica').fillColor('#16a34a').text('None detected', 160, rowY);
+      rowY += 16;
+    }
+
+    // ── Section: Ontology Enrichment ──────────────────────────────────────────
+    if (result.ontologyEnrichment?.length) {
+      rowY += 10;
+      doc.fontSize(12).font('Helvetica-Bold').fillColor('#1e3a5f').text('Clinical Classifications', 50, rowY);
+      doc.moveTo(50, rowY + 16).lineTo(545, rowY + 16).strokeColor('#cbd5e1').lineWidth(0.5).stroke();
+      rowY += 24;
+
+      for (const item of result.ontologyEnrichment) {
+        if (rowY > 720) { doc.addPage(); rowY = 50; }
+        const urgLabel = URGENCY_LABELS[item.urgencyTier] ?? (item.urgencyTier ?? '').toUpperCase();
+        const urgColor = item.urgencyTier === 'critical' ? '#b91c1c'
+          : item.urgencyTier === 'high' ? '#d97706'
+          : item.urgencyTier === 'moderate' ? '#ca8a04' : '#64748b';
+
+        doc.fontSize(9).font('Helvetica-Bold').fillColor('#1f2937').text(item.displayName ?? '—', 50, rowY);
+        doc.fontSize(8).font('Helvetica-Bold').fillColor(urgColor).text(urgLabel, 370, rowY);
+        doc.fontSize(8).font('Helvetica').fillColor('#64748b')
+          .text(`Tier: ${item.confidenceTier ?? '—'}  |  Severity: ${item.severity ?? '—'}`, 50, rowY + 12);
+        if (item.recommendedTests?.length) {
+          doc.fontSize(8).font('Helvetica').fillColor('#374151')
+            .text(`Tests: ${item.recommendedTests.join(', ')}`, 50, rowY + 24, { width: 490 });
+          rowY += 38;
+        } else {
+          rowY += 28;
+        }
+      }
+    }
+
+    // ── Section: Specialist Review ────────────────────────────────────────────
+    if (review) {
+      if (rowY > 680) { doc.addPage(); rowY = 50; }
+      rowY += 10;
+      doc.fontSize(12).font('Helvetica-Bold').fillColor('#1e3a5f').text('Specialist Review', 50, rowY);
+      doc.moveTo(50, rowY + 16).lineTo(545, rowY + 16).strokeColor('#cbd5e1').lineWidth(0.5).stroke();
+      rowY += 24;
+
+      const reviewRows = [
+        ['Status', (review.reviewStatus ?? '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())],
+        ['Priority', (review.priority ?? '—').charAt(0).toUpperCase() + (review.priority ?? '—').slice(1)],
+        ['Expert Diagnosis', review.expertDiagnosis ?? '—'],
+        ['Override Reason', review.overrideReason ?? '—'],
+        ['Review Date', review.reviewDate ? new Date(review.reviewDate).toUTCString() : 'Pending'],
+      ];
+      for (const [label, value] of reviewRows) {
+        if (rowY > 750) { doc.addPage(); rowY = 50; }
+        doc.fontSize(9).font('Helvetica-Bold').fillColor('#374151').text(label, 50, rowY);
+        doc.fontSize(9).font('Helvetica').fillColor('#1f2937').text(String(value), 160, rowY, { width: 380 });
+        rowY += 16;
+      }
+      if (review.reviewNotes) {
+        doc.fontSize(9).font('Helvetica-Bold').fillColor('#374151').text('Review Notes', 50, rowY);
+        doc.fontSize(9).font('Helvetica').fillColor('#1f2937').text(review.reviewNotes, 160, rowY, { width: 380 });
+        rowY += doc.heightOfString(review.reviewNotes, { width: 380 }) + 4;
+      }
+    }
+
+    // ── Footer ────────────────────────────────────────────────────────────────
+    const pages = doc.bufferedPageRange();
+    for (let i = 0; i < pages.count; i++) {
+      doc.switchToPage(pages.start + i);
+      doc.moveTo(50, 780).lineTo(545, 780).strokeColor('#e2e8f0').lineWidth(0.5).stroke();
+      doc.fontSize(7).font('Helvetica').fillColor('#94a3b8')
+        .text(
+          'This report is generated by ECGenius AI. It is intended to assist trained healthcare professionals '
+          + 'and does not replace clinical judgement. Not for self-diagnosis.',
+          50, 785, { width: 400, align: 'left' }
+        )
+        .text(`Page ${i + 1} of ${pages.count}  |  ${reportId}`, 50, 785, { width: 495, align: 'right' });
+    }
+
+    logAction({ req, userId, entityType: 'ECG_ANALYSIS', entityId: analysis._id, action: 'VIEW', newValue: { exported: 'pdf' } });
+
+    doc.end();
+  } catch (error) {
+    console.error('Error generating PDF report:', error);
+    if (!res.headersSent) {
+      return sendResponse(res, 500, false, 'Failed to generate report');
+    }
   }
 });
 
