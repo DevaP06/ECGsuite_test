@@ -13,6 +13,7 @@ import Validation from '../models/Validation.js';
 import { predictECG } from '../services/mlService.js';
 import { sendResponse } from '../utils/responseHandler.js';
 import { logAction } from '../services/auditService.js';
+import { notify } from '../services/notificationService.js';
 import { uploadLimiter, mlLimiter, readLimiter } from '../middleware/rateLimiter.js';
 
 
@@ -176,6 +177,31 @@ router.post('/upload', uploadLimiter, upload.single('ecgFile'), async (req, res)
     await ecgAnalysis.save();
     logAction({ req, userId, entityType: 'ECG_ANALYSIS', entityId: ecgAnalysis._id, action: 'UPLOAD', newValue: { fileName: ecgAnalysis.fileName, status: ecgAnalysis.status } });
 
+    if (!mlUnavailable && analysisResult) {
+      const patientLabel = ecgAnalysis.patientInfo?.name || 'your upload';
+      notify({
+        userId,
+        category: 'diagnosis',
+        title: 'AI diagnosis ready',
+        description: `${analysisResult.rhythm} reported for ${patientLabel}.`,
+        link: `/diagnosisdetail/${ecgAnalysis._id}`,
+        sourceType: 'ECG_ANALYSIS',
+        sourceId: ecgAnalysis._id,
+      });
+
+      if (analysisResult.isEmergency === true) {
+        notify({
+          userId,
+          category: 'alert',
+          title: 'Emergency finding detected',
+          description: `${analysisResult.rhythm} was flagged as an emergency for ${ecgAnalysis.patientInfo?.name || 'this analysis'}.`,
+          link: `/diagnosisdetail/${ecgAnalysis._id}`,
+          sourceType: 'ECG_ANALYSIS',
+          sourceId: ecgAnalysis._id,
+        });
+      }
+    }
+
     if (mlUnavailable) {
       return sendResponse(res, 202, true, 'ECG uploaded — analysis pending (ML service unavailable)', {
         analysisId: ecgAnalysis._id,
@@ -229,6 +255,15 @@ router.post('/upload', uploadLimiter, upload.single('ecgFile'), async (req, res)
         });
 
         await ecgAnalysis.save();
+        notify({
+          userId,
+          category: 'alert',
+          title: 'Analysis failed',
+          description: error.message?.trim() || 'Your ECG analysis could not be completed.',
+          link: `/analysis-failed/${ecgAnalysis._id}`,
+          sourceType: 'ECG_ANALYSIS',
+          sourceId: ecgAnalysis._id,
+        });
       } catch (saveError) {
         console.error('Failed to save failed ECG analysis:', saveError);
       }
@@ -847,6 +882,19 @@ router.post('/analysis/:id/specialist-review', mlLimiter, async (req, res) => {
     }
 
     logAction({ req, userId: cardiologistId, entityType: 'SPECIALIST_REVIEW', entityId: review._id, action: 'REVIEW', newValue: { analysisId: rawId, reviewStatus: review.reviewStatus } });
+
+    if (review.reviewStatus === 'completed') {
+      notify({
+        userId: analysis.userId,
+        category: 'review',
+        title: 'Specialist review completed',
+        description: `A cardiologist reviewed the ECG for ${analysis.patientInfo?.name ?? 'your upload'}.`,
+        link: `/diagnosisdetail/${analysis._id}`,
+        sourceType: 'SPECIALIST_REVIEW',
+        sourceId: review._id,
+      });
+    }
+
     return sendResponse(res, 201, true, 'Specialist review submitted', { review });
   } catch (error) {
     console.error('Error submitting specialist review:', error);
@@ -901,6 +949,22 @@ router.patch('/reviews/:reviewId', mlLimiter, async (req, res) => {
     const review = await SpecialistReview.findByIdAndUpdate(rawId, updates, { new: true, runValidators: true });
 
     logAction({ req, userId: cardiologistId, entityType: 'SPECIALIST_REVIEW', entityId: review._id, action: 'REVIEW', newValue: updates });
+
+    if (review.reviewStatus === 'completed') {
+      const analysis = await ECGAnalysis.findById(review.analysisId).select('userId patientInfo');
+      if (analysis) {
+        notify({
+          userId: analysis.userId,
+          category: 'review',
+          title: 'Specialist review completed',
+          description: `A cardiologist reviewed the ECG for ${analysis.patientInfo?.name ?? 'your upload'}.`,
+          link: `/diagnosisdetail/${analysis._id}`,
+          sourceType: 'SPECIALIST_REVIEW',
+          sourceId: review._id,
+        });
+      }
+    }
+
     return sendResponse(res, 200, true, 'Review updated successfully', { review });
   } catch (error) {
     console.error('Error updating specialist review:', error);

@@ -1,11 +1,11 @@
-// Local-only persistence for notification read/dismissed state and per-user
-// notification preferences. No backend notification endpoint exists yet —
-// mirrors the `ecg:clinicalContext:submitted:*` local-persistence pattern so
-// this is ready to be backed by a real API later without changing callers.
+// Local-only persistence for the CARDIOLOGIST review-queue notification feed,
+// which is derived client-side from a shared queue (see utils/notifications.ts)
+// and has no per-user backend record to track read/dismissed state against.
+// PATIENT/PHC_DOCTOR feeds are backed by /api/notifications and track this
+// state server-side instead (see services/notificationService.ts).
 
 const READ_KEY = 'ecg:notifications:read';
 const DISMISSED_KEY = 'ecg:notifications:dismissed';
-const PREFERENCES_KEY = 'ecg:notifications:preferences';
 
 function readIdSet(key: string): Set<string> {
   try {
@@ -49,33 +49,4 @@ export function dismiss(id: string): Set<string> {
   next.add(id);
   writeIdSet(DISMISSED_KEY, next);
   return next;
-}
-
-export interface NotificationPreferences {
-  diagnosisUpdates: boolean;
-  reviewUpdates: boolean;
-  emergencyAlerts: boolean;
-  emailDigest: boolean;
-}
-
-export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
-  diagnosisUpdates: true,
-  reviewUpdates: true,
-  emergencyAlerts: true,
-  emailDigest: false,
-};
-
-export function getNotificationPreferences(): NotificationPreferences {
-  try {
-    const raw = localStorage.getItem(PREFERENCES_KEY);
-    if (!raw) return { ...DEFAULT_NOTIFICATION_PREFERENCES };
-    const parsed = JSON.parse(raw) as Partial<NotificationPreferences>;
-    return { ...DEFAULT_NOTIFICATION_PREFERENCES, ...parsed };
-  } catch {
-    return { ...DEFAULT_NOTIFICATION_PREFERENCES };
-  }
-}
-
-export function saveNotificationPreferences(prefs: NotificationPreferences): void {
-  localStorage.setItem(PREFERENCES_KEY, JSON.stringify(prefs));
 }
