@@ -119,7 +119,7 @@ export const getAuditLogs = asyncHandler(async (req, res) => {
   const skip = (page - 1) * limit;
 
   const VALID_ACTIONS = ['LOGIN', 'REGISTER', 'LOGOUT', 'UPLOAD', 'DELETE', 'UPDATE', 'VIEW', 'REVIEW'];
-  const VALID_ENTITY_TYPES = ['USER', 'ECG_ANALYSIS', 'SPECIALIST_REVIEW', 'PATIENT', 'PATIENT_HISTORY', 'ANNOTATION', 'VALIDATION', 'FEEDBACK', 'ONTOLOGY_RULE'];
+  const VALID_ENTITY_TYPES = ['USER', 'ECG_ANALYSIS', 'SPECIALIST_REVIEW', 'PATIENT', 'PATIENT_HISTORY', 'ANNOTATION', 'VALIDATION', 'FEEDBACK', 'ONTOLOGY_RULE', 'MODEL_VERSION'];
 
   const filter = {};
   if (req.query.action) {

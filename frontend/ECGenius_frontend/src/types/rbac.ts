@@ -49,10 +49,10 @@ export const ROLE_NAV_ITEMS: Record<UserRole, NavItem[]> = {
   ],
   ADMIN: [
     { label: 'Dashboard',          path: '/admin/dashboard',        icon: 'Home'          },
-    { label: 'Users',              path: '/admin/users',            icon: 'Users',        isPlaceholder: true },
-    { label: 'Roles',              path: '/admin/roles',            icon: 'ShieldCheck',  isPlaceholder: true },
-    { label: 'Audit Logs',         path: '/admin/audit',            icon: 'ScrollText',   isPlaceholder: true },
-    { label: 'System Health',      path: '/admin/system',           icon: 'Server',       isPlaceholder: true },
-    { label: 'Models',             path: '/admin/models',           icon: 'Cpu',          isPlaceholder: true },
+    { label: 'Users',              path: '/admin/users',            icon: 'Users'         },
+    { label: 'Roles',              path: '/admin/roles',            icon: 'ShieldCheck'   },
+    { label: 'Audit Logs',         path: '/admin/audit',            icon: 'ScrollText'    },
+    { label: 'System Health',      path: '/admin/system',           icon: 'Server'        },
+    { label: 'Models',             path: '/admin/models',           icon: 'Cpu'           },
   ],
 };
