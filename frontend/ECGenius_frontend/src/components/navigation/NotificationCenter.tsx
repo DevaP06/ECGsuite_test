@@ -1,20 +1,22 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import {
   Bell, Loader2, AlertTriangle, Stethoscope, ClipboardList, ShieldAlert,
   Check, X, Inbox, CheckCheck,
 } from 'lucide-react';
 import { useAuth } from '../../features/auth/useAuth';
-import { ecgService } from '../../services/ecgService';
 import { reviewService } from '../../services/reviewService';
-import {
-  getReadIds, markAsRead, markAllAsRead, getDismissedIds, dismiss, getNotificationPreferences,
-} from '../../services/notificationStore';
+import { notificationService } from '../../services/notificationService';
+import { settingsService } from '../../services/settingsService';
+import { getReadIds, markAsRead, markAllAsRead, getDismissedIds, dismiss } from '../../services/notificationStore';
 import { extractErrorMessage } from '../../utils/errorUtils';
 import { buildNotifications } from '../../utils/notifications';
+import { DEFAULT_NOTIFICATION_PREFERENCES, type NotificationPreferences } from '../../types/settings';
 import type { NotificationItem, NotificationCategory } from '../../types/notification';
 
 type TabKey = 'all' | NotificationCategory;
+type DisplayNotification = NotificationItem & { read: boolean };
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: 'all',       label: 'All' },
@@ -50,14 +52,13 @@ export default function NotificationCenter() {
   const [loaded, setLoaded] = useState(false);
   const [loading, setLoading] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
-  const [items, setItems] = useState<NotificationItem[]>([]);
-  const [readIds, setReadIds] = useState<Set<string>>(() => getReadIds());
-  const [dismissedIds, setDismissedIds] = useState<Set<string>>(() => getDismissedIds());
-  const [preferences, setPreferences] = useState(() => getNotificationPreferences());
+  const [items, setItems] = useState<DisplayNotification[]>([]);
+  const [preferences, setPreferences] = useState<NotificationPreferences>(DEFAULT_NOTIFICATION_PREFERENCES);
   const [tab, setTab] = useState<TabKey>('all');
 
   const role = session?.user?.role;
   const supportsFeed = role === 'PATIENT' || role === 'PHC_DOCTOR' || role === 'CARDIOLOGIST';
+  const isCardiologist = role === 'CARDIOLOGIST';
 
   const load = useCallback(async () => {
     if (!supportsFeed) {
@@ -67,12 +68,25 @@ export default function NotificationCenter() {
     setLoading(true);
     setFetchError(null);
     try {
-      if (role === 'CARDIOLOGIST') {
+      if (isCardiologist) {
         const queue = await reviewService.getQueue();
-        setItems(buildNotifications([], queue));
+        const dismissedSet = getDismissedIds();
+        const readSet = getReadIds();
+        const built = buildNotifications([], queue)
+          .filter((item) => !dismissedSet.has(item.id))
+          .map((item) => ({ ...item, read: readSet.has(item.id) }));
+        setItems(built);
       } else {
-        const analyses = await ecgService.getMyAnalyses();
-        setItems(buildNotifications(analyses, []));
+        const { notifications } = await notificationService.getNotifications();
+        setItems(notifications.map((n) => ({
+          id: n._id,
+          category: n.category,
+          title: n.title,
+          description: n.description ?? '',
+          timestamp: n.createdAt,
+          link: n.link ?? undefined,
+          read: n.read,
+        })));
       }
       setLoaded(true);
     } catch (err: unknown) {
@@ -80,17 +94,20 @@ export default function NotificationCenter() {
     } finally {
       setLoading(false);
     }
-  }, [role, supportsFeed]);
+  }, [isCardiologist, supportsFeed]);
 
   useEffect(() => {
     if (open && !loaded && !loading) load();
   }, [open, loaded, loading, load]);
 
-  // Re-read preferences each time the dropdown opens, so changes saved on the
-  // Settings page take effect without requiring a full page reload.
+  // Re-read notification preferences each time the dropdown opens, so changes
+  // saved on the Settings page take effect without requiring a full page reload.
   useEffect(() => {
-    if (open) setPreferences(getNotificationPreferences());
-  }, [open]);
+    if (!open || !supportsFeed) return;
+    settingsService.getSettings()
+      .then((settings) => setPreferences(settings.notifications))
+      .catch(() => { /* keep previous preferences on failure */ });
+  }, [open, supportsFeed]);
 
   const categoryEnabled = useCallback(
     (category: NotificationCategory) => {
@@ -112,13 +129,13 @@ export default function NotificationCenter() {
   }, [open]);
 
   const visibleItems = useMemo(
-    () => items.filter((item) => !dismissedIds.has(item.id) && categoryEnabled(item.category)),
-    [items, dismissedIds, categoryEnabled],
+    () => items.filter((item) => categoryEnabled(item.category)),
+    [items, categoryEnabled],
   );
 
   const unreadCount = useMemo(
-    () => visibleItems.filter((item) => !readIds.has(item.id)).length,
-    [visibleItems, readIds],
+    () => visibleItems.filter((item) => !item.read).length,
+    [visibleItems],
   );
 
   const filteredItems = useMemo(
@@ -126,16 +143,42 @@ export default function NotificationCenter() {
     [visibleItems, tab],
   );
 
-  const handleMarkRead = (id: string) => setReadIds(markAsRead(id));
+  const handleMarkRead = (id: string) => {
+    setItems((prev) => prev.map((item) => (item.id === id ? { ...item, read: true } : item)));
+    if (isCardiologist) {
+      markAsRead(id);
+    } else {
+      notificationService.markAsRead(id).catch((err: unknown) => {
+        toast.error(extractErrorMessage(err, 'Failed to update notification.'));
+      });
+    }
+  };
 
-  const handleMarkAllRead = () => setReadIds(markAllAsRead(visibleItems.map((item) => item.id)));
+  const handleMarkAllRead = () => {
+    const ids = visibleItems.map((item) => item.id);
+    setItems((prev) => prev.map((item) => ({ ...item, read: true })));
+    if (isCardiologist) {
+      markAllAsRead(ids);
+    } else {
+      notificationService.markAllAsRead().catch((err: unknown) => {
+        toast.error(extractErrorMessage(err, 'Failed to update notifications.'));
+      });
+    }
+  };
 
   const handleDismiss = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    setDismissedIds(dismiss(id));
+    setItems((prev) => prev.filter((item) => item.id !== id));
+    if (isCardiologist) {
+      dismiss(id);
+    } else {
+      notificationService.dismiss(id).catch((err: unknown) => {
+        toast.error(extractErrorMessage(err, 'Failed to dismiss notification.'));
+      });
+    }
   };
 
-  const handleOpenItem = (item: NotificationItem) => {
+  const handleOpenItem = (item: DisplayNotification) => {
     handleMarkRead(item.id);
     setOpen(false);
     if (item.link) navigate(item.link);
@@ -221,7 +264,7 @@ export default function NotificationCenter() {
             ) : (
               <ul className="space-y-1">
                 {filteredItems.map((item) => {
-                  const isUnread = !readIds.has(item.id);
+                  const isUnread = !item.read;
                   const { icon: Icon, badgeClass } = CATEGORY_DISPLAY[item.category];
                   return (
                     <li key={item.id}>
