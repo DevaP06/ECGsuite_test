@@ -4,6 +4,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
 import connectDB, { waitForDbReady } from './src/db/index.js';
+import { sendResponse } from './src/utils/responseHandler.js';
 
 // Load environment variables
 dotenv.config();
@@ -39,10 +40,7 @@ app.use(express.json());
 
 const ensureDatabaseReady = async (req, res, next) => {
   if (!process.env.MONGO_URI) {
-    return res.status(503).json({
-      error: 'Database unavailable',
-      message: 'MONGO_URI is not configured'
-    });
+    return sendResponse(res, 503, false, 'MONGO_URI is not configured');
   }
 
   if (mongoose.connection.readyState === 1) {
@@ -51,10 +49,7 @@ const ensureDatabaseReady = async (req, res, next) => {
 
   const ready = await waitForDbReady(8000);
   if (!ready) {
-    return res.status(503).json({
-      error: 'Database unavailable',
-      message: 'MongoDB is not ready yet'
-    });
+    return sendResponse(res, 503, false, 'MongoDB is not ready yet');
   }
 
   return next();
@@ -127,19 +122,20 @@ app.use((error, req, res, next) => {
   console.error('Unhandled error:', error);
 
   if (statusCode < 500) {
-    return res.status(statusCode).json({ error: error.message, message: error.message });
+    return sendResponse(res, statusCode, false, error.message);
   }
 
-  res.status(statusCode).json({
-    error: 'Internal server error',
-    message: process.env.NODE_ENV === 'development' ? error.message : 'Something went wrong'
-  });
+  sendResponse(
+    res,
+    statusCode,
+    false,
+    process.env.NODE_ENV === 'development' ? error.message : 'Something went wrong'
+  );
 });
 
 // 404 handler for unmatched routes
 app.use((req, res) => {
-  res.status(404).json({ 
-    error: 'Not found',
+  sendResponse(res, 404, false, 'Not found', {
     path: req.originalUrl,
     availableRoutes: [
       '/api',

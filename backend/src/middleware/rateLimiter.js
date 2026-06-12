@@ -7,7 +7,7 @@ const make = (windowMs, max, message) =>
     skip: () => process.env.NODE_ENV === 'test',
     standardHeaders: true,
     legacyHeaders: false,
-    message: { success: false, message }
+    message: { success: false, code: 'RATE_LIMITED', message, data: null }
   });
 
 // Strict: login / register / google — brute-force targets

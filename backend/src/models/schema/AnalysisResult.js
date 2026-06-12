@@ -21,6 +21,16 @@ const analysisResultSchema = new mongoose.Schema({
     min: 0,
     max: 600
   },
+  qtcInterval: {
+    type: Number,
+    min: 0,
+    max: 700
+  },
+  rrInterval: {
+    type: Number,
+    min: 0,
+    max: 3000
+  },
   abnormalities: [{ type: String }],
   confidence: {
     type: Number,
@@ -47,6 +57,16 @@ const analysisResultSchema = new mongoose.Schema({
     type: Map,
     of: Number
   },
+  topPredictions: [{
+    rhythm: String,
+    fullName: String,
+    snomedCt: String,
+    confidence: {
+      type: Number,
+      min: 0,
+      max: 100
+    }
+  }],
   signalMetrics: {
     type: mongoose.Schema.Types.Mixed,
     default: null
@@ -54,6 +74,11 @@ const analysisResultSchema = new mongoose.Schema({
   isEmergency: {
     type: Boolean,
     default: false
+  },
+  emergencyLevel: {
+    type: String,
+    enum: ['none', 'low', 'moderate', 'high', 'critical'],
+    default: 'none'
   },
   ontologyEnrichment: [{
     displayName: String,
