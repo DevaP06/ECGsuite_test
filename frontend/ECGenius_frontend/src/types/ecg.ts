@@ -16,6 +16,8 @@ export interface SignalMetrics {
 export interface TopPrediction {
   rhythm: string;
   confidence: number;
+  fullName?: string;
+  snomedCt?: string;
 }
 
 export interface OntologyItem {
@@ -53,12 +55,14 @@ export interface AnalysisResult {
   heartRate: number | null;
   qrsDuration: number | null;
   qtInterval: number | null;
+  qtcInterval?: number | null;
+  rrInterval?: number | null;
   abnormalities: string[];
   confidence: number;
   aiModel?: string;
   modelVersion?: string;
   processingTime?: number;
-  
+
   // Future/extended response schemas
   signalMetrics?: SignalMetrics;
   predictedLabels?: string[];
@@ -67,6 +71,7 @@ export interface AnalysisResult {
   ontologyEnrichment?: OntologyItem[];
   explanation?: ExplanationData;
   isEmergency?: boolean;
+  emergencyLevel?: 'none' | 'low' | 'moderate' | 'high' | 'critical';
 }
 
 export interface ECGAnalysis {

@@ -84,6 +84,18 @@ const normalizeRhythm = (value) => {
   return 'other';
 };
 
+// Mirrors ontologyController's URGENCY_ORDER — lower rank wins when reducing
+// per-finding urgencyTier values down to a single top-level emergencyLevel.
+const EMERGENCY_LEVEL_RANK = { critical: 0, high: 1, moderate: 2, low: 3, none: 4 };
+
+const deriveEmergencyLevel = (ontologyEnrichment) => {
+  if (!Array.isArray(ontologyEnrichment)) return 'none';
+  return ontologyEnrichment.reduce((level, item) => {
+    const tier = item?.urgencyTier;
+    return tier && EMERGENCY_LEVEL_RANK[tier] < EMERGENCY_LEVEL_RANK[level] ? tier : level;
+  }, 'none');
+};
+
 const toAnalysisResult = (prediction, processingTime) => {
   const topPredictions = Array.isArray(prediction?.top_predictions)
     ? prediction.top_predictions
@@ -113,13 +125,17 @@ const toAnalysisResult = (prediction, processingTime) => {
       confidence: Math.round(p.probability * 100),
     })),
     ontologyEnrichment: prediction?.ontology ?? null,
+    emergencyLevel: deriveEmergencyLevel(prediction?.ontology),
+    isEmergency: Array.isArray(prediction?.ontology)
+      && prediction.ontology.some(item => item?.isEmergency === true),
     // Not yet provided by /predict — add when signal processing returns these:
     // heartRate: null,
     // qrsDuration: null,
     // qtInterval: null,
+    // qtcInterval: null,
+    // rrInterval: null,
     // abnormalities: [],
     // signalMetrics: null,
-    // isEmergency: false,
     // explanation: null,
   };
 };
