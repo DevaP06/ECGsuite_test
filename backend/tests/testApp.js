@@ -1,4 +1,5 @@
 import express from 'express';
+import cookieParser from 'cookie-parser';
 import authRoutes from '../src/routes/authRoutes.js';
 import ecgRoutes from '../src/routes/ecgRoutes.js';
 import adminRoutes from '../src/routes/adminRoutes.js';
@@ -12,6 +13,7 @@ import { authLimiter, mlLimiter, readLimiter } from '../src/middleware/rateLimit
 
 const app = express();
 app.use(express.json());
+app.use(cookieParser());
 
 // No ensureDatabaseReady — memory server is always connected in tests.
 // Rate limiters are included to satisfy CodeQL; they skip in NODE_ENV=test.

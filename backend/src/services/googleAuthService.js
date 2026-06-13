@@ -1,7 +1,7 @@
 import User from '../models/User.js';
 import { getGoogleClient } from '../config/googleClient.js';
 import { generateToken } from '../utils/generateToken.js';
-import { backfillLegacyOnboarding } from './authService.js';
+import { backfillLegacyOnboarding, issueRefreshToken } from './authService.js';
 
 function createError(message, statusCode = 500) {
   const error = new Error(message);
@@ -115,6 +115,7 @@ export async function verifyGoogleUser(credential) {
   return {
     isNewUser,
     token: generateToken(user._id, user.role),
+    refreshToken: await issueRefreshToken(user._id),
     user: toUserResponse(user)
   };
 }

@@ -2,6 +2,7 @@ import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
 import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
 import connectDB, { waitForDbReady } from './src/db/index.js';
 import { sendResponse } from './src/utils/responseHandler.js';
@@ -37,6 +38,7 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.json());
+app.use(cookieParser());
 
 const ensureDatabaseReady = async (req, res, next) => {
   if (!process.env.MONGO_URI) {
@@ -142,6 +144,7 @@ app.use((req, res) => {
       '/api/health',
       '/api/auth/register',
       '/api/auth/login',
+      '/api/auth/refresh',
       '/api/auth/logout',
       '/api/auth/google',
       '/api/auth/me',
