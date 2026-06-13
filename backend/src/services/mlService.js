@@ -46,7 +46,7 @@ export async function predictECG(filePath, age, gender) {
         },
         maxBodyLength: Infinity,
         maxContentLength: Infinity,
-        timeout: 30000,
+        timeout: 60000,
       });
 
       return response.data;
