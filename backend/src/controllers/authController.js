@@ -4,13 +4,17 @@ import {
   registerUserService,
   loginUserService,
   logoutUserService,
+  refreshSessionService,
 } from '../services/authService.js';
 import { verifyGoogleUser } from '../services/googleAuthService.js';
 import { logAction } from '../services/auditService.js';
 import User from '../models/User.js';
+import { REFRESH_TOKEN_TTL_MS } from '../utils/generateToken.js';
+import { setRefreshCookie, clearRefreshCookie, REFRESH_COOKIE_NAME } from '../utils/refreshCookie.js';
 
 export const registerUser = asyncHandler(async (req, res) => {
   const result = await registerUserService(req.body);
+  setRefreshCookie(res, result.refreshToken, REFRESH_TOKEN_TTL_MS);
   return sendResponse(res, 201, true, 'User registered successfully', {
     token: result.token,
     user: result.user
@@ -19,6 +23,7 @@ export const registerUser = asyncHandler(async (req, res) => {
 
 export const loginUser = asyncHandler(async (req, res) => {
   const result = await loginUserService(req.body);
+  setRefreshCookie(res, result.refreshToken, REFRESH_TOKEN_TTL_MS);
   logAction({ req, userId: result.user.id, entityType: 'USER', entityId: result.user.id, action: 'LOGIN' });
   return sendResponse(res, 200, true, 'Login successful', {
     token: result.token,
@@ -26,8 +31,20 @@ export const loginUser = asyncHandler(async (req, res) => {
   });
 });
 
+export const refreshSession = asyncHandler(async (req, res) => {
+  const rawToken = req.cookies?.[REFRESH_COOKIE_NAME];
+  const result = await refreshSessionService(rawToken);
+  setRefreshCookie(res, result.refreshToken, REFRESH_TOKEN_TTL_MS);
+  return sendResponse(res, 200, true, 'Session refreshed', {
+    token: result.token,
+    user: result.user
+  });
+});
+
 export const logoutUser = asyncHandler(async (req, res) => {
-  const result = await logoutUserService();
+  const rawToken = req.cookies?.[REFRESH_COOKIE_NAME];
+  const result = await logoutUserService(rawToken);
+  clearRefreshCookie(res);
   return sendResponse(res, 200, true, result.message, null);
 });
 
@@ -148,6 +165,8 @@ export const googleAuth = asyncHandler(async (req, res) => {
   const { credential } = req.body;
   const result = await verifyGoogleUser(credential);
 
+  setRefreshCookie(res, result.refreshToken, REFRESH_TOKEN_TTL_MS);
+
   return sendResponse(
     res,
     200,
@@ -155,6 +174,10 @@ export const googleAuth = asyncHandler(async (req, res) => {
     result.isNewUser
       ? 'Account created successfully with Google'
       : 'Welcome back! Signed in with Google',
-    result
+    {
+      isNewUser: result.isNewUser,
+      token: result.token,
+      user: result.user
+    }
   );
 });

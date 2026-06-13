@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import AxiosInstance from "../../AxiosInstance";
+import AxiosInstance, { refreshAccessToken } from "../../AxiosInstance";
 import { profileService } from "../../services/profileService";
 import { setSessionUserSnapshot } from "./roleUtils";
 
@@ -76,10 +76,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let cancelled = false;
 
     async function bootstrap() {
-      const token = localStorage.getItem(TOKEN_KEY);
+      let token = localStorage.getItem(TOKEN_KEY);
+
       if (!token) {
-        if (!cancelled) setStatus("unauthenticated");
-        return;
+        // No cached access token — if a refresh-token cookie is still valid,
+        // this silently restores the session without a full re-login.
+        token = await refreshAccessToken();
+        if (!token) {
+          if (!cancelled) setStatus("unauthenticated");
+          return;
+        }
       }
 
       // Set the header synchronously so the very first /api/auth/me request
@@ -106,6 +112,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true;
     };
+  }, []);
+
+  // The AxiosInstance response interceptor dispatches this when a 401's
+  // silent-refresh attempt also fails (refresh-token cookie missing/expired/
+  // revoked) — drop back to the login screen instead of looping on 401s.
+  useEffect(() => {
+    const handleSessionExpired = () => {
+      setAuthHeader(null);
+      setSessionUserSnapshot(null);
+      setSession(null);
+      setStatus("unauthenticated");
+    };
+
+    window.addEventListener("auth:session-expired", handleSessionExpired);
+    return () => window.removeEventListener("auth:session-expired", handleSessionExpired);
   }, []);
 
   const value = useMemo(() => {
@@ -150,6 +171,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
       },
       signout: () => {
+        // Best-effort: revoke the refresh-token cookie server-side. The local
+        // session is cleared immediately regardless of whether this succeeds.
+        AxiosInstance.post("/api/auth/logout").catch(() => {});
         localStorage.removeItem(TOKEN_KEY);
         setAuthHeader(null);
         setSessionUserSnapshot(null);
