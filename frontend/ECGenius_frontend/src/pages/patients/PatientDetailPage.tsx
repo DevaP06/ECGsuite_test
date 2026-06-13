@@ -8,10 +8,11 @@ import {
 import AppShell from '../../layouts/AppShell';
 import ECGTimeline from '../../components/patients/ECGTimeline';
 import TrendAnalytics from '../../components/patients/TrendAnalytics';
+import PatientTrendsSummary from '../../components/patients/PatientTrendsSummary';
 import { patientService } from '../../services/patientService';
 import { extractErrorMessage } from '../../utils/errorUtils';
 import { isDoctor } from '../../features/auth/roleUtils';
-import type { Patient } from '../../types/patient';
+import type { Patient, PatientTrends } from '../../types/patient';
 import type { ECGAnalysis } from '../../types/ecg';
 
 // ─── Info row helper ──────────────────────────────────────────────────────────
@@ -57,8 +58,10 @@ export default function PatientDetailPage() {
 
   const [patient, setPatient] = useState<Patient | null>(null);
   const [analyses, setAnalyses] = useState<ECGAnalysis[]>([]);
+  const [trends, setTrends] = useState<PatientTrends | null>(null);
   const [loading, setLoading] = useState(true);
   const [analysesLoading, setAnalysesLoading] = useState(true);
+  const [trendsLoading, setTrendsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const loadPatient = useCallback(async () => {
@@ -89,10 +92,25 @@ export default function PatientDetailPage() {
     }
   }, [patientId]);
 
+  const loadTrends = useCallback(async () => {
+    if (!patientId) return;
+    setTrendsLoading(true);
+    try {
+      const data = await patientService.getPatientTrends(patientId);
+      setTrends(data);
+    } catch {
+      // Non-fatal — trends section shows empty state
+      setTrends(null);
+    } finally {
+      setTrendsLoading(false);
+    }
+  }, [patientId]);
+
   useEffect(() => {
     loadPatient();
     loadAnalyses();
-  }, [loadPatient, loadAnalyses]);
+    loadTrends();
+  }, [loadPatient, loadAnalyses, loadTrends]);
 
   // ─── Loading state ──────────────────────────────────────────────────────────
   if (loading) {
@@ -278,6 +296,9 @@ export default function PatientDetailPage() {
             <ECGTimeline analyses={analyses} preferClinical={canEdit} />
           )}
         </div>
+
+        {/* ── Trends Summary ────────────────────────────────────────────── */}
+        <PatientTrendsSummary trends={trends} loading={trendsLoading} />
 
         {/* ── Trend Analytics ───────────────────────────────────────────── */}
         {!analysesLoading && (

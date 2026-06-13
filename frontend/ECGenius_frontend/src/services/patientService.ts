@@ -5,6 +5,7 @@ import type {
   PatientListResponse,
   CreatePatientPayload,
   PatientQuery,
+  PatientTrends,
 } from '../types/patient';
 import type { ECGAnalysis } from '../types/ecg';
 
@@ -15,6 +16,7 @@ import type { ECGAnalysis } from '../types/ecg';
 //   GET    /api/patients/:id          → Patient
 //   POST   /api/patients              → Patient
 //   GET    /api/patients/:id/analyses → { analyses: ECGAnalysis[] }
+//   GET    /api/patients/:id/trends   → PatientTrends
 
 export const patientService = {
 
@@ -62,5 +64,13 @@ export const patientService = {
     );
     const body = res.data as Record<string, unknown>;
     return ((body.analyses ?? body.data ?? []) as ECGAnalysis[]);
+  },
+
+  async getPatientTrends(patientId: string): Promise<PatientTrends> {
+    const res = await AxiosInstance.get<{ data: PatientTrends }>(
+      `/api/patients/${patientId}/trends`
+    );
+    const body = res.data as unknown as Record<string, unknown>;
+    return (body.data ?? body) as PatientTrends;
   },
 };
