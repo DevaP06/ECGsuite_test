@@ -1,5 +1,5 @@
 import express from 'express';
-import { listPatients, getPatient, createPatient, getPatientAnalyses } from '../controllers/patientController.js';
+import { listPatients, getPatient, createPatient, getPatientAnalyses, getPatientTrends } from '../controllers/patientController.js';
 import { requireRole } from '../middleware/auth.middleWare.js';
 import { readLimiter } from '../middleware/rateLimiter.js';
 
@@ -12,5 +12,6 @@ router.get('/', readLimiter, requireRole('PHC_DOCTOR', 'CARDIOLOGIST', 'ADMIN'),
 router.post('/', readLimiter, requireRole('PHC_DOCTOR', 'ADMIN'), createPatient);
 router.get('/:id', readLimiter, requireRole('PHC_DOCTOR', 'CARDIOLOGIST', 'ADMIN'), getPatient);
 router.get('/:id/analyses', readLimiter, requireRole('PHC_DOCTOR', 'CARDIOLOGIST', 'ADMIN'), getPatientAnalyses);
+router.get('/:id/trends', readLimiter, requireRole('PHC_DOCTOR', 'CARDIOLOGIST', 'ADMIN'), getPatientTrends);
 
 export default router;

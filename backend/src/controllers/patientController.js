@@ -146,3 +146,75 @@ export const getPatientAnalyses = asyncHandler(async (req, res) => {
 
   return sendResponse(res, 200, true, 'Patient analyses fetched successfully', { analyses });
 });
+
+// GET /api/patients/:id/trends
+export const getPatientTrends = asyncHandler(async (req, res) => {
+  const rawId = String(req.params.id);
+  if (!rawId.match(/^[a-f\d]{24}$/i)) {
+    return sendResponse(res, 400, false, 'Invalid patient ID');
+  }
+
+  const patient = await Patient.findById(rawId);
+  if (!patient) {
+    return sendResponse(res, 404, false, 'Patient not found');
+  }
+
+  const analyses = await ECGAnalysis.find({ patientId: rawId })
+    .select('status createdAt analysisResult')
+    .sort({ createdAt: 1 })
+    .lean();
+
+  const completed = analyses.filter((a) => a.status === 'completed' && a.analysisResult);
+
+  const rhythmCounts = new Map();
+  const dataPoints = [];
+  let confidenceSum = 0;
+  let emergencyCount = 0;
+
+  for (const a of completed) {
+    const r = a.analysisResult;
+    const rhythm = r.rhythm ?? 'unknown';
+    const confidence = r.confidence ?? 0;
+    const emergencyLevel = r.emergencyLevel ?? 'none';
+
+    rhythmCounts.set(rhythm, (rhythmCounts.get(rhythm) ?? 0) + 1);
+    confidenceSum += confidence;
+    if (r.isEmergency === true || emergencyLevel !== 'none') {
+      emergencyCount += 1;
+    }
+
+    dataPoints.push({
+      date: a.createdAt,
+      rhythm,
+      heartRate: r.heartRate ?? null,
+      qrsDuration: r.qrsDuration ?? null,
+      qtInterval: r.qtInterval ?? null,
+      qtcInterval: r.qtcInterval ?? null,
+      rrInterval: r.rrInterval ?? null,
+      confidence,
+      emergencyLevel
+    });
+  }
+
+  const rhythmDistribution = Array.from(rhythmCounts.entries())
+    .map(([rhythm, count]) => ({ rhythm, count }))
+    .sort((a, b) => b.count - a.count);
+
+  const dateRange = completed.length
+    ? { from: completed[0].createdAt, to: completed[completed.length - 1].createdAt }
+    : { from: null, to: null };
+
+  const summary = {
+    totalAnalyses: analyses.length,
+    completedAnalyses: completed.length,
+    averageConfidence: completed.length ? Number((confidenceSum / completed.length).toFixed(2)) : 0,
+    emergencyCount,
+    dateRange
+  };
+
+  return sendResponse(res, 200, true, 'Patient trends fetched successfully', {
+    summary,
+    rhythmDistribution,
+    dataPoints
+  });
+});

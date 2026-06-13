@@ -68,3 +68,35 @@ export interface PatientListResponse {
   page: number;
   pageSize: number;
 }
+
+// ─── Trends (returned by GET /api/patients/:id/trends) ───────────────────────
+export interface PatientTrendDataPoint {
+  date: string;
+  rhythm: string;
+  heartRate: number | null;
+  qrsDuration: number | null;
+  qtInterval: number | null;
+  qtcInterval: number | null;
+  rrInterval: number | null;
+  confidence: number;
+  emergencyLevel: 'none' | 'low' | 'moderate' | 'high' | 'critical';
+}
+
+export interface RhythmDistributionEntry {
+  rhythm: string;
+  count: number;
+}
+
+export interface PatientTrendsSummaryStats {
+  totalAnalyses: number;
+  completedAnalyses: number;
+  averageConfidence: number;
+  emergencyCount: number;
+  dateRange: { from: string | null; to: string | null };
+}
+
+export interface PatientTrends {
+  summary: PatientTrendsSummaryStats;
+  rhythmDistribution: RhythmDistributionEntry[];
+  dataPoints: PatientTrendDataPoint[];
+}
