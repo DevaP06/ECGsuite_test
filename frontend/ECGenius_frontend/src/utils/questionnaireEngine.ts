@@ -6,6 +6,7 @@ import type {
   RhythmHistoryEntry,
 } from '../types/clinicalContext';
 import { HISTORY_SCHEMA } from '../data/historySchema';
+import { toOntologyLabel } from '../data/labelMapping';
 import { getQuestionLabel } from '../data/questionLabels';
 
 const CATEGORY_ORDER: QuestionCategory[] = ['symptoms', 'riskFactors', 'vitals'];
@@ -43,7 +44,7 @@ export function calculateCoverage(
 ): number {
   const relevantKeys = new Set<string>();
   topRhythms.slice(0, 2).forEach(({ rhythm }) => {
-    const entry = HISTORY_SCHEMA[rhythm];
+    const entry = HISTORY_SCHEMA[toOntologyLabel(rhythm)];
     if (!entry) return;
     CATEGORY_ORDER.forEach((category) => {
       entry[SCHEMA_FIELD[category]].forEach((key) => relevantKeys.add(key));
@@ -70,7 +71,7 @@ export function generateQuestionnaire(topRhythms: TopPrediction[]): Questionnair
   const candidatesByKey = new Map<string, Candidate>();
   CATEGORY_ORDER.forEach((category) => {
     top2.forEach(({ rhythm }) => {
-      const entry = HISTORY_SCHEMA[rhythm];
+      const entry = HISTORY_SCHEMA[toOntologyLabel(rhythm)];
       if (!entry) return;
       entry[SCHEMA_FIELD[category]].forEach((key) => {
         const existing = candidatesByKey.get(key);

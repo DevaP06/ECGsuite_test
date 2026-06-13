@@ -96,6 +96,23 @@ const deriveEmergencyLevel = (ontologyEnrichment) => {
   }, 'none');
 };
 
+// Maps the ECGenius-Ontology-layer /diagnose response (tier 1/2/3 + confidence_label)
+// onto the flat { displayName, confidenceTier, urgencyTier, ... } shape AnalysisResult expects.
+const ONTOLOGY_TIER_TO_URGENCY = { 1: 'critical', 2: 'high', 3: 'moderate' };
+
+const mapOntologyEnrichment = (ontology) => {
+  const differential = Array.isArray(ontology?.differential) ? ontology.differential : [];
+
+  return differential.map(item => ({
+    displayName: item.label_name,
+    confidenceTier: item.confidence_label,
+    urgencyTier: ONTOLOGY_TIER_TO_URGENCY[item.tier] ?? 'low',
+    isEmergency: item.tier === 1,
+    severity: item.tier_label,
+    recommendedTests: item.default_action ? [item.default_action] : [],
+  }));
+};
+
 const toAnalysisResult = (prediction, processingTime) => {
   const topPredictions = Array.isArray(prediction?.top_predictions)
     ? prediction.top_predictions
@@ -109,6 +126,8 @@ const toAnalysisResult = (prediction, processingTime) => {
   const labelProbabilities = Object.fromEntries(
     topPredictions.map(p => [p.condition, p.probability])
   );
+
+  const ontologyEnrichment = mapOntologyEnrichment(prediction?.ontology);
 
   return {
     rhythm: bestRhythm,
@@ -124,19 +143,18 @@ const toAnalysisResult = (prediction, processingTime) => {
       snomedCt: p.snomed_ct,
       confidence: Math.round(p.probability * 100),
     })),
-    ontologyEnrichment: prediction?.ontology ?? null,
-    emergencyLevel: deriveEmergencyLevel(prediction?.ontology),
-    isEmergency: Array.isArray(prediction?.ontology)
-      && prediction.ontology.some(item => item?.isEmergency === true),
-    // Not yet provided by /predict — add when signal processing returns these:
-    // heartRate: null,
-    // qrsDuration: null,
-    // qtInterval: null,
-    // qtcInterval: null,
-    // rrInterval: null,
-    // abnormalities: [],
-    // signalMetrics: null,
-    // explanation: null,
+    ontologyEnrichment,
+    emergencyLevel: deriveEmergencyLevel(ontologyEnrichment),
+    isEmergency: ontologyEnrichment.some(item => item.isEmergency === true),
+    // Not yet provided by /predict — populated once signal-metrics processing is added
+    heartRate: null,
+    qrsDuration: null,
+    qtInterval: null,
+    qtcInterval: null,
+    rrInterval: null,
+    abnormalities: [],
+    signalMetrics: null,
+    explanation: null,
   };
 };
 

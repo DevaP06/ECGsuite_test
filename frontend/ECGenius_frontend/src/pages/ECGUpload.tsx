@@ -5,6 +5,7 @@ import AppShell from "../layouts/AppShell";
 import { ecgService } from "../services/ecgService";
 import UploadProgress from "../components/ecg/UploadProgress";
 import { extractErrorMessage } from "../utils/errorUtils";
+import { isDoctor } from "../features/auth/roleUtils";
 
 export default function ECGUpload() {
   const navigate = useNavigate();
@@ -97,7 +98,11 @@ export default function ECGUpload() {
         } else {
           toast.success("ECG uploaded and analyzed successfully!");
           setTimeout(() => {
-            navigate(`/diagnosisdetail/${result.analysisId}`);
+            if (isDoctor()) {
+              navigate(`/questionnaire/${result.analysisId}`);
+            } else {
+              navigate(`/diagnosisdetail/${result.analysisId}`);
+            }
           }, 1000);
         }
       } else {
