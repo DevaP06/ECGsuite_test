@@ -83,7 +83,6 @@ const ensureDatabaseReady = async (req, res, next) => {
 // Import auth controller functions
 import authRoutes from './src/routes/authRoutes.js';
 import ecgRoutes from './src/routes/ecgRoutes.js';
-import mlRoutes from './src/routes/mlRoutes.js';
 import waitlistRoutes from './src/routes/waitlistRoutes.js';
 import adminRoutes from './src/routes/adminRoutes.js';
 import patientRoutes from './src/routes/patientRoutes.js';
@@ -94,7 +93,7 @@ import ontologyRoutes from './src/routes/ontologyRoutes.js';
 import settingsRoutes from './src/routes/settingsRoutes.js';
 import notificationRoutes from './src/routes/notificationRoutes.js';
 import protect, { requireRole } from './src/middleware/auth.middleWare.js';
-import { mlLimiter, readLimiter } from './src/middleware/rateLimiter.js';
+import { readLimiter, waitlistLimiter } from './src/middleware/rateLimiter.js';
 
 app.get('/api', (req, res) => {
   res.json({ message: 'ECGenius API', version: '1.0.0' });
@@ -111,15 +110,14 @@ app.get('/api/health', (req, res) => {
 app.use('/api', ensureDatabaseReady);
 app.use('/api/auth', authRoutes);
 
-// Waitlist routes
-app.use('/api/waitlist', waitlistRoutes);
+// Waitlist — public but rate-limited to prevent signup spam
+app.use('/api/waitlist', waitlistLimiter, waitlistRoutes);
 
 // Domain routes
 app.use('/api/ecg', protect, ecgRoutes);
-app.use('/api/ml', mlLimiter, protect, mlRoutes);
 app.use('/api/admin', readLimiter, protect, requireRole('ADMIN'), adminRoutes);
 app.use('/api/patients', readLimiter, protect, patientRoutes);
-app.use('/api/clinical-context', protect, clinicalContextRoutes);
+app.use('/api/clinical-context', readLimiter, protect, clinicalContextRoutes);
 app.use('/api/review', readLimiter, protect, reviewRoutes);
 app.use('/api/analytics', readLimiter, protect, analyticsRoutes);
 app.use('/api/ontology', readLimiter, protect, ontologyRoutes);

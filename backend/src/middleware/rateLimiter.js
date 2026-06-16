@@ -37,3 +37,10 @@ export const mlLimiter = make(
   30,               // 30 req/min
   'Too many requests to ML service. Please slow down.'
 );
+
+// Public waitlist — prevent signup spam
+export const waitlistLimiter = make(
+  60 * 60 * 1000,   // 1 hour window
+  10,               // 10 signups/hour per IP
+  'Too many waitlist requests. Please try again later.'
+);
