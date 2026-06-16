@@ -99,7 +99,7 @@ export default function ECGUpload() {
           toast.success("ECG uploaded and analyzed successfully!");
           setTimeout(() => {
             if (isDoctor()) {
-              navigate(`/questionnaire/${result.analysisId}`);
+              navigate(`/clinical-context/${result.analysisId}`);
             } else {
               navigate(`/diagnosisdetail/${result.analysisId}`);
             }

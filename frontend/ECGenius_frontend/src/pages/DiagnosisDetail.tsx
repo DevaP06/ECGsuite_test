@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { Loader2, ArrowLeft, RefreshCw, AlertTriangle, ClipboardList, HelpCircle } from "lucide-react";
+import { Loader2, ArrowLeft, RefreshCw, AlertTriangle, HelpCircle } from "lucide-react";
 import AppShell from "../layouts/AppShell";
 import DiagnosisOverview from "../components/diagnosis/DiagnosisOverview";
 import ExplainabilityChart from "../components/diagnosis/ExplainabilityChart";
@@ -136,16 +136,6 @@ export default function DiagnosisDetail() {
             <span>Back to Dashboard</span>
           </Link>
           <div className="flex items-center gap-3">
-            {doctorView && id && (
-              <button
-                type="button"
-                onClick={() => navigate(`/questionnaire/${id}`)}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-sm font-semibold text-white transition"
-              >
-                <ClipboardList className="w-4 h-4" />
-                Clinical History
-              </button>
-            )}
             {doctorView && id && (analysis.analysisResult?.topPredictions?.length ?? 0) >= 1 && (
               <button
                 type="button"

@@ -73,3 +73,49 @@ export async function predictECG(filePath, age, gender) {
 
   return null;
 }
+
+// Re-run only the ontology stage against already-computed model probabilities
+// plus patient clinical context. No image/digitizer/model inference — used when
+// the clinical-context questionnaire is submitted to refine an existing
+// diagnosis. Returns the ml-api response ({ ontology }) or null if ml-api is
+// unreachable (same convention as predictECG).
+export async function refineOntology(labelProbabilities, patient, patientEvidence) {
+  const flaskUrl = process.env.FLASK_URL;
+  if (!flaskUrl) throw new Error("FLASK_URL is not set in environment");
+
+  const internalKey = process.env.INTERNAL_API_KEY;
+  const payload = {
+    label_probabilities: labelProbabilities,
+    patient,
+    patient_evidence: patientEvidence,
+  };
+
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const response = await axios.post(`${flaskUrl}/refine`, payload, {
+        headers: {
+          "Content-Type": "application/json",
+          ...(internalKey ? { "X-Internal-Key": internalKey } : {}),
+        },
+        timeout: 60000,
+      });
+      return response.data;
+    } catch (err) {
+      const isLast = attempt === MAX_RETRIES;
+      const isFlaskDown =
+        err.code === "ECONNREFUSED" ||
+        err.code === "ECONNRESET" ||
+        err.code === "ETIMEDOUT" ||
+        !err.response;
+
+      if (isFlaskDown && isLast) return null;
+      if (isFlaskDown && !isLast) {
+        await sleep(RETRY_DELAY_MS);
+        continue;
+      }
+      throw err;
+    }
+  }
+
+  return null;
+}

@@ -121,19 +121,24 @@ export const ecgService = {
   // Fetch individual analysis details
   async getAnalysis(id: string): Promise<ECGAnalysis> {
     const res = await AxiosInstance.get(`/api/ecg/analysis/${id}`);
-    return normalizeAnalysis(res.data);
+    // Backend wraps payloads as { success, message, data: { analysis, review } }
+    // — unwrap to the inner payload before normalizing.
+    const payload = res.data?.data ?? res.data;
+    return normalizeAnalysis(payload);
   },
 
   // Fetch list of user analyses
   async getMyAnalyses(): Promise<ECGAnalysis[]> {
     const res = await AxiosInstance.get("/api/ecg/my-analyses");
-    const analyses = res.data?.analyses || [];
+    const payload = res.data?.data ?? res.data;
+    const analyses = payload?.analyses || [];
     return analyses.map((item: unknown) => normalizeAnalysis(item));
   },
 
   // Update notes of an analysis
   async updateAnalysisNotes(id: string, notes: string): Promise<ECGAnalysis> {
     const res = await AxiosInstance.patch(`/api/ecg/analysis/${id}/notes`, { notes });
-    return normalizeAnalysis(res.data);
+    const payload = res.data?.data ?? res.data;
+    return normalizeAnalysis(payload);
   }
 };

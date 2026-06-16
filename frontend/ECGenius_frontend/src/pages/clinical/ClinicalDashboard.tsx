@@ -6,19 +6,17 @@ import {
 } from 'lucide-react';
 import AppShell from '../../layouts/AppShell';
 import { ecgService } from '../../services/ecgService';
-import { loadDraft } from '../../services/questionnaireService';
 import { hasClinicalContext, getSubmittedClinicalContext, getSubmittedAt } from '../../services/clinicalContextService';
 import { buildOntologyInput } from '../../services/ontologyFusionService';
 import { buildFusionResult } from '../../utils/ontologyFusion';
-import { answersArrayToMap } from '../../types/questionnaire';
 import { extractErrorMessage } from '../../utils/errorUtils';
 import { getDashboardRoute } from '../../features/auth/roleUtils';
 import EvidenceFusionPanel from '../../components/clinical/EvidenceFusionPanel';
 import EvidenceFusionSummary from '../../components/clinical/EvidenceFusionSummary';
+// (RiskFactorPanel removed with the old questionnaire — its data source is gone.)
 import EvidenceTimeline from '../../components/clinical/EvidenceTimeline';
 import ConfidenceBreakdown from '../../components/clinical/ConfidenceBreakdown';
 import ClinicalContextSummary from '../../components/clinical/ClinicalContextSummary';
-import RiskFactorPanel from '../../components/clinical/RiskFactorPanel';
 import ClinicalActionsPanel from '../../components/clinical/ClinicalActionsPanel';
 import RequestReviewButton from '../../components/review/RequestReviewButton';
 import ReviewStatusTracker from '../../components/review/ReviewStatusTracker';
@@ -27,7 +25,6 @@ import ClinicalReasoningPanel from '../../components/diagnosis/ClinicalReasoning
 import PDFExportButton from '../../components/common/PDFExportButton';
 import type { ECGAnalysis } from '../../types/ecg';
 import type { ClinicalContext } from '../../types/clinicalContext';
-import type { AnswersMap } from '../../types/questionnaire';
 
 export default function ClinicalDashboard() {
   const { analysisId } = useParams<{ analysisId: string }>();
@@ -35,7 +32,6 @@ export default function ClinicalDashboard() {
   const dashboardPath = getDashboardRoute();
 
   const [analysis, setAnalysis] = useState<ECGAnalysis | null>(null);
-  const [answers, setAnswers] = useState<AnswersMap>({});
   const [clinicalContext, setClinicalContext] = useState<ClinicalContext | null>(null);
   const [contextSubmittedAt, setContextSubmittedAt] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -52,11 +48,6 @@ export default function ClinicalDashboard() {
         const ecg = await ecgService.getAnalysis(analysisId);
         if (cancelled) return;
         setAnalysis(ecg);
-
-        const draft = loadDraft(analysisId);
-        if (draft?.answers?.length) {
-          setAnswers(answersArrayToMap(draft.answers));
-        }
 
         setClinicalContext(getSubmittedClinicalContext(analysisId));
         setContextSubmittedAt(getSubmittedAt(analysisId));
@@ -149,11 +140,11 @@ export default function ClinicalDashboard() {
             </button>
             <button
               type="button"
-              onClick={() => navigate(`/questionnaire/${analysisId}`)}
+              onClick={() => navigate(`/clinical-context/${analysisId}`)}
               className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-sm font-semibold text-white transition"
             >
               <ClipboardList className="w-4 h-4" />
-              Edit Clinical History
+              Edit Clinical Context
             </button>
           </div>
         </div>
@@ -259,11 +250,8 @@ export default function ClinicalDashboard() {
         {/* Differential diagnosis */}
         <DifferentialDiagnosisPanel diagnoses={fusionResult?.diagnoses} />
 
-        {/* Evidence + Risk factors */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          <EvidenceFusionPanel ontologyItems={ontologyItems} />
-          <RiskFactorPanel answers={answers} />
-        </div>
+        {/* Evidence fusion */}
+        <EvidenceFusionPanel ontologyItems={ontologyItems} />
 
         {/* Clinical reasoning */}
         <ClinicalReasoningPanel reasoning={reasoning} />

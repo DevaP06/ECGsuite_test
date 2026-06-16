@@ -64,7 +64,7 @@ import mlRoutes from './src/routes/mlRoutes.js';
 import waitlistRoutes from './src/routes/waitlistRoutes.js';
 import adminRoutes from './src/routes/adminRoutes.js';
 import patientRoutes from './src/routes/patientRoutes.js';
-import questionnaireRoutes from './src/routes/questionnaireRoutes.js';
+import clinicalContextRoutes from './src/routes/clinicalContextRoutes.js';
 import reviewRoutes from './src/routes/reviewRoutes.js';
 import analyticsRoutes from './src/routes/analyticsRoutes.js';
 import ontologyRoutes from './src/routes/ontologyRoutes.js';
@@ -105,7 +105,7 @@ app.use('/api/ecg', protect, ecgRoutes);
 app.use('/api/ml', mlLimiter, protect, mlRoutes);
 app.use('/api/admin', readLimiter, protect, requireRole('ADMIN'), adminRoutes);
 app.use('/api/patients', readLimiter, protect, patientRoutes);
-app.use('/api/questionnaire', readLimiter, protect, questionnaireRoutes);
+app.use('/api/clinical-context', protect, clinicalContextRoutes);
 app.use('/api/review', readLimiter, protect, reviewRoutes);
 app.use('/api/analytics', readLimiter, protect, analyticsRoutes);
 app.use('/api/ontology', readLimiter, protect, ontologyRoutes);
@@ -152,7 +152,7 @@ app.use((req, res) => {
       '/api/ml/...',
       '/api/admin/...',
       '/api/patients/...',
-      '/api/questionnaire/...',
+      '/api/clinical-context/...',
       '/api/review/...',
       '/api/settings/...',
       '/api/notifications/...'

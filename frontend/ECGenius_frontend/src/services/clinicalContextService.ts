@@ -1,9 +1,10 @@
-// Local-only persistence for the dynamic clinical-context wizard.
-// Submission is intentionally NOT sent to a backend (none exists for this
-// feature yet) — it is stored under its own localStorage namespace so it
-// never collides with the existing 'ecg:questionnaire:draft:' keys used by
-// HistoryQuestionnairePage.
+// Clinical-context wizard persistence.
+// Drafts are kept in localStorage under their own 'ecg:clinicalContext:' namespace.
+// On submit we POST the context to the backend (which re-runs the ontology with
+// the patient evidence and persists the refined differential) AND mirror it to
+// localStorage so the dashboard can render the submitted context offline.
 
+import AxiosInstance from '../AxiosInstance';
 import type { TopPrediction } from '../types/ecg';
 import type { ClinicalContext, QuestionnaireDefinition, QuestionnaireResponse } from '../types/clinicalContext';
 import type { OntologyInputPayload } from '../types/ontologyInput';
@@ -38,6 +39,16 @@ export function clearDraft(analysisId: string): void {
 }
 
 export async function submitClinicalContext(payload: OntologyInputPayload): Promise<void> {
+  // Send to the backend first — it re-runs the ontology with the patient
+  // evidence and persists the refined differential onto the analysis. If this
+  // throws, the caller surfaces the error and the user can retry.
+  await AxiosInstance.post(`/api/clinical-context/${payload.analysisId}`, {
+    clinicalContext: payload.clinicalContext,
+    topRhythms: payload.topRhythms,
+  });
+
+  // Mirror to localStorage so the dashboard can render the submitted context
+  // (and its "completed" badge) without an extra round-trip.
   try {
     localStorage.setItem(
       `${SUBMITTED_KEY_PREFIX}${payload.analysisId}`,

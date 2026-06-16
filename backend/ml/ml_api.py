@@ -10,6 +10,7 @@ from fastapi import FastAPI
 from fastapi import UploadFile
 from fastapi import File
 from fastapi import HTTPException
+from pydantic import BaseModel
 
 from predictor import ECGPredictor
 
@@ -86,18 +87,26 @@ def _run_model(signal_data: list) -> list:
     return top_predictions
 
 
-def _run_ontology(top_predictions: list) -> dict:
-    model_output = {}
-    for p in top_predictions:
-        ontology_label = ONTOLOGY_LABEL_MAP.get(p["condition"])
-        if ontology_label is not None:
-            model_output[ontology_label] = p["probability"]
+_EMPTY_PATIENT = {"symptoms": {}, "risk_factors": {}, "vitals": {}}
 
+
+def _to_ontology_model_output(label_probs: dict) -> dict:
+    """Remap this model's acronym labels to the ontology's label_id vocabulary."""
+    model_output = {}
+    for condition, prob in label_probs.items():
+        ontology_label = ONTOLOGY_LABEL_MAP.get(condition)
+        if ontology_label is not None:
+            model_output[ontology_label] = float(prob)
+    return model_output
+
+
+def _call_ontology(model_output: dict, patient: dict = None, patient_evidence: dict = None) -> dict:
     response = requests.post(
         ONTOLOGY_URL,
         json={
             "model_output": model_output,
-            "patient": {"symptoms": {}, "risk_factors": {}, "vitals": {}},
+            "patient": patient or _EMPTY_PATIENT,
+            "patient_evidence": patient_evidence,
             "patient_id": None,
             "threshold": 0.10
         },
@@ -105,6 +114,12 @@ def _run_ontology(top_predictions: list) -> dict:
     )
     response.raise_for_status()
     return response.json()
+
+
+def _run_ontology(top_predictions: list, patient: dict = None, patient_evidence: dict = None) -> dict:
+    label_probs = {p["condition"]: p["probability"] for p in top_predictions}
+    model_output = _to_ontology_model_output(label_probs)
+    return _call_ontology(model_output, patient, patient_evidence)
 
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
@@ -166,3 +181,29 @@ async def predict(file: UploadFile = File(...)):
     finally:
         if os.path.exists(temp_file):
             os.remove(temp_file)
+
+
+class RefineRequest(BaseModel):
+    # {model_acronym_label: probability} — the stored labelProbabilities from a
+    # prior /predict run (keys are this model's acronyms, e.g. "AFIB", "SB").
+    label_probabilities: dict
+    # Structured patient history ({symptoms|risk_factors|vitals: {key: bool}}).
+    patient: dict | None = None
+    # Pre-computed Naive-Bayes evidence flags ({feature: bool}) from the
+    # clinical-context wizard (chest_pain, cad, hr_gt_100, ...).
+    patient_evidence: dict | None = None
+
+
+@app.post("/refine")
+def refine(req: RefineRequest):
+    """Re-run ONLY the ontology stage against stored model probabilities plus
+    patient clinical context. No image/digitizer/model inference — used to
+    refine a diagnosis once the clinical-context questionnaire is submitted."""
+    try:
+        model_output = _to_ontology_model_output(req.label_probabilities)
+        ontology = _call_ontology(model_output, req.patient, req.patient_evidence)
+        return {"ontology": ontology}
+    except requests.RequestException as e:
+        raise HTTPException(status_code=502, detail=f"Ontology service error: {e}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

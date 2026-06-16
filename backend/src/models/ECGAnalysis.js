@@ -68,6 +68,17 @@ const ecgAnalysisSchema = new mongoose.Schema({
     type: analysisResultSchema,
     default: null
   },
+  // Patient clinical context submitted via the clinical-context wizard
+  // ({ symptoms, riskFactors, vitals } boolean maps). Stored for durability /
+  // audit; used to re-fuse the ontology differential (clinicalContextController).
+  clinicalContext: {
+    type: mongoose.Schema.Types.Mixed,
+    default: null
+  },
+  clinicalContextAt: {
+    type: Date,
+    default: null
+  },
   processedAt: {
     type: Date,
     default: null

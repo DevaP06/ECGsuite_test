@@ -2,7 +2,7 @@ services:
 
   digitizer:
     build:
-      context: ../unetdigitization/Electrocardiogram-Digitization
+      context: ../unetdigitization/Electro
     ports:
       - "8000:8000"
     restart: unless-stopped

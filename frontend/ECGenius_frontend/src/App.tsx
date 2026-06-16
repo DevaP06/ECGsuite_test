@@ -26,7 +26,6 @@ import ECGUpload from './pages/ECGUpload';
 import DiagnosisDetail from './pages/DiagnosisDetail';
 import RoleSelectionPage from './pages/onboarding/RoleSelectionPage';
 import ProfileCompletionPage from './pages/onboarding/ProfileCompletionPage';
-import HistoryQuestionnairePage from './pages/questionnaire/HistoryQuestionnairePage';
 import ClinicalQuestionnairePage from './pages/ClinicalQuestionnairePage';
 import ClinicalDashboard from './pages/clinical/ClinicalDashboard';
 import FailedAnalysisPage from './pages/analysis/FailedAnalysisPage';
@@ -215,14 +214,6 @@ const router = createBrowserRouter(
         element={
           <RoleGuard allowedRoles={['PHC_DOCTOR', 'PATIENT']}>
             <ECGUpload />
-          </RoleGuard>
-        }
-      />
-      <Route
-        path="questionnaire/:analysisId"
-        element={
-          <RoleGuard allowedRoles={['PHC_DOCTOR', 'CARDIOLOGIST']}>
-            <HistoryQuestionnairePage />
           </RoleGuard>
         }
       />

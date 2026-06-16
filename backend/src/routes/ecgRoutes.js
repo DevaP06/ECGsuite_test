@@ -15,6 +15,7 @@ import { sendResponse } from '../utils/responseHandler.js';
 import { logAction } from '../services/auditService.js';
 import { notify } from '../services/notificationService.js';
 import { uploadLimiter, mlLimiter, readLimiter } from '../middleware/rateLimiter.js';
+import { mapOntologyEnrichment, deriveEmergencyLevel } from '../utils/ontologyMapping.js';
 
 
 const __filename = fileURLToPath(import.meta.url);
@@ -27,9 +28,15 @@ import os from 'os';
 const tempUploadDir = path.join(os.tmpdir(), 'ecg-temp');
 const processedUploadDir = path.join(os.tmpdir(), 'ecg-processed');
 const failedUploadDir = path.join(os.tmpdir(), 'ecg-failed');
-fs.mkdirSync(tempUploadDir, { recursive: true });
-fs.mkdirSync(processedUploadDir, { recursive: true });
-fs.mkdirSync(failedUploadDir, { recursive: true });
+
+// These live under the OS temp dir, which the OS (Windows Storage Sense, /tmp
+// reapers) can delete once they're empty — so creating them once at startup is
+// not enough. ensureDir() is called again per request (multer destination +
+// moveFile) so a write never fails with ENOENT on a vanished temp folder.
+const ensureDir = (dir) => fs.mkdirSync(dir, { recursive: true });
+ensureDir(tempUploadDir);
+ensureDir(processedUploadDir);
+ensureDir(failedUploadDir);
 
 const router = express.Router();
 
@@ -42,7 +49,12 @@ const MIME_TO_EXT = {
 // Configure multer for ECG file uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, tempUploadDir);
+    try {
+      ensureDir(tempUploadDir); // recreate if the OS reaped the empty temp dir
+      cb(null, tempUploadDir);
+    } catch (err) {
+      cb(err);
+    }
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
@@ -82,35 +94,6 @@ const normalizeRhythm = (value) => {
   if (['bradycardia'].includes(rhythm)) return 'bradycardia';
 
   return 'other';
-};
-
-// Mirrors ontologyController's URGENCY_ORDER — lower rank wins when reducing
-// per-finding urgencyTier values down to a single top-level emergencyLevel.
-const EMERGENCY_LEVEL_RANK = { critical: 0, high: 1, moderate: 2, low: 3, none: 4 };
-
-const deriveEmergencyLevel = (ontologyEnrichment) => {
-  if (!Array.isArray(ontologyEnrichment)) return 'none';
-  return ontologyEnrichment.reduce((level, item) => {
-    const tier = item?.urgencyTier;
-    return tier && EMERGENCY_LEVEL_RANK[tier] < EMERGENCY_LEVEL_RANK[level] ? tier : level;
-  }, 'none');
-};
-
-// Maps the ECGenius-Ontology-layer /diagnose response (tier 1/2/3 + confidence_label)
-// onto the flat { displayName, confidenceTier, urgencyTier, ... } shape AnalysisResult expects.
-const ONTOLOGY_TIER_TO_URGENCY = { 1: 'critical', 2: 'high', 3: 'moderate' };
-
-const mapOntologyEnrichment = (ontology) => {
-  const differential = Array.isArray(ontology?.differential) ? ontology.differential : [];
-
-  return differential.map(item => ({
-    displayName: item.label_name,
-    confidenceTier: item.confidence_label,
-    urgencyTier: ONTOLOGY_TIER_TO_URGENCY[item.tier] ?? 'low',
-    isEmergency: item.tier === 1,
-    severity: item.tier_label,
-    recommendedTests: item.default_action ? [item.default_action] : [],
-  }));
 };
 
 const toAnalysisResult = (prediction, processingTime) => {
