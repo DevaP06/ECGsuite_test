@@ -16,7 +16,8 @@ const RETRY_DELAY_MS = 1000;
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export async function predictECG(filePath, age, gender) {
-  const flaskUrl = process.env.FLASK_URL;
+  // Trailing slashes would produce '//predict' (→ 404 on FastAPI), so normalize.
+  const flaskUrl = (process.env.FLASK_URL || "").replace(/\/+$/, "");
   if (!flaskUrl) throw new Error("FLASK_URL is not set in environment");
 
   // path.basename() strips all directory components — CodeQL-recognized path sanitizer.
@@ -80,7 +81,8 @@ export async function predictECG(filePath, age, gender) {
 // diagnosis. Returns the ml-api response ({ ontology }) or null if ml-api is
 // unreachable (same convention as predictECG).
 export async function refineOntology(labelProbabilities, patient, patientEvidence) {
-  const flaskUrl = process.env.FLASK_URL;
+  // Trailing slashes would produce '//predict' (→ 404 on FastAPI), so normalize.
+  const flaskUrl = (process.env.FLASK_URL || "").replace(/\/+$/, "");
   if (!flaskUrl) throw new Error("FLASK_URL is not set in environment");
 
   const internalKey = process.env.INTERNAL_API_KEY;
