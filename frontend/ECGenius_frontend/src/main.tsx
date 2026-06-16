@@ -1,23 +1,38 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-
-import { PostHogProvider } from 'posthog-js/react';
-
+import { PostHogProvider } from "posthog-js/react";
 import "./index.css";
 import App from "./App";
 
+const posthogKey = import.meta.env.VITE_PUBLIC_POSTHOG_KEY as string | undefined;
+const posthogHost = import.meta.env.VITE_PUBLIC_POSTHOG_HOST as string | undefined;
 
-createRoot(document.getElementById("root")!).render(
-  <StrictMode>
-    <PostHogProvider
-      apiKey={import.meta.env.VITE_PUBLIC_POSTHOG_KEY}
-      options={{
-        api_host: import.meta.env.VITE_PUBLIC_POSTHOG_HOST,
-        capture_exceptions: true, // This enables capturing exceptions using Error Tracking
-        debug: import.meta.env.MODE === "development",
-      }}
-    >
+const root = createRoot(document.getElementById("root")!);
+
+// PostHog is optional — if the key is not configured the app renders normally
+// without analytics. This prevents a silent no-op that masks missing env vars.
+if (posthogKey && posthogHost) {
+  root.render(
+    <StrictMode>
+      <PostHogProvider
+        apiKey={posthogKey}
+        options={{
+          api_host: posthogHost,
+          capture_exceptions: true,
+          debug: import.meta.env.MODE === "development",
+        }}
+      >
+        <App />
+      </PostHogProvider>
+    </StrictMode>
+  );
+} else {
+  if (import.meta.env.MODE === "development" && !posthogKey) {
+    console.info("[ECGenius] PostHog not configured — set VITE_PUBLIC_POSTHOG_KEY to enable analytics");
+  }
+  root.render(
+    <StrictMode>
       <App />
-    </PostHogProvider>
-  </StrictMode>
-);
+    </StrictMode>
+  );
+}

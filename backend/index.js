@@ -10,6 +10,15 @@ import { sendResponse } from './src/utils/responseHandler.js';
 // Load environment variables
 dotenv.config();
 
+// Fail fast if required variables are missing so misconfigured deployments
+// surface immediately rather than crashing on the first real request.
+const REQUIRED_ENV = ['MONGO_URI', 'JWT_SECRET', 'GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET'];
+const missing = REQUIRED_ENV.filter((k) => !process.env[k]);
+if (missing.length && process.env.NODE_ENV !== 'test') {
+  console.error(`❌ Missing required environment variables: ${missing.join(', ')}`);
+  process.exit(1);
+}
+
 const app = express();
 app.set('trust proxy', 1);
 
@@ -27,18 +36,32 @@ app.use(helmet({
   },
 }));
 
+const PROD_ORIGINS = [
+  'https://ec-gsuite-test.vercel.app',
+  'https://www.ecgenius.life',
+  'https://ecgenius.life',
+];
+const DEV_ORIGINS = ['http://localhost:5173', 'http://localhost:3000'];
+const ALLOWED_ORIGINS =
+  process.env.NODE_ENV === 'production' ? PROD_ORIGINS : [...PROD_ORIGINS, ...DEV_ORIGINS];
+
 app.use(cors({
-  origin: [
-    'http://localhost:5173',
-    'http://localhost:3000',
-    'https://ec-gsuite-test.vercel.app',
-    'https://www.ecgenius.life',
-    'https://ecgenius.life'
-  ],
-  credentials: true
+  origin: ALLOWED_ORIGINS,
+  credentials: true,
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-ID'],
+  exposedHeaders: ['X-Request-ID'],
 }));
 app.use(express.json());
 app.use(cookieParser());
+
+// Attach a unique request ID to every request so logs and error responses
+// are traceable end-to-end. The frontend reads this from X-Request-ID.
+app.use((req, res, next) => {
+  const id = crypto.randomUUID();
+  req.requestId = id;
+  res.setHeader('X-Request-ID', id);
+  next();
+});
 
 const ensureDatabaseReady = async (req, res, next) => {
   if (!process.env.MONGO_URI) {
@@ -73,24 +96,15 @@ import notificationRoutes from './src/routes/notificationRoutes.js';
 import protect, { requireRole } from './src/middleware/auth.middleWare.js';
 import { mlLimiter, readLimiter } from './src/middleware/rateLimiter.js';
 
-// Test routes
 app.get('/api', (req, res) => {
-  res.json({ 
-    message: 'API is running',
-    timestamp: new Date().toISOString(),
-    env: process.env.NODE_ENV,
-    hasGoogleClientId: !!process.env.GOOGLE_CLIENT_ID,
-    hasMongoUri: !!process.env.MONGO_URI
-  });
-});
-
-// Lightweight test endpoint (useful for smoke tests)
-app.get('/api/test', (req, res) => {
-  res.json({ message: 'Backend is working!', timestamp: new Date().toISOString() });
+  res.json({ message: 'ECGenius API', version: '1.0.0' });
 });
 
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK', message: 'API is healthy' });
+  res.json({
+    status: 'OK',
+    db: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+  });
 });
 
 // Authentication routes with /api prefix
