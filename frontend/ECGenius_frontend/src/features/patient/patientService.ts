@@ -29,7 +29,7 @@ export async function fetchPatients(params: PatientQuery): Promise<{ data: Patie
     data = data.filter((p) => p.name.toLowerCase().includes(params.q!.toLowerCase()));
   }
   if (params.sort) {
-    data.sort((a: any, b: any) => {
+    data.sort((a: Patient, b: Patient) => {
       if (a[params.sort!] < b[params.sort!]) return params.dir === "desc" ? 1 : -1;
       if (a[params.sort!] > b[params.sort!]) return params.dir === "desc" ? -1 : 1;
       return 0;
