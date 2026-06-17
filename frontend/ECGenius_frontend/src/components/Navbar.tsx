@@ -12,7 +12,6 @@ const Navbar = () => {
     { name: "Pricing", path: "/pricing" },
     { name: "Careers", path: "/careers" }, // ✅ Added Careers
     { name: "Contact", path: "/contact" },
-    // { name: "Login", path: "/login" },
   ];
 
   return (
@@ -42,7 +41,7 @@ const Navbar = () => {
             ))}
 
             <Link
-              to="/Sign-Up-page"
+              to="/register"
               className="ml-4 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-semibold whitespace-nowrap"
             >
               Get Started
@@ -75,7 +74,7 @@ const Navbar = () => {
           ))}
 
           <Link
-            to="/Sign-Up-page"
+            to="/register"
             className="block w-full text-center bg-blue-600 text-white px-4 py-2 rounded-lg mt-2 hover:bg-blue-700 transition-colors font-semibold"
             onClick={() => setIsOpen(false)}
           >

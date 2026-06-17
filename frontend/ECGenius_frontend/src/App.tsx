@@ -106,7 +106,7 @@ const router = createBrowserRouter(
       <Route path="about" element={<About />} />
       <Route path="how-it-works" element={<HowItWorksPage />} />
       <Route path="pricing" element={<PricingPage />} />
-      <Route path="Contact" element={<ContactPage />} />
+      <Route path="contact" element={<ContactPage />} />
       <Route path="try-beta" element={<TryBetaPage />} />
       <Route path="login" element={<LoginPage />} />
       <Route path="register" element={<RegisterPage />} />
