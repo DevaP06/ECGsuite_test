@@ -21,7 +21,7 @@ export default function PDFExportButton({ analysisId, patientName, variant = 'bu
         responseType: 'blob',
       });
 
-      const contentType = response.headers['content-type'] ?? 'application/pdf';
+      const contentType = String(response.headers['content-type'] ?? 'application/pdf');
       const blob = new Blob([response.data], { type: contentType });
       const url = URL.createObjectURL(blob);
 
