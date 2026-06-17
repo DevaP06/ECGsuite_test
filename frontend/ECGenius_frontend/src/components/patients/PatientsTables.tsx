@@ -54,7 +54,7 @@ export default function PatientsTable() {
           className="border px-2 py-2 rounded text-sm"
           value={`${sort}:${dir}`}
           onChange={(e) => {
-            const [s, d] = e.target.value.split(":") as [string, string];
+            const [s, d] = e.target.value.split(":") as [any, any];
             setSort(s);
             setDir(d);
           }}

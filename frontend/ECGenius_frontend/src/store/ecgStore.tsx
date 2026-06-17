@@ -3,7 +3,7 @@ import React, { createContext, useContext, useState } from "react";
 interface ECG {
   id: string;
   patientId: string;
-  data: unknown;
+  data: any; // later replace with your ECG waveform type
 }
 
 interface ECGContextType {

@@ -9,7 +9,7 @@ import PatientAppointments from "../components/patients/PatientAppointments";
 import PatientECGs from "../components/patients/PatientECGs";
 
 export default function PatientDetail() {
-  useParams();
+  const { id: _id } = useParams();
 
   return (
     <AppShell title="Patient Detail">
