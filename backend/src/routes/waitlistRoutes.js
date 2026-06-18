@@ -1,8 +1,9 @@
 // src/routes/waitlistRoutes.js
 import express from 'express';
-import { 
-  addToWaitlist, 
-  getWaitlist, 
+import {
+  addToWaitlist,
+  getWaitlist,
+  getWaitlistCount,
   checkWaitlistStatus,
   getUserWaitlistStatus,
   linkWaitlistToUser
@@ -12,6 +13,7 @@ const router = express.Router();
 
 // Public routes
 router.post('/join', addToWaitlist);
+router.get('/count', getWaitlistCount);
 router.get('/check', checkWaitlistStatus);
 
 // Authenticated routes

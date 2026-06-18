@@ -92,6 +92,7 @@ import analyticsRoutes from './src/routes/analyticsRoutes.js';
 import ontologyRoutes from './src/routes/ontologyRoutes.js';
 import settingsRoutes from './src/routes/settingsRoutes.js';
 import notificationRoutes from './src/routes/notificationRoutes.js';
+import dashboardRoutes from './src/routes/dashboardRoutes.js';
 import protect, { requireRole } from './src/middleware/auth.middleWare.js';
 import { readLimiter, waitlistLimiter } from './src/middleware/rateLimiter.js';
 
@@ -123,6 +124,7 @@ app.use('/api/analytics', readLimiter, protect, analyticsRoutes);
 app.use('/api/ontology', readLimiter, protect, ontologyRoutes);
 app.use('/api/settings', readLimiter, protect, settingsRoutes);
 app.use('/api/notifications', readLimiter, protect, notificationRoutes);
+app.use('/api/dashboard', readLimiter, protect, dashboardRoutes);
 
 // Error handling middleware. Service-layer errors are thrown via createError(),
 // which sets `error.statusCode` (400 validation, 401 bad credentials, 409
@@ -167,7 +169,9 @@ app.use((req, res) => {
       '/api/clinical-context/...',
       '/api/review/...',
       '/api/settings/...',
-      '/api/notifications/...'
+      '/api/notifications/...',
+      '/api/dashboard/...',
+      '/api/waitlist/...'
     ]
   });
 });

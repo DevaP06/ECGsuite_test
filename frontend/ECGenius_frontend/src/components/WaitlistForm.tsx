@@ -13,7 +13,6 @@ export default function WaitlistForm({ onClose, onSuccess }: WaitlistFormProps) 
     email: ''
   });
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [waitlistCount, setWaitlistCount] = useState<number>(0);
 
@@ -21,10 +20,10 @@ export default function WaitlistForm({ onClose, onSuccess }: WaitlistFormProps) 
     const fetchWaitlistCount = async () => {
       try {
         const response = await axios.get(
-          `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/waitlist/all`
+          `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/waitlist/count`
         );
-        if (response.data.count) {
-          setWaitlistCount(response.data.count);
+        if (response.data?.data?.count != null) {
+          setWaitlistCount(response.data.data.count);
         }
       } catch (err) {
         console.error('Failed to fetch waitlist count', err);
@@ -46,7 +45,6 @@ export default function WaitlistForm({ onClose, onSuccess }: WaitlistFormProps) 
     e.preventDefault();
     setLoading(true);
     setError('');
-    setMessage('');
 
     try {
       const response = await axios.post(
@@ -115,9 +113,9 @@ export default function WaitlistForm({ onClose, onSuccess }: WaitlistFormProps) 
           )}
         </div>
 
-        {message && (
-          <motion.div 
-            className="mb-4 p-4 bg-green-900 border border-green-700 text-green-300 rounded"
+        {error && (
+          <motion.div
+            className="mb-4 p-4 bg-red-900 border border-red-700 text-red-300 rounded"
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}

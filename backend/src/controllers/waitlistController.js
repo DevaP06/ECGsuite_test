@@ -88,6 +88,17 @@ export const linkWaitlistToUser = async (req, res) => {
   }
 };
 
+// Public waitlist count (no auth required)
+export const getWaitlistCount = async (req, res) => {
+  try {
+    const count = await Waitlist.countDocuments();
+    return sendResponse(res, 200, true, 'Waitlist count fetched', { count });
+  } catch (error) {
+    console.error('Error fetching waitlist count:', error);
+    return sendResponse(res, 500, false, 'Error fetching waitlist count');
+  }
+};
+
 // Get all waitlist entries (admin)
 export const getWaitlist = async (req, res) => {
   try {
