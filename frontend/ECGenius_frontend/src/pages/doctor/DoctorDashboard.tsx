@@ -9,6 +9,8 @@ import AppShell from '../../layouts/AppShell';
 import { useAuth } from '../../features/auth/useAuth';
 import { patientService } from '../../services/patientService';
 import { reviewService } from '../../services/reviewService';
+import { dashboardService } from '../../services/dashboardService';
+import type { DoctorDashboardStats } from '../../services/dashboardService';
 import { extractErrorMessage } from '../../utils/errorUtils';
 import type { PatientListItem } from '../../types/patient';
 import type { ReviewQueueItem, ReviewPriority } from '../../types/review';
@@ -224,6 +226,23 @@ function RecentPatients() {
 export default function DoctorDashboard() {
   const { session } = useAuth();
   const name = session?.user?.username ?? 'Doctor';
+  const [stats, setStats] = useState<DoctorDashboardStats | null>(null);
+  const [statsLoading, setStatsLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await dashboardService.getDoctorStats();
+        if (!cancelled) setStats(data);
+      } catch {
+        // non-fatal — stats show "—"
+      } finally {
+        if (!cancelled) setStatsLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   return (
     <AppShell title="Doctor Dashboard">
@@ -235,10 +254,10 @@ export default function DoctorDashboard() {
 
       {/* Quick stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <StatCard label="ECGs Today"      value="—" sub="Awaiting backend" />
-        <StatCard label="Pending Reviews" value="—" sub="Awaiting backend" accent="text-amber-600" />
-        <StatCard label="Critical Alerts" value="—" sub="Awaiting backend" accent="text-red-600" />
-        <StatCard label="Patients"        value="—" sub="Awaiting backend" />
+        <StatCard label="ECGs Today"      value={statsLoading ? '…' : stats ? String(stats.ecgsToday) : '—'} sub={stats ? 'Today' : 'Awaiting backend'} />
+        <StatCard label="Pending Reviews" value={statsLoading ? '…' : stats ? String(stats.pendingReviews) : '—'} sub={stats ? 'Active' : 'Awaiting backend'} accent="text-amber-600" />
+        <StatCard label="Critical Alerts" value={statsLoading ? '…' : stats ? String(stats.criticalAlerts) : '—'} sub={stats ? 'Unresolved' : 'Awaiting backend'} accent="text-red-600" />
+        <StatCard label="Patients"        value={statsLoading ? '…' : stats ? String(stats.totalPatients) : '—'} sub={stats ? 'Registered' : 'Awaiting backend'} />
       </div>
 
       {/* Primary action cards */}
