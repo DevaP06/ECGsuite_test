@@ -173,7 +173,7 @@ export default function PatientDetailPage() {
           <div className="flex items-center gap-2">
             {canEdit && (
               <Link
-                to="/ecgupload"
+                to={`/ecgupload?patientId=${patientId}`}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-semibold text-white transition"
               >
                 <Upload className="w-4 h-4" />
