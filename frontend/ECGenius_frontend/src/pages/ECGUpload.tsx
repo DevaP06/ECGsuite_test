@@ -1,24 +1,107 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect, useRef } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
+import { Search, X, UserPlus } from "lucide-react";
 import AppShell from "../layouts/AppShell";
 import { ecgService } from "../services/ecgService";
+import { patientService } from "../services/patientService";
 import UploadProgress from "../components/ecg/UploadProgress";
 import { extractErrorMessage } from "../utils/errorUtils";
 import { isDoctor } from "../features/auth/roleUtils";
+import type { PatientListItem } from "../types/patient";
 
 export default function ECGUpload() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const preselectedPatientId = searchParams.get("patientId");
+
   const [form, setForm] = useState({
     name: "",
     age: "",
     gender: "",
     notes: "",
   });
+  const [selectedPatient, setSelectedPatient] = useState<PatientListItem | null>(null);
 
   const [file, setFile] = useState<File | null>(null);
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle');
   const [uploadProgress, setUploadProgress] = useState(0);
+
+  // Patient search state
+  const [patientQuery, setPatientQuery] = useState("");
+  const [patientResults, setPatientResults] = useState<PatientListItem[]>([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Load preselected patient from URL
+  useEffect(() => {
+    if (!preselectedPatientId) return;
+    (async () => {
+      try {
+        const p = await patientService.getPatient(preselectedPatientId);
+        const item: PatientListItem = {
+          _id: p._id,
+          name: p.name,
+          age: p.age,
+          gender: p.gender,
+          createdAt: p.createdAt,
+        };
+        selectPatient(item);
+      } catch {
+        // Patient not found — let user fill manually
+      }
+    })();
+  }, [preselectedPatientId]);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  // Debounced patient search
+  useEffect(() => {
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    if (!patientQuery.trim()) {
+      setPatientResults([]);
+      return;
+    }
+    searchTimerRef.current = setTimeout(async () => {
+      setSearchLoading(true);
+      try {
+        const res = await patientService.getPatients({ q: patientQuery, pageSize: 5 });
+        setPatientResults(res.data);
+      } catch {
+        setPatientResults([]);
+      } finally {
+        setSearchLoading(false);
+      }
+    }, 300);
+  }, [patientQuery]);
+
+  const selectPatient = (p: PatientListItem) => {
+    setSelectedPatient(p);
+    setForm(prev => ({
+      ...prev,
+      name: p.name,
+      age: String(p.age),
+      gender: p.gender.charAt(0).toUpperCase() + p.gender.slice(1),
+    }));
+    setShowDropdown(false);
+    setPatientQuery("");
+  };
+
+  const clearPatient = () => {
+    setSelectedPatient(null);
+    setForm({ name: "", age: "", gender: "", notes: form.notes });
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -44,7 +127,6 @@ export default function ECGUpload() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validation
     if (!form.name.trim()) {
       toast.error("Patient name is required.");
       return;
@@ -76,6 +158,9 @@ export default function ECGUpload() {
     formData.append("patientGender", form.gender.toLowerCase());
     if (form.notes.trim()) {
       formData.append("notes", form.notes.trim());
+    }
+    if (selectedPatient) {
+      formData.append("patientId", selectedPatient._id);
     }
 
     try {
@@ -120,8 +205,83 @@ export default function ECGUpload() {
     <AppShell title="Upload ECG">
       <div className="max-w-2xl mx-auto bg-white shadow rounded-lg p-6">
         <h2 className="text-2xl font-bold mb-6 text-slate-800">Upload ECG for AI Diagnosis</h2>
-        
+
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Patient selector */}
+          <div ref={dropdownRef} className="relative">
+            <label className="block text-sm font-semibold text-slate-700 mb-1">Link to Patient</label>
+            {selectedPatient ? (
+              <div className="flex items-center justify-between border border-blue-200 bg-blue-50 rounded px-3 py-2">
+                <span className="text-sm font-semibold text-blue-800">
+                  {selectedPatient.name} &middot; {selectedPatient.age}y &middot; <span className="capitalize">{selectedPatient.gender}</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={clearPatient}
+                  disabled={isUploading}
+                  className="text-blue-500 hover:text-blue-700"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input
+                  type="text"
+                  value={patientQuery}
+                  onChange={(e) => {
+                    setPatientQuery(e.target.value);
+                    setShowDropdown(true);
+                  }}
+                  onFocus={() => patientQuery.trim() && setShowDropdown(true)}
+                  disabled={isUploading}
+                  placeholder="Search registered patients by name…"
+                  className="w-full border border-slate-300 pl-9 pr-3 py-2 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                />
+              </div>
+            )}
+
+            {showDropdown && !selectedPatient && (
+              <div className="absolute z-20 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                {searchLoading ? (
+                  <p className="px-3 py-2 text-xs text-slate-400">Searching…</p>
+                ) : patientResults.length > 0 ? (
+                  patientResults.map((p) => (
+                    <button
+                      key={p._id}
+                      type="button"
+                      onClick={() => selectPatient(p)}
+                      className="w-full text-left px-3 py-2 hover:bg-blue-50 text-sm transition"
+                    >
+                      <span className="font-semibold text-slate-800">{p.name}</span>
+                      <span className="text-slate-500 ml-2">{p.age}y · <span className="capitalize">{p.gender}</span></span>
+                    </button>
+                  ))
+                ) : patientQuery.trim() ? (
+                  <div className="px-3 py-3 text-center">
+                    <p className="text-xs text-slate-400 mb-2">No patients found.</p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowDropdown(false);
+                        navigate("/patients/register");
+                      }}
+                      className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 font-semibold"
+                    >
+                      <UserPlus className="w-3 h-3" /> Register new patient
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+            )}
+            <p className="text-xs text-slate-400 mt-1">
+              {selectedPatient
+                ? "ECG will be linked to this patient's record."
+                : "Optional — link this ECG to a registered patient for history tracking."}
+            </p>
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1">Patient Name *</label>
@@ -130,9 +290,9 @@ export default function ECGUpload() {
                 name="name"
                 value={form.name}
                 onChange={handleChange}
-                disabled={isUploading}
+                disabled={isUploading || !!selectedPatient}
                 required
-                className="w-full border border-slate-300 px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                className="w-full border border-slate-300 px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition disabled:bg-slate-50 disabled:text-slate-500"
                 placeholder="Patient full name"
               />
             </div>
@@ -145,9 +305,9 @@ export default function ECGUpload() {
                 max="120"
                 value={form.age}
                 onChange={handleChange}
-                disabled={isUploading}
+                disabled={isUploading || !!selectedPatient}
                 required
-                className="w-full border border-slate-300 px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                className="w-full border border-slate-300 px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition disabled:bg-slate-50 disabled:text-slate-500"
                 placeholder="Patient age"
               />
             </div>
@@ -159,9 +319,9 @@ export default function ECGUpload() {
               name="gender"
               value={form.gender}
               onChange={handleChange}
-              disabled={isUploading}
+              disabled={isUploading || !!selectedPatient}
               required
-              className="w-full border border-slate-300 px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+              className="w-full border border-slate-300 px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition disabled:bg-slate-50 disabled:text-slate-500"
             >
               <option value="">Select gender</option>
               <option value="Male">Male</option>
@@ -205,8 +365,8 @@ export default function ECGUpload() {
               type="submit"
               disabled={isUploading}
               className={`w-full text-white py-2.5 rounded font-semibold transition shadow ${
-                isUploading 
-                  ? "bg-blue-400 cursor-not-allowed" 
+                isUploading
+                  ? "bg-blue-400 cursor-not-allowed"
                   : "bg-blue-600 hover:bg-blue-700 active:scale-98"
               }`}
             >

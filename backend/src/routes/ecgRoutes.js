@@ -156,11 +156,15 @@ router.post('/upload', uploadLimiter, upload.single('ecgFile'), async (req, res)
       return sendResponse(res, 400, false, 'No ECG file uploaded');
     }
 
-    const { patientName, patientAge, patientGender, notes } = req.body;
+    const { patientName, patientAge, patientGender, notes, patientId } = req.body;
     const userId = req.user?._id || req.user?.id;
     const age = Number(patientAge || 0);
     const genderValue = mapGenderToNumeric(patientGender);
     const startedAt = Date.now();
+
+    const validPatientId = patientId && String(patientId).match(/^[a-f\d]{24}$/i)
+      ? patientId
+      : null;
 
     // path.basename() is the CodeQL-recognised path sanitizer — strips all directory
     // components so no user-influenced value ever reaches a file system API directly.
@@ -176,6 +180,7 @@ router.post('/upload', uploadLimiter, upload.single('ecgFile'), async (req, res)
 
     const ecgAnalysis = new ECGAnalysis({
       userId,
+      ...(validPatientId && { patientId: validPatientId }),
       fileName: req.file.filename,
       originalName: req.file.originalname,
       filePath: finalFilePath,
