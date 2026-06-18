@@ -47,14 +47,25 @@ export async function predictECG(filePath, age, gender) {
         },
         maxBodyLength: Infinity,
         maxContentLength: Infinity,
-        timeout: 60000,
+        // Full pipeline (digitize + model + ontology) runs ~60-90s on CPU.
+        // Allow up to 4 min; Vercel Fluid functions cap at 5 min, so axios fails
+        // gracefully before the function itself is killed.
+        timeout: 240000,
       });
 
       return response.data;
     } catch (err) {
       const isLast = attempt === MAX_RETRIES;
-      // Only retry on network-level failures (Flask unreachable). A 5xx response
-      // means Flask IS running and actively rejected the request — that's not retryable.
+
+      // A timeout means ml-api is UP but the inference is taking too long.
+      // Retrying just re-runs the heavy ~75s job (and burns the function budget),
+      // so give up gracefully → caller saves the analysis as "pending".
+      const isTimeout =
+        err.code === "ECONNABORTED" || /timeout/i.test(err.message || "");
+      if (isTimeout) return null;
+
+      // Connection refused/reset = ml-api truly unreachable or mid-restart →
+      // a brief retry is worthwhile (e.g. digitizer restarting).
       const isFlaskDown =
         err.code === "ECONNREFUSED" ||
         err.code === "ECONNRESET" ||
@@ -67,7 +78,7 @@ export async function predictECG(filePath, age, gender) {
         continue;
       }
 
-      // Non-retryable error (4xx, bad request, etc.)
+      // Non-retryable error (4xx/5xx from ml-api) — surface it.
       throw err;
     }
   }
