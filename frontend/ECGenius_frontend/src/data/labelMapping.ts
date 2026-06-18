@@ -35,6 +35,19 @@ export const MODEL_LABEL_TO_ONTOLOGY: Record<string, string> = {
   SA: 'Irregular_RR',
   VPE: 'Short_PR',
   WPW: 'Short_PR',
+
+  // Added to widen questionnaire coverage (clinically unambiguous mappings only):
+  AT: 'SVT',          // atrial tachycardia → supraventricular tachycardia
+  AVRT: 'SVT',        // AV reentrant tachycardia → supraventricular tachycardia
+  IVB: 'Wide_QRS',    // intraventricular block → wide-QRS conduction
+  STTC: 'ST_Depression', // ST-T change → repolarization abnormality (review)
+
+  // New ontology diagnoses added (labels.csv) — pending cardiologist review:
+  RVH: 'RVH',                    // right ventricular hypertrophy
+  RAH: 'RAE',                    // right atrial hypertrophy → right atrial enlargement
+  APB: 'PAC',                    // atrial premature beats → premature atrial complex
+  AQW: 'Pathological_Q_Waves',   // abnormal Q wave → pathological Q waves (prior MI)
+  MISW: 'Pathological_Q_Waves',  // side-wall MI → pathological Q waves (review acuity)
 };
 
 export function toOntologyLabel(rhythm: string): string {

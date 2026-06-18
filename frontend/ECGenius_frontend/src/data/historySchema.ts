@@ -113,4 +113,71 @@ export const HISTORY_SCHEMA: RhythmQuestionMap = {
     risk_factors: ['htn', 'young_age'],
     vitals: ['sbp_gt_140'],
   },
+
+  // ── Added to close the model→ontology→questionnaire coverage gap ──────────
+  // Standard AHA/ACC symptom–risk–vital associations, using the existing key
+  // vocabulary. CLINICAL-DECISION-SUPPORT CONTENT — pending cardiologist review
+  // (same sign-off process as rules_v2.csv).
+  ST_Elevation: {
+    symptoms: ['chest_pain', 'diaphoresis', 'dyspnea', 'syncope'],
+    risk_factors: ['cad', 'dm', 'smoking', 'prior_mi'],
+    vitals: ['sbp_lt_90', 'spo2_lt_94', 'hr_gt_100'],
+  },
+  ST_Depression: {
+    symptoms: ['chest_pain', 'diaphoresis', 'dyspnea'],
+    risk_factors: ['cad', 'dm', 'smoking', 'htn', 'prior_mi'],
+    vitals: ['hr_gt_100'],
+  },
+  TWI: {
+    symptoms: ['chest_pain', 'dyspnea'],
+    risk_factors: ['cad', 'htn'],
+    vitals: [],
+  },
+  NSR: {
+    symptoms: ['asymptomatic'],
+    risk_factors: [],
+    vitals: [],
+  },
+  PVC: {
+    symptoms: ['palpitations', 'dizziness', 'asymptomatic'],
+    risk_factors: ['cad', 'prior_mi'],
+    vitals: [],
+  },
+  Irregular_RR: {
+    symptoms: ['palpitations', 'dyspnea', 'dizziness', 'syncope'],
+    risk_factors: ['htn', 'dm'],
+    vitals: ['hr_gt_100'],
+  },
+  Short_PR: {
+    symptoms: ['palpitations', 'syncope', 'dizziness'],
+    risk_factors: ['young_age'],
+    vitals: ['hr_gt_150'],
+  },
+  Wide_QRS: {
+    symptoms: ['palpitations', 'syncope', 'dizziness', 'dyspnea'],
+    risk_factors: ['cad', 'prior_mi'],
+    vitals: ['sbp_lt_90', 'hr_gt_100'],
+  },
+
+  // ── New ontology diagnoses (RVH/RAE/PAC/Pathological_Q_Waves) — pending review ──
+  RVH: {
+    symptoms: ['dyspnea', 'dizziness'],
+    risk_factors: [],
+    vitals: ['spo2_lt_94'],
+  },
+  RAE: {
+    symptoms: ['dyspnea'],
+    risk_factors: [],
+    vitals: ['spo2_lt_94'],
+  },
+  PAC: {
+    symptoms: ['palpitations', 'asymptomatic'],
+    risk_factors: [],
+    vitals: [],
+  },
+  Pathological_Q_Waves: {
+    symptoms: ['chest_pain', 'dyspnea'],
+    risk_factors: ['cad', 'dm', 'smoking', 'prior_mi', 'htn'],
+    vitals: [],
+  },
 };

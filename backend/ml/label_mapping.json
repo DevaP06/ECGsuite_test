@@ -24,5 +24,16 @@
   "PRIE": "Heart_Block_1st",
   "SA": "Irregular_RR",
   "VPE": "Short_PR",
-  "WPW": "Short_PR"
+  "WPW": "Short_PR",
+
+  "AT": "SVT",
+  "AVRT": "SVT",
+  "IVB": "Wide_QRS",
+  "STTC": "ST_Depression",
+
+  "RVH": "RVH",
+  "RAH": "RAE",
+  "APB": "PAC",
+  "AQW": "Pathological_Q_Waves",
+  "MISW": "Pathological_Q_Waves"
 }
