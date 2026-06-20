@@ -16,6 +16,7 @@ import { logAction } from '../services/auditService.js';
 import { notify } from '../services/notificationService.js';
 import { uploadLimiter, mlLimiter, readLimiter } from '../middleware/rateLimiter.js';
 import { mapOntologyEnrichment, deriveEmergencyLevel } from '../utils/ontologyMapping.js';
+import { uploadToGCS, isGCSConfigured } from '../services/gcsService.js';
 
 
 const __filename = fileURLToPath(import.meta.url);
@@ -198,6 +199,19 @@ router.post('/upload', uploadLimiter, upload.single('ecgFile'), async (req, res)
 
     await ecgAnalysis.save();
     logAction({ req, userId, entityType: 'ECG_ANALYSIS', entityId: ecgAnalysis._id, action: 'UPLOAD', newValue: { fileName: ecgAnalysis.fileName, status: ecgAnalysis.status } });
+
+    if (isGCSConfigured()) {
+      try {
+        const gcsUrl = await uploadToGCS(finalFilePath, safeFilename);
+        if (gcsUrl) {
+          ecgAnalysis.storageUrl = gcsUrl;
+          await ecgAnalysis.save();
+          fsp.unlink(finalFilePath).catch(() => {});
+        }
+      } catch (gcsErr) {
+        console.error('GCS upload failed (file kept on disk):', gcsErr.message);
+      }
+    }
 
     if (!mlUnavailable && analysisResult) {
       const patientLabel = ecgAnalysis.patientInfo?.name || 'your upload';
