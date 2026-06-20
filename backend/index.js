@@ -97,7 +97,7 @@ import protect, { requireRole } from './src/middleware/auth.middleWare.js';
 import { readLimiter, waitlistLimiter } from './src/middleware/rateLimiter.js';
 
 app.get('/api', (req, res) => {
-  res.json({ message: 'ECGenius API', version: '1.0.0' });
+  res.json({ message: 'ECGenius API', version: '1.1.0' });
 });
 
 app.get('/api/health', (req, res) => {
