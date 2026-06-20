@@ -1,0 +1,10 @@
+{
+  "name": "ecg-storage",
+  "version": "1.0.0",
+  "description": "Cloud Function proxy for ECG file storage in GCS",
+  "main": "index.js",
+  "dependencies": {
+    "@google-cloud/storage": "^7.0.0",
+    "busboy": "^1.6.0"
+  }
+}
