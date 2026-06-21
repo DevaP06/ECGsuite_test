@@ -405,171 +405,320 @@ router.get('/analysis/:id/report', readLimiter, async (req, res) => {
     const reportId = `ECG-${String(analysis._id).slice(-8).toUpperCase()}`;
 
     const RHYTHM_LABELS = {
-      normal: 'Normal Sinus Rhythm',
-      atrial_fibrillation: 'Atrial Fibrillation',
-      atrial_flutter: 'Atrial Flutter',
-      ventricular_tachycardia: 'Ventricular Tachycardia',
-      bradycardia: 'Bradycardia',
+      normal: 'Normal Sinus Rhythm (NSR)',
+      atrial_fibrillation: 'Atrial Fibrillation (AFib)',
+      atrial_flutter: 'Atrial Flutter (AFlutter)',
+      ventricular_tachycardia: 'Ventricular Tachycardia (VT)',
+      bradycardia: 'Sinus Bradycardia',
       other: 'Other / Unclassified',
     };
 
     const URGENCY_LABELS = { critical: 'CRITICAL', high: 'HIGH', moderate: 'MODERATE', low: 'LOW' };
 
-    const doc = new PDFDocument({ size: 'A4', margin: 50, bufferPages: true });
+    const doc = new PDFDocument({ size: 'A4', margin: 40, bufferPages: true });
 
     const safePatientName = (patient?.name ?? 'Unknown').replace(/[^a-zA-Z0-9 _-]/g, '');
-    const filename = `ECGenius_Report_${safePatientName.replace(/\s+/g, '_')}_${String(analysis._id).slice(-6)}.pdf`;
+    const filename = `ECGenius_Clinical_Report_${safePatientName.replace(/\s+/g, '_')}_${String(analysis._id).slice(-6)}.pdf`;
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     doc.pipe(res);
 
-    // ── Header ────────────────────────────────────────────────────────────────
-    doc.fontSize(22).font('Helvetica-Bold').fillColor('#1e3a5f').text('ECGenius', 50, 45);
-    doc.fontSize(10).font('Helvetica').fillColor('#64748b')
-      .text('AI-Driven ECG Interpretation & Clinical Decision Support', 50, 72);
-    doc.moveTo(50, 90).lineTo(545, 90).strokeColor('#e2e8f0').lineWidth(1).stroke();
+    const LEFT = 40;
+    const RIGHT = 555;
+    const WIDTH = RIGHT - LEFT;
+    const COL_MID = 300;
 
+    const drawLine = (y, color = '#1a365d', weight = 1) => {
+      doc.moveTo(LEFT, y).lineTo(RIGHT, y).strokeColor(color).lineWidth(weight).stroke();
+    };
+
+    const sectionHeader = (title, y) => {
+      doc.rect(LEFT, y, WIDTH, 20).fill('#1a365d');
+      doc.fontSize(9).font('Helvetica-Bold').fillColor('#ffffff')
+        .text(title.toUpperCase(), LEFT + 8, y + 5, { width: WIDTH - 16 });
+      return y + 26;
+    };
+
+    const labelValue = (label, value, y, labelX = LEFT + 8, valueX = LEFT + 130) => {
+      doc.fontSize(8.5).font('Helvetica').fillColor('#64748b').text(label, labelX, y);
+      doc.fontSize(8.5).font('Helvetica-Bold').fillColor('#1e293b').text(String(value), valueX, y);
+      return y + 14;
+    };
+
+    const checkPageBreak = (y, needed = 60) => {
+      if (y > 740 - needed) { doc.addPage(); return 50; }
+      return y;
+    };
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // PAGE HEADER — Institution-style banner
+    // ══════════════════════════════════════════════════════════════════════════
+    doc.rect(LEFT, 30, WIDTH, 52).fill('#0f2b46');
+    doc.fontSize(20).font('Helvetica-Bold').fillColor('#ffffff').text('ECGenius', LEFT + 12, 38);
+    doc.fontSize(8).font('Helvetica').fillColor('#93c5fd')
+      .text('AI-ASSISTED ELECTROCARDIOGRAM DIAGNOSTIC REPORT', LEFT + 12, 60);
+    doc.fontSize(7.5).font('Helvetica').fillColor('#93c5fd')
+      .text('www.ecgenius.life', RIGHT - 120, 60, { width: 110, align: 'right' });
+
+    // Thin accent line under header
+    doc.rect(LEFT, 82, WIDTH, 3).fill('#2563eb');
+
+    let y = 94;
+
+    // ── Report identification bar ────────────────────────────────────────────
+    doc.rect(LEFT, y, WIDTH, 22).fill('#f1f5f9');
+    doc.fontSize(7.5).font('Helvetica-Bold').fillColor('#475569')
+      .text(`Report ID: ${reportId}`, LEFT + 8, y + 6)
+      .text(`Date: ${new Date(analysis.processedAt || analysis.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}`, LEFT + 160, y + 6)
+      .text(`Model: ${result.aiModel ?? 'LightECGNet'} ${result.modelVersion ?? 'v2'}`, LEFT + 320, y + 6);
+    y += 28;
+
+    // ── EMERGENCY ALERT ──────────────────────────────────────────────────────
     if (result.isEmergency) {
-      doc.rect(50, 98, 495, 28).fill('#fef2f2');
-      doc.fontSize(11).font('Helvetica-Bold').fillColor('#b91c1c')
-        .text('⚠  TIER-1 EMERGENCY — Immediate clinical action required', 60, 105);
+      doc.rect(LEFT, y, WIDTH, 26).fill('#fef2f2').strokeColor('#dc2626').lineWidth(1.5).stroke();
+      doc.fontSize(10).font('Helvetica-Bold').fillColor('#991b1b')
+        .text('URGENT: TIER-1 EMERGENCY — Immediate clinical action required', LEFT + 10, y + 7);
+      y += 34;
     }
 
-    const afterHeader = result.isEmergency ? 140 : 108;
+    // ══════════════════════════════════════════════════════════════════════════
+    // SECTION 1: PATIENT DEMOGRAPHICS
+    // ══════════════════════════════════════════════════════════════════════════
+    y = sectionHeader('Patient Information', y);
 
-    // ── Report metadata ───────────────────────────────────────────────────────
-    doc.fontSize(9).font('Helvetica').fillColor('#64748b')
-      .text(`Report ID: ${reportId}`, 50, afterHeader)
-      .text(`Generated: ${generatedAt}`, 50, afterHeader + 13)
-      .text(`AI Model: ${result.aiModel ?? 'LightECGNet v2'}  v${result.modelVersion ?? '1.0.0'}`, 50, afterHeader + 26);
-
-    // ── Section: Patient Information ──────────────────────────────────────────
-    const secStart = afterHeader + 52;
-    doc.fontSize(12).font('Helvetica-Bold').fillColor('#1e3a5f').text('Patient Information', 50, secStart);
-    doc.moveTo(50, secStart + 16).lineTo(545, secStart + 16).strokeColor('#cbd5e1').lineWidth(0.5).stroke();
-
-    const pRows = [
-      ['Name', patient?.name ?? '—'],
-      ['Age', patient?.age != null ? `${patient.age} years` : '—'],
-      ['Gender', patient?.gender ? (patient.gender.charAt(0).toUpperCase() + patient.gender.slice(1)) : '—'],
-      ['File', analysis.originalName ?? '—'],
-      ['Analysed', analysis.processedAt ? new Date(analysis.processedAt).toUTCString() : '—'],
-    ];
-    let rowY = secStart + 24;
-    for (const [label, value] of pRows) {
-      doc.fontSize(9).font('Helvetica-Bold').fillColor('#374151').text(label, 50, rowY);
-      doc.fontSize(9).font('Helvetica').fillColor('#1f2937').text(String(value), 160, rowY);
-      rowY += 16;
-    }
+    doc.rect(LEFT, y, WIDTH, 56).stroke('#e2e8f0');
+    const pY = y + 6;
+    labelValue('Patient Name', patient?.name ?? '—', pY);
+    labelValue('Age / Sex', `${patient?.age ?? '—'} years / ${patient?.gender ? (patient.gender.charAt(0).toUpperCase() + patient.gender.slice(1)) : '—'}`, pY + 14);
+    labelValue('Source File', analysis.originalName ?? '—', pY, COL_MID, COL_MID + 90);
+    labelValue('Date of Study', analysis.processedAt ? new Date(analysis.processedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—', pY + 14, COL_MID, COL_MID + 90);
     if (analysis.notes) {
-      doc.fontSize(9).font('Helvetica-Bold').fillColor('#374151').text('Notes', 50, rowY);
-      doc.fontSize(9).font('Helvetica').fillColor('#1f2937').text(analysis.notes, 160, rowY, { width: 380 });
-      rowY += doc.heightOfString(analysis.notes, { width: 380 }) + 4;
+      labelValue('Clinical Notes', analysis.notes, pY + 28);
     }
+    y += 62;
 
-    // ── Section: Key Findings ─────────────────────────────────────────────────
-    rowY += 10;
-    doc.fontSize(12).font('Helvetica-Bold').fillColor('#1e3a5f').text('Key Findings', 50, rowY);
-    doc.moveTo(50, rowY + 16).lineTo(545, rowY + 16).strokeColor('#cbd5e1').lineWidth(0.5).stroke();
-    rowY += 24;
+    // ══════════════════════════════════════════════════════════════════════════
+    // SECTION 2: PRIMARY INTERPRETATION
+    // ══════════════════════════════════════════════════════════════════════════
+    y = sectionHeader('ECG Interpretation', y);
 
     const rhythmLabel = RHYTHM_LABELS[result.rhythm] ?? result.rhythm ?? '—';
-    const confidence = result.confidence != null ? `${Math.round(result.confidence)}%` : '—';
+    const confidence = result.confidence != null ? Math.round(result.confidence) : 0;
 
-    const findingRows = [
-      ['Rhythm', rhythmLabel],
-      ['Confidence', confidence],
-      ['Heart Rate', result.heartRate != null ? `${result.heartRate} bpm` : '—'],
-      ['QRS Duration', result.qrsDuration != null ? `${result.qrsDuration} ms` : '—'],
-      ['QT Interval', result.qtInterval != null ? `${result.qtInterval} ms` : '—'],
+    // Primary diagnosis box
+    const diagBg = result.isEmergency ? '#fef2f2' : confidence >= 80 ? '#f0fdf4' : '#fffbeb';
+    const diagBorder = result.isEmergency ? '#dc2626' : confidence >= 80 ? '#16a34a' : '#d97706';
+    doc.rect(LEFT, y, WIDTH, 38).fill(diagBg).strokeColor(diagBorder).lineWidth(1).stroke();
+    doc.fontSize(7).font('Helvetica-Bold').fillColor('#64748b').text('PRIMARY RHYTHM CLASSIFICATION', LEFT + 10, y + 5);
+    doc.fontSize(13).font('Helvetica-Bold').fillColor('#0f172a').text(rhythmLabel, LEFT + 10, y + 16);
+
+    // Confidence indicator
+    doc.fontSize(7).font('Helvetica-Bold').fillColor('#64748b').text('CONFIDENCE', RIGHT - 110, y + 5);
+    doc.fontSize(16).font('Helvetica-Bold').fillColor(confidence >= 80 ? '#16a34a' : confidence >= 60 ? '#d97706' : '#dc2626')
+      .text(`${confidence}%`, RIGHT - 110, y + 16);
+    y += 46;
+
+    // Signal metrics table
+    doc.rect(LEFT, y, WIDTH, 16).fill('#f8fafc');
+    doc.fontSize(7).font('Helvetica-Bold').fillColor('#475569')
+      .text('PARAMETER', LEFT + 8, y + 4)
+      .text('VALUE', LEFT + 160, y + 4)
+      .text('REFERENCE RANGE', LEFT + 280, y + 4)
+      .text('STATUS', LEFT + 430, y + 4);
+    y += 16;
+
+    const metrics = [
+      ['Heart Rate', result.heartRate != null ? `${result.heartRate} bpm` : '—', '60 - 100 bpm', result.heartRate != null ? (result.heartRate >= 60 && result.heartRate <= 100 ? 'Normal' : 'Abnormal') : '—'],
+      ['QRS Duration', result.qrsDuration != null ? `${result.qrsDuration} ms` : '—', '80 - 120 ms', result.qrsDuration != null ? (result.qrsDuration >= 80 && result.qrsDuration <= 120 ? 'Normal' : 'Abnormal') : '—'],
+      ['QT Interval', result.qtInterval != null ? `${result.qtInterval} ms` : '—', '350 - 440 ms', result.qtInterval != null ? (result.qtInterval >= 350 && result.qtInterval <= 440 ? 'Normal' : 'Abnormal') : '—'],
+      ['QTc Interval', result.qtcInterval != null ? `${result.qtcInterval} ms` : '—', '< 450 ms (M) / < 470 ms (F)', result.qtcInterval != null ? (result.qtcInterval < 470 ? 'Normal' : 'Prolonged') : '—'],
+      ['RR Interval', result.rrInterval != null ? `${result.rrInterval} ms` : '—', '600 - 1000 ms', result.rrInterval != null ? (result.rrInterval >= 600 && result.rrInterval <= 1000 ? 'Normal' : 'Abnormal') : '—'],
     ];
-    for (const [label, value] of findingRows) {
-      doc.fontSize(9).font('Helvetica-Bold').fillColor('#374151').text(label, 50, rowY);
-      doc.fontSize(9).font('Helvetica').fillColor('#1f2937').text(String(value), 160, rowY);
-      rowY += 16;
+
+    for (let i = 0; i < metrics.length; i++) {
+      const [param, val, ref, status] = metrics[i];
+      if (i % 2 === 0) doc.rect(LEFT, y, WIDTH, 14).fill('#ffffff');
+      else doc.rect(LEFT, y, WIDTH, 14).fill('#f8fafc');
+      doc.fontSize(8).font('Helvetica').fillColor('#1e293b').text(param, LEFT + 8, y + 3);
+      doc.fontSize(8).font('Helvetica-Bold').fillColor('#0f172a').text(val, LEFT + 160, y + 3);
+      doc.fontSize(7.5).font('Helvetica').fillColor('#64748b').text(ref, LEFT + 280, y + 3);
+      const statusColor = status === 'Normal' ? '#16a34a' : status === 'Abnormal' || status === 'Prolonged' ? '#dc2626' : '#94a3b8';
+      doc.fontSize(7.5).font('Helvetica-Bold').fillColor(statusColor).text(status, LEFT + 430, y + 3);
+      y += 14;
     }
+    doc.rect(LEFT, y - 70, WIDTH, 70).stroke('#e2e8f0');
 
     // Abnormalities
-    rowY += 4;
-    doc.fontSize(9).font('Helvetica-Bold').fillColor('#374151').text('Abnormalities', 50, rowY);
+    y += 6;
+    doc.fontSize(8).font('Helvetica-Bold').fillColor('#475569').text('DETECTED ABNORMALITIES:', LEFT + 8, y);
     if (result.abnormalities?.length) {
-      doc.fontSize(9).font('Helvetica').fillColor('#1f2937')
-        .text(result.abnormalities.join(', '), 160, rowY, { width: 380 });
-      rowY += doc.heightOfString(result.abnormalities.join(', '), { width: 380 }) + 4;
+      doc.fontSize(8.5).font('Helvetica').fillColor('#dc2626')
+        .text(result.abnormalities.map(a => a.replace(/_/g, ' ')).join('  |  '), LEFT + 160, y, { width: WIDTH - 170 });
+      y += doc.heightOfString(result.abnormalities.join('  |  '), { width: WIDTH - 170 }) + 8;
     } else {
-      doc.fontSize(9).font('Helvetica').fillColor('#16a34a').text('None detected', 160, rowY);
-      rowY += 16;
+      doc.fontSize(8.5).font('Helvetica').fillColor('#16a34a').text('No abnormalities detected', LEFT + 160, y);
+      y += 16;
     }
 
-    // ── Section: Ontology Enrichment ──────────────────────────────────────────
+    // ── Top predictions ──────────────────────────────────────────────────────
+    if (result.topPredictions?.length > 1) {
+      y = checkPageBreak(y, 80);
+      y = sectionHeader('Differential Diagnosis (AI Predictions)', y);
+
+      doc.rect(LEFT, y, WIDTH, 16).fill('#f8fafc');
+      doc.fontSize(7).font('Helvetica-Bold').fillColor('#475569')
+        .text('RANK', LEFT + 8, y + 4)
+        .text('CONDITION', LEFT + 50, y + 4)
+        .text('SNOMED-CT', LEFT + 280, y + 4)
+        .text('PROBABILITY', LEFT + 420, y + 4);
+      y += 16;
+
+      for (let i = 0; i < Math.min(result.topPredictions.length, 5); i++) {
+        const pred = result.topPredictions[i];
+        if (i % 2 === 0) doc.rect(LEFT, y, WIDTH, 14).fill('#ffffff');
+        else doc.rect(LEFT, y, WIDTH, 14).fill('#f8fafc');
+        doc.fontSize(8).font('Helvetica-Bold').fillColor('#64748b').text(`${i + 1}.`, LEFT + 12, y + 3);
+        doc.fontSize(8).font('Helvetica').fillColor('#1e293b').text(pred.fullName ?? pred.rhythm ?? '—', LEFT + 50, y + 3, { width: 220 });
+        doc.fontSize(7.5).font('Courier').fillColor('#64748b').text(pred.snomedCt ?? '—', LEFT + 280, y + 3);
+
+        // Probability bar
+        const barW = Math.min((pred.confidence ?? 0), 100);
+        const barColor = barW >= 70 ? '#16a34a' : barW >= 40 ? '#d97706' : '#94a3b8';
+        doc.rect(LEFT + 420, y + 3, 80, 8).fill('#e2e8f0');
+        doc.rect(LEFT + 420, y + 3, 80 * barW / 100, 8).fill(barColor);
+        doc.fontSize(7).font('Helvetica-Bold').fillColor('#1e293b').text(`${pred.confidence ?? 0}%`, LEFT + 505, y + 3);
+        y += 14;
+      }
+      doc.rect(LEFT, y - (14 * Math.min(result.topPredictions.length, 5)) - 16, WIDTH, (14 * Math.min(result.topPredictions.length, 5)) + 16).stroke('#e2e8f0');
+      y += 6;
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // SECTION 3: CLINICAL CLASSIFICATIONS (ONTOLOGY)
+    // ══════════════════════════════════════════════════════════════════════════
     if (result.ontologyEnrichment?.length) {
-      rowY += 10;
-      doc.fontSize(12).font('Helvetica-Bold').fillColor('#1e3a5f').text('Clinical Classifications', 50, rowY);
-      doc.moveTo(50, rowY + 16).lineTo(545, rowY + 16).strokeColor('#cbd5e1').lineWidth(0.5).stroke();
-      rowY += 24;
+      y = checkPageBreak(y, 80);
+      y = sectionHeader('Clinical Classifications & Recommendations', y);
 
       for (const item of result.ontologyEnrichment) {
-        if (rowY > 720) { doc.addPage(); rowY = 50; }
+        y = checkPageBreak(y, 50);
         const urgLabel = URGENCY_LABELS[item.urgencyTier] ?? (item.urgencyTier ?? '').toUpperCase();
-        const urgColor = item.urgencyTier === 'critical' ? '#b91c1c'
+        const urgColor = item.urgencyTier === 'critical' ? '#dc2626'
           : item.urgencyTier === 'high' ? '#d97706'
           : item.urgencyTier === 'moderate' ? '#ca8a04' : '#64748b';
+        const urgBg = item.urgencyTier === 'critical' ? '#fef2f2'
+          : item.urgencyTier === 'high' ? '#fffbeb'
+          : '#f8fafc';
 
-        doc.fontSize(9).font('Helvetica-Bold').fillColor('#1f2937').text(item.displayName ?? '—', 50, rowY);
-        doc.fontSize(8).font('Helvetica-Bold').fillColor(urgColor).text(urgLabel, 370, rowY);
-        doc.fontSize(8).font('Helvetica').fillColor('#64748b')
-          .text(`Tier: ${item.confidenceTier ?? '—'}  |  Severity: ${item.severity ?? '—'}`, 50, rowY + 12);
+        doc.rect(LEFT, y, WIDTH, 1).fill('#e2e8f0');
+        y += 4;
+        doc.rect(LEFT + 3, y, 3, 12).fill(urgColor);
+        doc.fontSize(9).font('Helvetica-Bold').fillColor('#0f172a').text(item.displayName ?? '—', LEFT + 12, y);
+
+        doc.rect(RIGHT - 70, y - 1, 62, 14).fill(urgBg).strokeColor(urgColor).lineWidth(0.5).stroke();
+        doc.fontSize(7).font('Helvetica-Bold').fillColor(urgColor).text(urgLabel, RIGHT - 68, y + 2, { width: 58, align: 'center' });
+
+        y += 16;
+        doc.fontSize(7.5).font('Helvetica').fillColor('#64748b')
+          .text(`Confidence Tier: ${item.confidenceTier ?? '—'}    |    Severity: ${item.severity ?? '—'}`, LEFT + 12, y);
+        y += 12;
+
         if (item.recommendedTests?.length) {
-          doc.fontSize(8).font('Helvetica').fillColor('#374151')
-            .text(`Tests: ${item.recommendedTests.join(', ')}`, 50, rowY + 24, { width: 490 });
-          rowY += 38;
-        } else {
-          rowY += 28;
+          doc.fontSize(7.5).font('Helvetica-Bold').fillColor('#475569').text('Recommended Tests:', LEFT + 12, y);
+          doc.fontSize(7.5).font('Helvetica').fillColor('#1e293b')
+            .text(item.recommendedTests.join(', '), LEFT + 120, y, { width: WIDTH - 132 });
+          y += doc.heightOfString(item.recommendedTests.join(', '), { width: WIDTH - 132 }) + 6;
         }
+        y += 4;
       }
     }
 
-    // ── Section: Specialist Review ────────────────────────────────────────────
+    // ══════════════════════════════════════════════════════════════════════════
+    // SECTION 4: SPECIALIST REVIEW
+    // ══════════════════════════════════════════════════════════════════════════
     if (review) {
-      if (rowY > 680) { doc.addPage(); rowY = 50; }
-      rowY += 10;
-      doc.fontSize(12).font('Helvetica-Bold').fillColor('#1e3a5f').text('Specialist Review', 50, rowY);
-      doc.moveTo(50, rowY + 16).lineTo(545, rowY + 16).strokeColor('#cbd5e1').lineWidth(0.5).stroke();
-      rowY += 24;
+      y = checkPageBreak(y, 100);
+      y = sectionHeader('Specialist Cardiologist Review', y);
 
-      const reviewRows = [
-        ['Status', (review.reviewStatus ?? '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())],
-        ['Priority', (review.priority ?? '—').charAt(0).toUpperCase() + (review.priority ?? '—').slice(1)],
-        ['Expert Diagnosis', review.expertDiagnosis ?? '—'],
-        ['Override Reason', review.overrideReason ?? '—'],
-        ['Review Date', review.reviewDate ? new Date(review.reviewDate).toUTCString() : 'Pending'],
-      ];
-      for (const [label, value] of reviewRows) {
-        if (rowY > 750) { doc.addPage(); rowY = 50; }
-        doc.fontSize(9).font('Helvetica-Bold').fillColor('#374151').text(label, 50, rowY);
-        doc.fontSize(9).font('Helvetica').fillColor('#1f2937').text(String(value), 160, rowY, { width: 380 });
-        rowY += 16;
+      const statusLabel = (review.reviewStatus ?? '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+      const statusColor = review.reviewStatus === 'completed' ? '#16a34a' : '#d97706';
+
+      doc.rect(LEFT, y, WIDTH, 70).stroke('#e2e8f0');
+      const rY = y + 6;
+      labelValue('Review Status', statusLabel, rY);
+      doc.fontSize(8.5).font('Helvetica-Bold').fillColor(statusColor).text(statusLabel, LEFT + 130, rY);
+      labelValue('Priority', (review.priority ?? '—').charAt(0).toUpperCase() + (review.priority ?? '—').slice(1), rY + 14);
+      labelValue('Expert Diagnosis', review.expertDiagnosis ?? '—', rY + 28);
+      labelValue('Review Date', review.reviewDate ? new Date(review.reviewDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Pending', rY, COL_MID, COL_MID + 90);
+
+      if (review.overrideReason) {
+        labelValue('Override Reason', review.overrideReason, rY + 42);
       }
+      y += 76;
+
       if (review.reviewNotes) {
-        doc.fontSize(9).font('Helvetica-Bold').fillColor('#374151').text('Review Notes', 50, rowY);
-        doc.fontSize(9).font('Helvetica').fillColor('#1f2937').text(review.reviewNotes, 160, rowY, { width: 380 });
-        rowY += doc.heightOfString(review.reviewNotes, { width: 380 }) + 4;
+        doc.rect(LEFT, y, WIDTH, 4).fill('#f8fafc');
+        y += 4;
+        doc.fontSize(7.5).font('Helvetica-Bold').fillColor('#475569').text('REVIEW NOTES:', LEFT + 8, y);
+        y += 12;
+        doc.fontSize(8).font('Helvetica').fillColor('#1e293b').text(review.reviewNotes, LEFT + 8, y, { width: WIDTH - 16 });
+        y += doc.heightOfString(review.reviewNotes, { width: WIDTH - 16 }) + 8;
       }
     }
 
-    // ── Footer ────────────────────────────────────────────────────────────────
+    // ══════════════════════════════════════════════════════════════════════════
+    // SECTION 5: CLINICAL IMPRESSION
+    // ══════════════════════════════════════════════════════════════════════════
+    y = checkPageBreak(y, 80);
+    y = sectionHeader('Clinical Impression', y);
+
+    doc.rect(LEFT, y, WIDTH, 50).fill('#f8fafc').stroke('#e2e8f0');
+    const impressionParts = [];
+    impressionParts.push(`12-lead ECG analysis performed using AI model ${result.aiModel ?? 'LightECGNet'} (${result.modelVersion ?? 'v2'}).`);
+    impressionParts.push(`Primary rhythm identified as ${rhythmLabel} with ${confidence}% confidence.`);
+    if (result.abnormalities?.length) {
+      impressionParts.push(`Notable findings: ${result.abnormalities.map(a => a.replace(/_/g, ' ')).join(', ')}.`);
+    } else {
+      impressionParts.push('No significant abnormalities detected.');
+    }
+    if (result.isEmergency) {
+      impressionParts.push('This case has been flagged as a Tier-1 emergency requiring immediate clinical attention.');
+    }
+    if (review?.reviewStatus === 'completed') {
+      impressionParts.push(`Specialist review completed${review.expertDiagnosis ? `: ${review.expertDiagnosis}` : ''}.`);
+    }
+    doc.fontSize(8).font('Helvetica').fillColor('#1e293b')
+      .text(impressionParts.join(' '), LEFT + 10, y + 8, { width: WIDTH - 20, lineGap: 2 });
+    y += 56;
+
+    // ── Signature line ───────────────────────────────────────────────────────
+    y = checkPageBreak(y, 60);
+    y += 10;
+    doc.fontSize(7.5).font('Helvetica').fillColor('#94a3b8').text('Electronically generated — no signature required', LEFT + 8, y);
+    y += 14;
+    doc.moveTo(LEFT, y).lineTo(LEFT + 200, y).strokeColor('#cbd5e1').lineWidth(0.5).stroke();
+    doc.fontSize(7.5).font('Helvetica').fillColor('#64748b').text('Attending Physician', LEFT + 8, y + 4);
+    doc.moveTo(COL_MID, y).lineTo(COL_MID + 200, y).strokeColor('#cbd5e1').lineWidth(0.5).stroke();
+    doc.fontSize(7.5).font('Helvetica').fillColor('#64748b').text('Date', COL_MID + 8, y + 4);
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // FOOTER — on every page
+    // ══════════════════════════════════════════════════════════════════════════
     const pages = doc.bufferedPageRange();
     for (let i = 0; i < pages.count; i++) {
       doc.switchToPage(pages.start + i);
-      doc.moveTo(50, 780).lineTo(545, 780).strokeColor('#e2e8f0').lineWidth(0.5).stroke();
-      doc.fontSize(7).font('Helvetica').fillColor('#94a3b8')
+      doc.rect(LEFT, 775, WIDTH, 0.5).fill('#1a365d');
+      doc.fontSize(6.5).font('Helvetica').fillColor('#94a3b8')
         .text(
-          'This report is generated by ECGenius AI. It is intended to assist trained healthcare professionals '
-          + 'and does not replace clinical judgement. Not for self-diagnosis.',
-          50, 785, { width: 400, align: 'left' }
-        )
-        .text(`Page ${i + 1} of ${pages.count}  |  ${reportId}`, 50, 785, { width: 495, align: 'right' });
+          'DISCLAIMER: This report is generated by ECGenius AI-assisted diagnostic platform. It is intended to support trained healthcare '
+          + 'professionals in clinical decision-making and does not constitute a definitive diagnosis. Clinical correlation is recommended. Not for self-diagnosis.',
+          LEFT, 779, { width: WIDTH - 80, align: 'left' }
+        );
+      doc.fontSize(7).font('Helvetica-Bold').fillColor('#475569')
+        .text(`${i + 1} / ${pages.count}`, RIGHT - 30, 779);
+      doc.fontSize(6.5).font('Helvetica').fillColor('#94a3b8')
+        .text(reportId, RIGHT - 80, 789, { width: 80, align: 'right' });
     }
 
     logAction({ req, userId, entityType: 'ECG_ANALYSIS', entityId: analysis._id, action: 'VIEW', newValue: { exported: 'pdf' } });
