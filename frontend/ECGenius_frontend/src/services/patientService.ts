@@ -48,14 +48,19 @@ export const patientService = {
   async getPatient(id: string): Promise<Patient> {
     const res = await AxiosInstance.get<Patient>(`/api/patients/${id}`);
     const body = res.data as unknown as Record<string, unknown>;
-    // Support envelope: { patient: {...} } or flat
-    return (body.patient ?? body) as Patient;
+    const payload = (body.data && typeof body.data === 'object' && !Array.isArray(body.data))
+      ? body.data as Record<string, unknown>
+      : body;
+    return (payload.patient ?? payload) as Patient;
   },
 
   async createPatient(payload: CreatePatientPayload): Promise<Patient> {
     const res = await AxiosInstance.post<Patient>('/api/patients', payload);
     const body = res.data as unknown as Record<string, unknown>;
-    return (body.patient ?? body) as Patient;
+    const inner = (body.data && typeof body.data === 'object' && !Array.isArray(body.data))
+      ? body.data as Record<string, unknown>
+      : body;
+    return (inner.patient ?? inner) as Patient;
   },
 
   async getPatientAnalyses(patientId: string): Promise<ECGAnalysis[]> {
@@ -63,7 +68,11 @@ export const patientService = {
       `/api/patients/${patientId}/analyses`
     );
     const body = res.data as Record<string, unknown>;
-    return ((body.analyses ?? body.data ?? []) as ECGAnalysis[]);
+    const payload = (body.data && typeof body.data === 'object' && !Array.isArray(body.data))
+      ? body.data as Record<string, unknown>
+      : body;
+    const list = payload.analyses ?? body.analyses;
+    return Array.isArray(list) ? (list as ECGAnalysis[]) : [];
   },
 
   async getPatientTrends(patientId: string): Promise<PatientTrends> {

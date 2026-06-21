@@ -163,7 +163,7 @@ export default function CardiologistDashboard() {
     return () => { cancelled = true; };
   }, []);
 
-  const hasStats = metrics && metrics.accuracy.totalReviewed > 0;
+  const hasStats = metrics && metrics.accuracy && metrics.accuracy.totalReviewed > 0;
 
   return (
     <AppShell title="Cardiologist Dashboard">
