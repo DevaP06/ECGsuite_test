@@ -44,7 +44,8 @@ export const analyticsService = {
         params: { period },
       });
       const body = res.data as Record<string, unknown>;
-      return (body.metrics ?? body) as ReviewMetrics;
+      const payload = (body.data ?? body) as Record<string, unknown>;
+      return (payload.metrics ?? payload) as ReviewMetrics;
     } catch (err: unknown) {
       if (is404(err)) return { ...EMPTY_METRICS, period };
       throw err;
@@ -58,7 +59,8 @@ export const analyticsService = {
         params: { period },
       });
       const body = res.data as Record<string, unknown>;
-      return (body.insights ?? body) as CardiologistInsights;
+      const payload = (body.data ?? body) as Record<string, unknown>;
+      return (payload.insights ?? payload) as CardiologistInsights;
     } catch (err: unknown) {
       if (is404(err)) {
         return {
