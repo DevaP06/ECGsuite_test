@@ -452,18 +452,12 @@ router.get('/analysis/:id/report', readLimiter, async (req, res) => {
     };
 
     // ══════════════════════════════════════════════════════════════════════════
-    // PAGE HEADER — Institution-style banner with logo
+    // PAGE HEADER — Institution-style banner
     // ══════════════════════════════════════════════════════════════════════════
-    const logoPath = path.join(__dirname, '../assets/ecgenius.png');
     doc.rect(LEFT, 30, WIDTH, 52).fill('#0f2b46');
-    try {
-      if (fs.existsSync(logoPath)) {
-        doc.image(logoPath, LEFT + 10, 33, { height: 46 });
-      }
-    } catch { /* logo missing — text-only fallback */ }
-    doc.fontSize(20).font('Helvetica-Bold').fillColor('#ffffff').text('ECGenius', LEFT + 62, 38);
+    doc.fontSize(20).font('Helvetica-Bold').fillColor('#ffffff').text('ECGenius', LEFT + 12, 38);
     doc.fontSize(8).font('Helvetica').fillColor('#93c5fd')
-      .text('AI-ASSISTED ELECTROCARDIOGRAM DIAGNOSTIC REPORT', LEFT + 62, 60);
+      .text('AI-ASSISTED ELECTROCARDIOGRAM DIAGNOSTIC REPORT', LEFT + 12, 60);
     doc.fontSize(7.5).font('Helvetica').fillColor('#93c5fd')
       .text('www.ecgenius.life', RIGHT - 120, 60, { width: 110, align: 'right' });
 
