@@ -20,7 +20,7 @@ services:
     environment:
       - DIGITIZER_URL=http://digitizer:8000/extract-signal
       - ONTOLOGY_URL=http://ontology:8002/diagnose
-    # INTERNAL_API_KEY (the shared secret ml_api.py checks) comes from
+      - INTERNAL_API_KEY=5e9a423230f985f0351b25dcbd9183ad0eac3e10050eab241afedd8f21290928
     # backend/.env — keep it identical to the backend's value. The explicit
     # environment entries above take precedence over anything in the env file.
     env_file:
