@@ -152,9 +152,9 @@ export default function PatientDetailPage() {
   }
 
   // ─── Derived values ──────────────────────────────────────────────────────────
-  const registeredDate = new Date(patient.createdAt).toLocaleDateString(undefined, {
-    year: 'numeric', month: 'long', day: 'numeric',
-  });
+  const registeredDate = patient.createdAt
+    ? new Date(patient.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })
+    : '—';
 
   return (
     <AppShell title="Patient Detail">
@@ -206,7 +206,7 @@ export default function PatientDetailPage() {
             </div>
             <div className="text-right shrink-0">
               <span className="text-xs font-mono bg-gray-100 text-slate-500 rounded px-2 py-1">
-                {patient._id.slice(-8)}
+                {(patient._id ?? '').slice(-8)}
               </span>
               <p className="text-xs text-slate-400 mt-1">Registered {registeredDate}</p>
             </div>
