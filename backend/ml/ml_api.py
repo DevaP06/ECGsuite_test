@@ -2,6 +2,9 @@ import os
 import uuid
 import tempfile
 import json
+import asyncio
+import secrets
+import logging
 
 import numpy as np
 import requests
@@ -9,7 +12,10 @@ import requests
 from fastapi import FastAPI
 from fastapi import UploadFile
 from fastapi import File
+from fastapi import Form
 from fastapi import HTTPException
+from fastapi import Depends
+from fastapi import Header
 from pydantic import BaseModel
 
 from predictor import ECGPredictor
@@ -40,6 +46,73 @@ predictor = ECGPredictor()
 
 DIGITIZER_URL = os.getenv("DIGITIZER_URL", "http://127.0.0.1:8000/extract-signal")
 ONTOLOGY_URL  = os.getenv("ONTOLOGY_URL",  "http://127.0.0.1:8002/diagnose")
+
+logger = logging.getLogger("ml_api")
+
+# ── Security & load-shedding ──────────────────────────────────────────────────
+# Shared secret the Node backend sends as the X-Internal-Key header
+# (mlService.js). This VM is publicly reachable so Vercel can call it; without
+# this gate anyone who finds the URL could run unlimited inference and drain
+# compute credits. Must match the backend's INTERNAL_API_KEY exactly.
+INTERNAL_API_KEY = os.getenv("INTERNAL_API_KEY")
+
+# Max heavy inferences (digitize + DL model) allowed to run at once. Extra
+# concurrent requests are shed with 429 instead of queueing, so a burst can't
+# exhaust the VM's RAM/credits. /refine is excluded — it's a light, ontology-
+# only call with no model inference.
+ML_MAX_CONCURRENCY = int(os.getenv("ML_MAX_CONCURRENCY", "2"))
+# Seconds a request may wait for a free slot before being rejected.
+# 0 = reject immediately when all slots are busy.
+ML_QUEUE_TIMEOUT = float(os.getenv("ML_QUEUE_TIMEOUT", "0"))
+
+_heavy_semaphore = asyncio.Semaphore(ML_MAX_CONCURRENCY)
+
+if not INTERNAL_API_KEY:
+    logger.warning(
+        "INTERNAL_API_KEY is not set — every inference endpoint will reject "
+        "requests with 503. Set it to the same value as the backend's "
+        "INTERNAL_API_KEY env var."
+    )
+
+
+def require_internal_key(
+    x_internal_key: str | None = Header(default=None, alias="X-Internal-Key"),
+):
+    """Reject callers that don't present the backend's shared secret.
+
+    Fails closed: if INTERNAL_API_KEY is unset on this service, all requests are
+    refused rather than silently running unauthenticated.
+    """
+    if not INTERNAL_API_KEY:
+        raise HTTPException(status_code=503, detail="ML service auth is not configured")
+    if not x_internal_key or not secrets.compare_digest(x_internal_key, INTERNAL_API_KEY):
+        raise HTTPException(status_code=401, detail="Invalid or missing internal key")
+
+
+async def heavy_slot():
+    """Bounded-concurrency gate for the digitize+model endpoints.
+
+    Holds one of ML_MAX_CONCURRENCY slots for the request's lifetime; if none is
+    free within ML_QUEUE_TIMEOUT it sheds load with 429 rather than piling
+    uploads up in memory/disk.
+    """
+    acquired = False
+    try:
+        if ML_QUEUE_TIMEOUT > 0:
+            try:
+                await asyncio.wait_for(_heavy_semaphore.acquire(), timeout=ML_QUEUE_TIMEOUT)
+            except asyncio.TimeoutError:
+                raise HTTPException(status_code=429, detail="ML service is busy — please retry shortly")
+            acquired = True
+        else:
+            if _heavy_semaphore.locked():
+                raise HTTPException(status_code=429, detail="ML service is busy — please retry shortly")
+            await _heavy_semaphore.acquire()
+            acquired = True
+        yield
+    finally:
+        if acquired:
+            _heavy_semaphore.release()
 
 
 @app.get("/")
@@ -122,9 +195,34 @@ def _run_ontology(top_predictions: list, patient: dict = None, patient_evidence:
     return _call_ontology(model_output, patient, patient_evidence)
 
 
+def _patient_from_demographics(age=None, gender=None) -> dict:
+    """Build the ontology `patient` dict from the upload form's age/gender.
+
+    Age < 40 sets the `young_age` risk factor that the ontology rule engine
+    reads directly (rules V14/V22/V24), and is also placed in `vitals` so the
+    ontology's Naive-Bayes layer can derive young_age on its own. This lets the
+    upload path drive age-based context rules without the user having to fill
+    the separate clinical-context questionnaire.
+
+    Gender is accepted (the upload form sends it) but the ontology does not
+    consume it yet, so it is intentionally not mapped here.
+    """
+    patient = {"symptoms": {}, "risk_factors": {}, "vitals": {}}
+    try:
+        age_val = float(age) if age is not None else 0.0
+    except (TypeError, ValueError):
+        return patient
+    # age 0 is the "not provided" sentinel from the controller (Number(... || 0)).
+    if age_val > 0:
+        patient["vitals"]["age"] = age_val
+        if age_val < 40:
+            patient["risk_factors"]["young_age"] = True
+    return patient
+
+
 # ── Endpoints ─────────────────────────────────────────────────────────────────
 
-@app.post("/digitizer")
+@app.post("/digitizer", dependencies=[Depends(require_internal_key), Depends(heavy_slot)])
 async def digitizer_only(file: UploadFile = File(...)):
     """Signal processing only — returns raw signal from the digitizer service."""
     temp_file = await _save_upload(file)
@@ -142,7 +240,7 @@ async def digitizer_only(file: UploadFile = File(...)):
             os.remove(temp_file)
 
 
-@app.post("/topprediction")
+@app.post("/topprediction", dependencies=[Depends(require_internal_key), Depends(heavy_slot)])
 async def top_prediction(file: UploadFile = File(...)):
     """Digitizer + DL model — returns top predictions. No ontology."""
     temp_file = await _save_upload(file)
@@ -162,14 +260,25 @@ async def top_prediction(file: UploadFile = File(...)):
             os.remove(temp_file)
 
 
-@app.post("/predict")
-async def predict(file: UploadFile = File(...)):
-    """Full pipeline — digitizer + DL model + ontology enrichment."""
+@app.post("/predict", dependencies=[Depends(require_internal_key), Depends(heavy_slot)])
+async def predict(
+    file: UploadFile = File(...),
+    age: str | None = Form(None),
+    gender: str | None = Form(None),
+):
+    """Full pipeline — digitizer + DL model + ontology enrichment.
+
+    age/gender come from the upload form (forwarded by mlService.predictECG).
+    age is passed into the ontology as the `young_age` risk factor so context
+    rules can fire on the upload path, not only via the clinical-context
+    questionnaire.
+    """
     temp_file = await _save_upload(file)
     try:
         data = _digitize(temp_file, file.filename, file.content_type)
         top_predictions = _run_model(data["signal"])
-        ontology = _run_ontology(top_predictions)
+        patient = _patient_from_demographics(age, gender)
+        ontology = _run_ontology(top_predictions, patient=patient)
         return {
             "layout": data["layout"],
             "signal_shape": data["signal_shape"],
@@ -194,7 +303,7 @@ class RefineRequest(BaseModel):
     patient_evidence: dict | None = None
 
 
-@app.post("/refine")
+@app.post("/refine", dependencies=[Depends(require_internal_key)])
 def refine(req: RefineRequest):
     """Re-run ONLY the ontology stage against stored model probabilities plus
     patient clinical context. No image/digitizer/model inference — used to

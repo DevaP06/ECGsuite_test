@@ -7,7 +7,6 @@ import patientRoutes from '../src/routes/patientRoutes.js';
 import clinicalContextRoutes from '../src/routes/clinicalContextRoutes.js';
 import reviewRoutes from '../src/routes/reviewRoutes.js';
 import analyticsRoutes from '../src/routes/analyticsRoutes.js';
-import ontologyRoutes from '../src/routes/ontologyRoutes.js';
 import protect, { requireRole } from '../src/middleware/auth.middleWare.js';
 import { authLimiter, mlLimiter, readLimiter } from '../src/middleware/rateLimiter.js';
 
@@ -24,7 +23,6 @@ app.use('/api/patients',      readLimiter, protect, patientRoutes);
 app.use('/api/clinical-context', readLimiter, protect, clinicalContextRoutes);
 app.use('/api/review',        readLimiter, protect, reviewRoutes);
 app.use('/api/analytics',     readLimiter, protect, analyticsRoutes);
-app.use('/api/ontology',      readLimiter, protect, ontologyRoutes);
 
 app.use((error, req, res, _next) => {
   const statusCode = typeof error.statusCode === 'number' ? error.statusCode : 500;

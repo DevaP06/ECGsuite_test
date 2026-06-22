@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import {
-  ClipboardList, CheckCircle, BarChart2, BookOpen,
+  ClipboardList, CheckCircle, BarChart2,
   Activity, ShieldCheck, Timer, Loader2, ArrowRight, Clock, Zap, AlertCircle,
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -254,17 +254,6 @@ export default function CardiologistDashboard() {
           accent="text-red-500"
           bg="bg-red-50"
           to="/cardiologist/validation"
-        />
-      </div>
-
-      <div className="mt-4">
-        <PlaceholderCard
-          title="Ontology Rules"
-          description="View and manage SNOMED CT and ICD-10 mapping rules used in AI-assisted diagnosis."
-          icon={BookOpen}
-          accent="text-teal-500"
-          bg="bg-teal-50"
-          to="/cardiologist/ontology"
         />
       </div>
     </AppShell>

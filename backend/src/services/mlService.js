@@ -64,6 +64,11 @@ export async function predictECG(filePath, age, gender) {
         err.code === "ECONNABORTED" || /timeout/i.test(err.message || "");
       if (isTimeout) return null;
 
+      // ml-api is up but shedding load (429 from its concurrency guard).
+      // Retrying would only add to the overload, so give up gracefully →
+      // caller saves the analysis as "pending" (same convention as a timeout).
+      if (err.response?.status === 429) return null;
+
       // Connection refused/reset = ml-api truly unreachable or mid-restart →
       // a brief retry is worthwhile (e.g. digitizer restarting).
       const isFlaskDown =

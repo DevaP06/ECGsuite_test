@@ -50,7 +50,6 @@ const CaseReviewsPage = lazy(() => import('./pages/cardiologist/CaseReviewsPage'
 const CaseReviewPage = lazy(() => import('./pages/cardiologist/CaseReviewPage'));
 const CardiologistInsightsPage = lazy(() => import('./pages/cardiologist/CardiologistInsightsPage'));
 const AnalyticsDashboardPage = lazy(() => import('./pages/cardiologist/AnalyticsDashboardPage'));
-const OntologyRulesPage = lazy(() => import('./pages/cardiologist/OntologyRulesPage'));
 const AnnotationWorkspacePage = lazy(() => import('./pages/cardiologist/AnnotationWorkspacePage'));
 const ValidationDashboardPage = lazy(() => import('./pages/cardiologist/ValidationDashboardPage'));
 
@@ -141,7 +140,6 @@ const router = createBrowserRouter(
       <Route path="cardiologist/analytics" element={<RoleGuard allowedRoles={['CARDIOLOGIST']}><AnalyticsDashboardPage /></RoleGuard>} />
       <Route path="cardiologist/validation" element={<RoleGuard allowedRoles={['CARDIOLOGIST']}><ValidationDashboardPage /></RoleGuard>} />
       <Route path="cardiologist/annotation/:analysisId" element={<RoleGuard allowedRoles={['CARDIOLOGIST']}><AnnotationWorkspacePage /></RoleGuard>} />
-      <Route path="cardiologist/ontology" element={<RoleGuard allowedRoles={['CARDIOLOGIST']}><OntologyRulesPage /></RoleGuard>} />
 
       {/* ── Patient ──────────────────────────────────────────────────── */}
       <Route path="patient/dashboard" element={<RoleGuard allowedRoles={['PATIENT']}><PatientDashboard /></RoleGuard>} />

@@ -38,7 +38,6 @@ export const ROLE_NAV_ITEMS: Record<UserRole, NavItem[]> = {
     { label: 'AI Insights',        path: '/cardiologist/insights',   icon: 'Activity'      },
     { label: 'Analytics',          path: '/cardiologist/analytics',  icon: 'BarChart2'     },
     { label: 'Validation',         path: '/cardiologist/validation', icon: 'ShieldCheck'   },
-    { label: 'Ontology Rules',     path: '/cardiologist/ontology',   icon: 'BookOpen'      },
   ],
   PATIENT: [
     { label: 'Dashboard',          path: '/patient/dashboard',      icon: 'Home'          },

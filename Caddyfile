@@ -1,0 +1,27 @@
+# Public HTTPS entrypoint for the ML API.
+#
+# Caddy automatically provisions and renews a Let's Encrypt certificate for the
+# domain below. Requirements:
+#   1. DNS A record for this domain → the VM's public IP
+#   2. Inbound ports 80 (ACME HTTP challenge) and 443 open on the VM firewall
+#   3. ml-api reachable on the compose network (it is, as service "ml-api")
+#
+# After it's serving, point the backend at it:  FLASK_URL=https://ml.ecgenius.life
+# (set in the Vercel backend env, then redeploy). Change the hostname here if you
+# use a different subdomain.
+
+{
+	# Let's Encrypt account email — used for expiry/renewal notices. Change as needed.
+	email ecgenius.life@gmail.com
+}
+
+ml.ecgenius.life {
+	reverse_proxy ml-api:8001 {
+		# The /predict pipeline (digitize + model + ontology) can take ~60-90s.
+		# Don't cut the response early — the backend's axios waits up to 240s.
+		transport http {
+			dial_timeout 10s
+			response_header_timeout 240s
+		}
+	}
+}

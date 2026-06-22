@@ -3,18 +3,28 @@ services:
   digitizer:
     build:
       context: ../Electrocardiogram-Digitization
+    # Localhost-only: not publicly reachable on the VM. ml-api still calls it
+    # over the compose network as http://digitizer:8000.
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     restart: unless-stopped
 
   ml-api:
     build:
       context: ./backend/ml
+    # Localhost-only now — Caddy terminates TLS and reverse-proxies to this
+    # container over the compose network (http://ml-api:8001). Bound to 127.0.0.1
+    # for local debugging on the VM; never published to the public interface.
     ports:
-      - "8001:8001"
+      - "127.0.0.1:8001:8001"
     environment:
       - DIGITIZER_URL=http://digitizer:8000/extract-signal
       - ONTOLOGY_URL=http://ontology:8002/diagnose
+    # INTERNAL_API_KEY (the shared secret ml_api.py checks) comes from
+    # backend/.env — keep it identical to the backend's value. The explicit
+    # environment entries above take precedence over anything in the env file.
+    env_file:
+      - ./backend/.env
     depends_on:
       - digitizer
       - ontology
@@ -23,8 +33,29 @@ services:
   ontology:
     build:
       context: ../ECGenius-Ontology-layer
+    # Localhost-only — ml-api reaches it as http://ontology:8002 internally.
     ports:
-      - "8002:8002"
+      - "127.0.0.1:8002:8002"
     env_file:
       - ./backend/.env
     restart: unless-stopped
+
+  caddy:
+    image: caddy:2
+    # Public HTTPS entrypoint. Caddy auto-provisions + renews a Let's Encrypt
+    # cert for the domain in ./Caddyfile and reverse-proxies TLS → ml-api:8001.
+    # Open ONLY 80 (ACME challenge) and 443 on the VM firewall.
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - ml-api
+    restart: unless-stopped
+
+volumes:
+  caddy_data:
+  caddy_config:
