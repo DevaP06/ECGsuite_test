@@ -177,24 +177,24 @@ export default function CardiologistDashboard() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <StatCard
           label="Pending Reviews"
-          value={statsLoading ? '…' : hasStats ? String(metrics!.pendingCount) : '—'}
+          value={statsLoading ? '…' : hasStats ? String(metrics?.pendingCount ?? 0) : '—'}
           sub={hasStats ? 'Today' : 'Awaiting backend'}
           accent="text-amber-600"
         />
         <StatCard
           label="Total Reviewed"
-          value={statsLoading ? '…' : hasStats ? String(metrics!.accuracy.totalReviewed) : '—'}
+          value={statsLoading ? '…' : hasStats ? String(metrics?.accuracy?.totalReviewed ?? 0) : '—'}
           sub={hasStats ? 'Today' : 'Awaiting backend'}
         />
         <StatCard
           label="Completed Today"
-          value={statsLoading ? '…' : hasStats ? String(metrics!.completedToday) : '—'}
+          value={statsLoading ? '…' : hasStats ? String(metrics?.completedToday ?? 0) : '—'}
           sub={hasStats ? 'Cases resolved' : 'Awaiting backend'}
           accent="text-emerald-600"
         />
         <StatCard
           label="Avg Review Time"
-          value={statsLoading ? '…' : hasStats ? `${metrics!.avgReviewMinutes}m` : '—'}
+          value={statsLoading ? '…' : hasStats ? `${metrics?.avgReviewMinutes ?? 0}m` : '—'}
           sub={hasStats ? 'Per case' : 'Awaiting backend'}
         />
       </div>

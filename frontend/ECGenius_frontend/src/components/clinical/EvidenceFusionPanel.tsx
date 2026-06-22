@@ -58,7 +58,7 @@ export default function EvidenceFusionPanel({ ontologyItems }: Props) {
           </div>
 
           <ul className="space-y-1">
-            {item.evidence!.map((ev, evIdx) => (
+            {item.evidence?.map((ev, evIdx) => (
               <li key={evIdx} className="flex items-start gap-2 text-xs text-slate-600">
                 <AlertCircle className="w-3.5 h-3.5 text-blue-400 shrink-0 mt-0.5" />
                 <span>{ev}</span>

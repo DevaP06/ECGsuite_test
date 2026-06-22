@@ -92,7 +92,7 @@ export default function ECGUpload() {
       ...prev,
       name: p.name,
       age: String(p.age),
-      gender: p.gender.charAt(0).toUpperCase() + p.gender.slice(1),
+      gender: p.gender ? p.gender.charAt(0).toUpperCase() + p.gender.slice(1) : '',
     }));
     setShowDropdown(false);
     setPatientQuery("");

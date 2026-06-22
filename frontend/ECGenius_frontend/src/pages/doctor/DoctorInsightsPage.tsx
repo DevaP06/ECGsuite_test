@@ -114,19 +114,19 @@ export default function DoctorInsightsPage() {
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               <StatCard
                 label="Total Uploads"
-                value={String(summary!.totalUploads)}
+                value={String(summary?.totalUploads)}
                 accent="bg-indigo-50 text-indigo-600"
                 icon={ListChecks}
               />
               <StatCard
                 label="Pending Reviews"
-                value={String(summary!.pendingReviewsCount)}
+                value={String(summary?.pendingReviewsCount)}
                 accent="bg-amber-50 text-amber-600"
                 icon={ClipboardList}
               />
               <StatCard
                 label="Emergency Alerts"
-                value={String(summary!.emergencyAlerts.length)}
+                value={String(summary?.emergencyAlerts.length)}
                 accent="bg-red-50 text-red-600"
                 icon={ShieldAlert}
               />
@@ -159,9 +159,9 @@ export default function DoctorInsightsPage() {
               {/* Top abnormalities */}
               <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 space-y-3">
                 <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide">Top Abnormalities</h3>
-                {summary!.topAbnormalities.length > 0 ? (
+                {summary?.topAbnormalities.length > 0 ? (
                   <ul className="space-y-2">
-                    {summary!.topAbnormalities.map(({ label, count }) => (
+                    {summary?.topAbnormalities.map(({ label, count }) => (
                       <li key={label} className="flex items-center gap-3">
                         <span className="text-sm text-slate-700 flex-1 truncate">{label}</span>
                         <span className="text-xs font-semibold bg-purple-50 text-purple-700 px-2 py-0.5 rounded-full">
@@ -178,9 +178,9 @@ export default function DoctorInsightsPage() {
               {/* Emergency alerts */}
               <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 space-y-3">
                 <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide">Emergency Alerts</h3>
-                {summary!.emergencyAlerts.length > 0 ? (
+                {summary?.emergencyAlerts.length > 0 ? (
                   <ul className="space-y-2">
-                    {summary!.emergencyAlerts.map((alert) => (
+                    {summary?.emergencyAlerts.map((alert) => (
                       <li key={alert.analysisId}>
                         <Link
                           to={`/diagnosisdetail/${alert.analysisId}`}
@@ -210,9 +210,9 @@ export default function DoctorInsightsPage() {
                   <Stethoscope className="w-4 h-4 text-slate-400" />
                   Recent Diagnoses
                 </h3>
-                {summary!.recentDiagnoses.length > 0 ? (
+                {summary?.recentDiagnoses.length > 0 ? (
                   <ul className="space-y-2">
-                    {summary!.recentDiagnoses.map((d) => (
+                    {summary?.recentDiagnoses.map((d) => (
                       <li key={d.analysisId}>
                         <Link
                           to={`/diagnosisdetail/${d.analysisId}`}
@@ -242,9 +242,9 @@ export default function DoctorInsightsPage() {
                   <UploadCloud className="w-4 h-4 text-slate-400" />
                   Recent ECG Uploads
                 </h3>
-                {summary!.recentUploads.length > 0 ? (
+                {summary?.recentUploads.length > 0 ? (
                   <ul className="space-y-2">
-                    {summary!.recentUploads.map((u) => (
+                    {summary?.recentUploads.map((u) => (
                       <li key={u.analysisId}>
                         <Link
                           to={`/diagnosisdetail/${u.analysisId}`}

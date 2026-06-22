@@ -201,7 +201,7 @@ export default function WaveformAnnotationPanel({ explanation, onMarksUpdate }: 
             </ResponsiveContainer>
           </div>
           <p className="text-xs text-slate-400 mt-1">
-            Showing {signalPoints.length} of {explanation!.rawSignalData!.length} samples
+            Showing {signalPoints.length} of {explanation?.rawSignalData?.length} samples
           </p>
         </div>
       ) : (

@@ -231,14 +231,14 @@ export default function MyReportsPage() {
 
                     {(a.analysisResult?.abnormalities?.length ?? 0) > 0 && (
                       <div className="flex flex-wrap gap-1.5 pt-1 border-t border-gray-50">
-                        {a.analysisResult!.abnormalities.slice(0, 4).map((f, i) => (
+                        {a.analysisResult?.abnormalities.slice(0, 4).map((f, i) => (
                           <span key={i} className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-100">
                             {f}
                           </span>
                         ))}
-                        {a.analysisResult!.abnormalities.length > 4 && (
+                        {a.analysisResult?.abnormalities.length > 4 && (
                           <span className="text-xs px-2 py-0.5 rounded-full bg-gray-50 text-gray-500 border border-gray-200">
-                            +{a.analysisResult!.abnormalities.length - 4} more
+                            +{a.analysisResult?.abnormalities.length - 4} more
                           </span>
                         )}
                       </div>
