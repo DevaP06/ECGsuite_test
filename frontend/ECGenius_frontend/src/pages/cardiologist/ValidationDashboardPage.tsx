@@ -179,7 +179,7 @@ export default function ValidationDashboardPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <MetricCard
                 label="Total Reviewed"
-                value={hasData ? String(metrics!.accuracy.totalReviewed) : '—'}
+                value={hasData ? String(metrics?.accuracy.totalReviewed) : '—'}
                 sub={`Period: ${period === 'all' ? 'All time' : `Past ${period}`}`}
                 icon={CheckCircle2}
                 iconBg="bg-blue-50"
@@ -198,7 +198,7 @@ export default function ValidationDashboardPage() {
               <MetricCard
                 label="Override Rate"
                 value={overrideRate ? `${overrideRate}%` : '—'}
-                sub={hasData ? `${metrics!.accuracy.aiOverridden} overrides` : 'Awaiting data'}
+                sub={hasData ? `${metrics?.accuracy.aiOverridden} overrides` : 'Awaiting data'}
                 icon={XCircle}
                 iconBg="bg-amber-50"
                 iconColor="text-amber-500"
@@ -206,7 +206,7 @@ export default function ValidationDashboardPage() {
               />
               <MetricCard
                 label="Pending Reviews"
-                value={hasData ? String(metrics!.pendingCount) : '—'}
+                value={hasData ? String(metrics?.pendingCount) : '—'}
                 sub="Awaiting cardiologist action"
                 icon={Clock}
                 iconBg="bg-yellow-50"
@@ -215,7 +215,7 @@ export default function ValidationDashboardPage() {
               />
               <MetricCard
                 label="Completed Today"
-                value={hasData ? String(metrics!.completedToday) : '—'}
+                value={hasData ? String(metrics?.completedToday) : '—'}
                 sub="Reviews finished today"
                 icon={TrendingUp}
                 iconBg="bg-purple-50"
@@ -224,7 +224,7 @@ export default function ValidationDashboardPage() {
               />
               <MetricCard
                 label="Avg Review Time"
-                value={hasData ? `${metrics!.avgReviewMinutes} min` : '—'}
+                value={hasData ? `${metrics?.avgReviewMinutes} min` : '—'}
                 sub="Mean time per review"
                 icon={Clock}
                 iconBg="bg-teal-50"
@@ -240,22 +240,22 @@ export default function ValidationDashboardPage() {
                 <div className="space-y-4">
                   <SlaBar
                     label="Tier 1 — Critical (4h target)"
-                    met={metrics!.sla.tier1Critical.met}
-                    total={metrics!.sla.tier1Critical.total}
+                    met={metrics?.sla.tier1Critical.met}
+                    total={metrics?.sla.tier1Critical.total}
                     target={4}
                     colorClass="bg-red-500"
                   />
                   <SlaBar
                     label="Tier 2 — Urgent (24h target)"
-                    met={metrics!.sla.tier2Urgent.met}
-                    total={metrics!.sla.tier2Urgent.total}
+                    met={metrics?.sla.tier2Urgent.met}
+                    total={metrics?.sla.tier2Urgent.total}
                     target={24}
                     colorClass="bg-amber-500"
                   />
                   <SlaBar
                     label="Tier 3 — Normal (48h target)"
-                    met={metrics!.sla.tier3Normal.met}
-                    total={metrics!.sla.tier3Normal.total}
+                    met={metrics?.sla.tier3Normal.met}
+                    total={metrics?.sla.tier3Normal.total}
                     target={48}
                     colorClass="bg-emerald-500"
                   />
@@ -268,12 +268,12 @@ export default function ValidationDashboardPage() {
             </div>
 
             {/* Accuracy breakdown */}
-            {hasData && metrics!.accuracy.topOverriddenRhythm && (
+            {hasData && metrics?.accuracy.topOverriddenRhythm && (
               <div className="bg-amber-50 border border-amber-200 rounded-xl px-5 py-4 flex items-center gap-3">
                 <TrendingUp className="w-4 h-4 text-amber-600 shrink-0" />
                 <p className="text-sm text-amber-800">
                   Most frequently overridden rhythm:{' '}
-                  <span className="font-bold">{metrics!.accuracy.topOverriddenRhythm}</span>
+                  <span className="font-bold">{metrics?.accuracy.topOverriddenRhythm}</span>
                 </p>
               </div>
             )}

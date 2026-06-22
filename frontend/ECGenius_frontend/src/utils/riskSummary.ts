@@ -78,8 +78,8 @@ function buildHistoricalDiagnoses(analyses: ECGAnalysis[]): HistoricalDiagnosisE
     .slice(0, HISTORY_LIMIT)
     .map((a) => ({
       analysisId: a._id,
-      rhythm: a.analysisResult!.rhythm,
-      confidence: a.analysisResult!.confidence,
+      rhythm: a.analysisResult?.rhythm,
+      confidence: a.analysisResult?.confidence,
       createdAt: a.createdAt,
     }));
 }

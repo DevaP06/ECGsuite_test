@@ -236,7 +236,7 @@ export default function ReviewRequestPage() {
                     <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1.5">ECG Summary</p>
                     {(selected.analysisResult?.abnormalities?.length ?? 0) > 0 ? (
                       <ul className="space-y-1">
-                        {selected.analysisResult!.abnormalities.map((f, i) => (
+                        {selected.analysisResult?.abnormalities.map((f, i) => (
                           <li key={i} className="flex items-center gap-2 text-sm text-slate-700">
                             <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
                             {f}

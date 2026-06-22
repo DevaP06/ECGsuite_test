@@ -158,28 +158,28 @@ export default function AnalyticsDashboardPage() {
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               <StatCard
                 label="Total Reviews"
-                value={hasMetrics ? String(metrics!.accuracy.totalReviewed) : '—'}
+                value={hasMetrics ? String(metrics?.accuracy.totalReviewed) : '—'}
                 accent="text-indigo-700"
               />
               <StatCard
                 label="AI Approved"
-                value={hasMetrics ? String(metrics!.accuracy.aiCorrect) : '—'}
+                value={hasMetrics ? String(metrics?.accuracy.aiCorrect) : '—'}
                 accent="text-emerald-700"
               />
               <StatCard
                 label="Overridden"
-                value={hasMetrics ? String(metrics!.accuracy.aiOverridden) : '—'}
+                value={hasMetrics ? String(metrics?.accuracy.aiOverridden) : '—'}
                 accent="text-amber-700"
               />
               <StatCard
                 label="Avg Review Time"
-                value={hasMetrics ? `${metrics!.avgReviewMinutes}m` : '—'}
+                value={hasMetrics ? `${metrics?.avgReviewMinutes}m` : '—'}
                 accent="text-blue-700"
               />
               <StatCard
                 label="Urgent Cases"
-                value={hasMetrics ? String(metrics!.sla.tier1Critical.total) : '—'}
-                subLabel={hasMetrics ? `${metrics!.sla.tier1Critical.met} met / ${metrics!.sla.tier1Critical.target} target` : undefined}
+                value={hasMetrics ? String(metrics?.sla.tier1Critical.total) : '—'}
+                subLabel={hasMetrics ? `${metrics?.sla.tier1Critical.met} met / ${metrics?.sla.tier1Critical.target} target` : undefined}
                 accent="text-red-700"
               />
             </div>
@@ -193,7 +193,7 @@ export default function AnalyticsDashboardPage() {
               {hasDailyStats ? (
                 <div className="h-60">
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={metrics!.dailyStats} margin={{ top: 4, right: 16, left: -10, bottom: 4 }}>
+                    <LineChart data={metrics?.dailyStats} margin={{ top: 4, right: 16, left: -10, bottom: 4 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                       <XAxis
                         dataKey="date"
@@ -225,9 +225,9 @@ export default function AnalyticsDashboardPage() {
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart
                         data={[
-                          { tier: 'Critical (4h)', pct: metrics!.sla.tier1Critical.total > 0 ? Math.round((metrics!.sla.tier1Critical.met / metrics!.sla.tier1Critical.total) * 100) : 0 },
-                          { tier: 'Urgent (24h)',  pct: metrics!.sla.tier2Urgent.total > 0   ? Math.round((metrics!.sla.tier2Urgent.met   / metrics!.sla.tier2Urgent.total)   * 100) : 0 },
-                          { tier: 'Normal (48h)',  pct: metrics!.sla.tier3Normal.total > 0   ? Math.round((metrics!.sla.tier3Normal.met   / metrics!.sla.tier3Normal.total)   * 100) : 0 },
+                          { tier: 'Critical (4h)', pct: metrics?.sla.tier1Critical.total > 0 ? Math.round((metrics?.sla.tier1Critical.met / metrics?.sla.tier1Critical.total) * 100) : 0 },
+                          { tier: 'Urgent (24h)',  pct: metrics?.sla.tier2Urgent.total > 0   ? Math.round((metrics?.sla.tier2Urgent.met   / metrics?.sla.tier2Urgent.total)   * 100) : 0 },
+                          { tier: 'Normal (48h)',  pct: metrics?.sla.tier3Normal.total > 0   ? Math.round((metrics?.sla.tier3Normal.met   / metrics?.sla.tier3Normal.total)   * 100) : 0 },
                         ]}
                         margin={{ top: 4, right: 16, left: -10, bottom: 4 }}
                       >
@@ -249,10 +249,10 @@ export default function AnalyticsDashboardPage() {
                 <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide">
                   Diagnosis Distribution
                 </h3>
-                {hasInsights && insights!.diagnosisDistribution.length > 0 ? (
+                {hasInsights && insights?.diagnosisDistribution.length > 0 ? (
                   <div className="space-y-2">
-                    {insights!.diagnosisDistribution.slice(0, 8).map((d) => {
-                      const total = insights!.totalCases;
+                    {insights?.diagnosisDistribution.slice(0, 8).map((d) => {
+                      const total = insights?.totalCases;
                       const pct = total > 0 ? Math.round((d.count / total) * 100) : 0;
                       return (
                         <div key={d.rhythm} className="space-y-0.5">
@@ -274,11 +274,11 @@ export default function AnalyticsDashboardPage() {
             </div>
 
             {/* Top abnormalities */}
-            {hasInsights && insights!.topAbnormalities.length > 0 && (
+            {hasInsights && insights?.topAbnormalities.length > 0 && (
               <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 space-y-3">
                 <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide">Top Abnormalities</h3>
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                  {insights!.topAbnormalities.map((a) => (
+                  {insights?.topAbnormalities.map((a) => (
                     <div key={a.label} className="bg-gray-50 rounded-lg px-3 py-2.5">
                       <p className="text-xs font-semibold text-slate-700 leading-tight">{a.label}</p>
                       <p className="text-lg font-bold text-indigo-600">{a.count}</p>
