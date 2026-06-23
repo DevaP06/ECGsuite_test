@@ -71,6 +71,11 @@ export const getPatient = asyncHandler(async (req, res) => {
     return sendResponse(res, 404, false, 'Patient not found');
   }
 
+  const userId = req.user._id || req.user.id;
+  if (req.user.role !== 'CARDIOLOGIST' && req.user.role !== 'ADMIN' && String(patient.registeredBy) !== String(userId)) {
+    return sendResponse(res, 403, false, 'You do not have access to this patient');
+  }
+
   const stats = await ECGAnalysis.aggregate([
     { $match: { patientId: patient._id } },
     { $group: { _id: '$patientId', total: { $sum: 1 }, lastVisit: { $max: '$createdAt' } } }
@@ -140,6 +145,11 @@ export const getPatientAnalyses = asyncHandler(async (req, res) => {
     return sendResponse(res, 404, false, 'Patient not found');
   }
 
+  const pUserId = req.user._id || req.user.id;
+  if (req.user.role !== 'CARDIOLOGIST' && req.user.role !== 'ADMIN' && String(patient.registeredBy) !== String(pUserId)) {
+    return sendResponse(res, 403, false, 'You do not have access to this patient');
+  }
+
   const analyses = await ECGAnalysis.find({ patientId: rawId })
     .select('-filePath')
     .sort({ createdAt: -1 });
@@ -157,6 +167,11 @@ export const getPatientTrends = asyncHandler(async (req, res) => {
   const patient = await Patient.findById(rawId);
   if (!patient) {
     return sendResponse(res, 404, false, 'Patient not found');
+  }
+
+  const tUserId = req.user._id || req.user.id;
+  if (req.user.role !== 'CARDIOLOGIST' && req.user.role !== 'ADMIN' && String(patient.registeredBy) !== String(tUserId)) {
+    return sendResponse(res, 403, false, 'You do not have access to this patient');
   }
 
   const analyses = await ECGAnalysis.find({ patientId: rawId })
